@@ -13,6 +13,7 @@ import json
 from jinja2 import Template
 from pyaml_env import parse_config
 
+# TODO: use config
 test_domain = 'test.me.uk'
 
 def redirect_to_https_server_block(site: dict):

@@ -3,9 +3,8 @@ certs:
   autodeflect_certs_dir: "/opt/deflect/modules/autodeflect/certs/letsencrypt/"
   ssl_output_dir: "todo: dependent on timestamp?"
 dnets:
-  - dnet1
-  - dnet2
-  - svdnet
+  - dnet_a
+  - dnet_b
 log:
   level: "DEBUG"
   file: "/path/to/deflect_next.log"
