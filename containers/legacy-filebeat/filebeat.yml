@@ -5,7 +5,7 @@ filebeat.inputs:
   fields:
     dnet: "${DEFLECT_DNET}"
     type: deflect_access
-  
+
 - type: log
   paths:
     - /var/log/banjax-next/banjax-logstash-format.log

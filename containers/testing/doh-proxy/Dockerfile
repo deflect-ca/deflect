@@ -1,6 +1,6 @@
 # Copyright (c) 2020, eQualit.ie inc.
 # All rights reserved.
-# 
+#
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -26,7 +26,7 @@ EXPOSE 443
 #     --upstream-resolver=127.0.0.1 \
 #     --certfile=./fullchain1.pem \
 #     --keyfile=./privkey1.pem
-# 
+#
 # XXX the trusted IPs are the nginx hosts in front of this
 # need to not hard-code them here
 CMD doh-httpproxy \

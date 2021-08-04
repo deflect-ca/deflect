@@ -1,6 +1,6 @@
 # Copyright (c) 2020, eQualit.ie inc.
 # All rights reserved.
-# 
+#
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -15,7 +15,7 @@ RUN pip3 install certbot certbot-dns-standalone
 # 	certbot-dns-standalone:dns-standalone
 # 	--certbot-dns-standalone:dns-standalone-address=0.0.0.0
 # 	--certbot-dns-standalone:dns-standalone-port=53 -d example.com
-# 
+#
 
 EXPOSE 5053
 # XXX use exec form (with an array)

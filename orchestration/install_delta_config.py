@@ -135,7 +135,7 @@ def run_certbot_and_get_certs(client, config, all_sites, config_timestamp, image
     etc_ssl_sites_tarfile_name = f"./output/{config_timestamp}/etc-ssl-sites.tar"
     # Never extract archives from untrusted sources without prior inspection. It is
     # possible that files are created outside of path, e.g. members that have
-    # absolute filenames starting with "/" or filenames with two dots "..". 
+    # absolute filenames starting with "/" or filenames with two dots "..".
     with tarfile.open(etc_ssl_sites_tarfile_name, "r") as tar_file:
         tar_file.extractall(path=f"./output/{config_timestamp}/")
 
@@ -251,7 +251,7 @@ def import_kibana_saved_objects(config):
 # looks like:
 # Changed password for user remote_monitoring_user
 # PASSWORD remote_monitoring_user = ${REMOTE_MONITORING_USER}
-# 
+#
 # Changed password for user elastic
 # PASSWORD elastic = ${ELASTICSEARCH_PASSWORD}
 # etc.
