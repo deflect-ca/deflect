@@ -1,0 +1,156 @@
+options {
+        directory "/var/cache/bind";
+        dnssec-validation no;
+        listen-on-v6 { any; };
+        listen-on { any; };
+	allow-recursion { any; };
+};
+
+// logging {
+//         channel default_file {
+//                 file "/var/log/named.log" size 10m;
+//                 severity debug;
+//                 print-time yes;
+//                 print-severity yes;
+//                 print-category yes;
+//         };
+//         channel queries_log {
+//           file "/var/named-queries.log" versions 600 size 20m;
+//           print-time yes;
+//           print-category yes;
+//           print-severity yes;
+//           severity info;
+//         };
+//         category queries { queries_log; };
+//         category default{ default_file; };
+// };
+
+logging {
+     channel default_log {
+          file "/var/log/named-default" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel auth_servers_log {
+          file "/var/log/named-auth_servers" versions 100 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel dnssec_log {
+          file "/var/log/named-dnssec" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel zone_transfers_log {
+          file "/var/log/named-zone_transfers" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel ddns_log {
+          file "/var/log/named-ddns" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel client_security_log {
+          file "/var/log/named-client_security" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel rate_limiting_log {
+          file "/var/log/named-rate_limiting" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel rpz_log {
+          file "/var/log/named-rpz" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel dnstap_log {
+          file "/var/log/named-dnstap" versions 3 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel queries_log {
+          file "/var/log/named-queries" versions 600 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity info;
+     };
+     channel query-errors_log {
+          file "/var/log/named-query-errors" versions 5 size 20m;
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          severity dynamic;
+     };
+     channel default_syslog {
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          syslog daemon;
+          severity info;
+     };
+     channel default_debug {
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          file "named.run";
+          severity dynamic;
+     };
+     category default { default_syslog; default_debug; default_log; };
+     category config { default_syslog; default_debug; default_log; };
+     category dispatch { default_syslog; default_debug; default_log; };
+     category network { default_syslog; default_debug; default_log; };
+     category general { default_syslog; default_debug; default_log; };
+     category resolver { auth_servers_log; default_debug; };       
+     category cname { auth_servers_log; default_debug; };       
+     category delegation-only { auth_servers_log; default_debug; };
+     category lame-servers { auth_servers_log; default_debug; };
+     category edns-disabled { auth_servers_log; default_debug; };
+     category dnssec { dnssec_log; default_debug; };
+     category notify { zone_transfers_log; default_debug; };       
+     category xfer-in { zone_transfers_log; default_debug; };       
+     category xfer-out { zone_transfers_log; default_debug; };
+     category update{ ddns_log; default_debug; };
+     category update-security { ddns_log; default_debug; };
+     category client{ client_security_log; default_debug; };       
+     category security { client_security_log; default_debug; };
+     category rate-limit { rate_limiting_log; default_debug; };       
+     category spill { rate_limiting_log; default_debug; };       
+     category database { rate_limiting_log; default_debug; };
+     category rpz { rpz_log; default_debug; };
+     category dnstap { dnstap_log; default_debug; };
+     category trust-anchor-telemetry { default_syslog; default_debug; default_log; };
+     category queries { queries_log; };
+     category query-errors {query-errors_log; };
+};
+
+controls {   
+	inet 127.0.0.1 allow { localhost; } 
+	keys { test-key; }; 
+};
+
+key test-key {
+	algorithm hmac-md5;
+	secret "PEU/owDy6BDaK52u5bDfEkEO64SP9gnPzqoiFyi/GO0=";
+};

@@ -1,0 +1,11 @@
+aiohttp
+pyopenssl>=20.0
+pem
+python-nginx==1.5.3
+pyyaml
+dnspython
+python-gnupg
+docker
+pyaml-env==1.1.1
+paramiko==2.7.2
+jinja2==3.0.1

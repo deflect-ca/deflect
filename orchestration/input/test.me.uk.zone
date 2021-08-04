@@ -1,0 +1,13 @@
+$TTL	300
+@	IN	SOA	test.me.uk. root.test.me.uk. (
+			      2		; Serial
+			    300		; Refresh
+			    300		; Retry
+			2419200		; Expire
+			    300 )	; Negative Cache TTL
+;
+@	IN	NS	ns1.test.me.uk.
+@	IN	NS	ns2.test.me.uk.
+@	IN	A	0.0.0.0
+ns1	IN	A	0.0.0.0
+ns2	IN	A	0.0.0.0

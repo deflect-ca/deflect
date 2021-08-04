@@ -1,0 +1,10 @@
+version: "3.9"
+
+# dev server
+services:
+  web:
+    build: .
+    volumes:
+      - .:/opt/hello-world
+    ports:
+      - "8080:8080"

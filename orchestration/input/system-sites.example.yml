@@ -1,0 +1,111 @@
+doh.test.me.uk:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: https_proxy_pass
+  letsencrypt: true
+  origin_http_port: 8085
+  origin_https_port: 444
+  origin_ip: 1.2.3.4
+  password_protected_paths: []
+  password_protected_paths_password: password
+  public_domain: doh.test.me.uk
+  rate_limited_regexes: []
+  server_names:
+  - doh.test.me.uk
+  - www.doh.test.me.uk
+  uploaded_cert_bundle_name: null
+kibana.test.me.uk:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: https_proxy_pass
+  letsencrypt: true
+  origin_http_port: 5601
+  origin_https_port: 444
+  origin_ip: 1.2.3.4
+  password_protected_paths: []
+  password_protected_paths_password: password
+  public_domain: kibana.test.me.uk
+  rate_limited_regexes: []
+  server_names:
+  - kibana.test.me.uk
+  - www.kibana.test.me.uk
+  uploaded_cert_bundle_name: null
+  # banjax-next.test.me.uk:
+  #   allow_http_delete_push: false
+  #   cache_exceptions: []
+  #   challenge_everyone_captcha: false
+  #   challenge_everyone_sha_inv: false
+  #   default_cache_time_minutes: 10
+  #   disable_logging: false
+  #   dnet: controller
+  #   dns_records: {}
+  #   http_request_does: http_proxy_pass
+  #   https_request_does: http_proxy_pass
+  #   letsencrypt: true
+  #   origin_http_port: 8081
+  #   origin_https_port: 8081
+  #   origin_ip: 1.2.3.4
+  #   password_protected_paths: []
+  #   public_domain: banjax-next.test.me.uk
+  #   rate_limited_regexes: []
+  #   server_names:
+  #   - banjax-next.test.me.uk
+  #   uploaded_cert_bundle_name: null
+prod.deflect.ca:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: http_proxy_pass
+  letsencrypt: false
+  origin_http_port: 80
+  origin_https_port: 443
+  origin_ip: 1.2.3.4
+  password_protected_paths: []
+  password_protected_paths_password: password
+  public_domain: prod.deflect.ca
+  rate_limited_regexes: []
+  server_names:
+  - prod.deflect.ca
+  uploaded_cert_bundle_name: null
+test-origin.test.me.uk:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: http_proxy_pass
+  letsencrypt: true
+  origin_http_port: 8080
+  origin_https_port: 8080
+  origin_ip: 1.2.3.4
+  password_protected_paths: ["/admin"]
+  password_protected_paths_password: password
+  public_domain: test-origin.test.me.uk
+  rate_limited_regexes: []
+  server_names:
+  - test-origin.test.me.uk
+  uploaded_cert_bundle_name: null

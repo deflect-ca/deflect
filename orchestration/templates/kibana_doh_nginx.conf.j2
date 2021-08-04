@@ -1,0 +1,22 @@
+server {
+    server_name {{ server_name }};
+    listen 80;
+    return 301 https://$server_name$request_uri/;
+}
+
+server {
+    server_name {{ server_name }};
+    access_log /var/log/nginx/system_sites.log json_combined;
+    listen 443 ssl http2;
+    ssl_certificate /etc/ssl/sites/{{ cert_name }}.le.fullchain.crt;
+    ssl_certificate_key /etc/ssl/sites/{{ cert_name }}.le.key;
+    ssl_ciphers {{ ssl_ciphers }};
+    location / {
+        set $loc_in "system_site";
+        set $loc_out "system_site";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_cache_valid 200 302 1d;
+        proxy_pass {{ proxy_pass }};
+    }
+}

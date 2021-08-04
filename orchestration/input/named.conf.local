@@ -1,0 +1,4 @@
+zone "test.me.uk" {
+    type master;
+    file "/etc/bind/test.me.uk.zone";
+};

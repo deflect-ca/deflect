@@ -1,0 +1,22 @@
+filebeat.inputs:
+- type: log
+  paths:
+    - /var/log/banjax-next/nginx-logstash-format.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access
+  
+- type: log
+  paths:
+    - /var/log/banjax-next/banjax-logstash-format.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax
+
+output.logstash:
+  hosts: ["${LOGSTASH_HOST}"]
+  ssl.certificate_authorities: ["/etc/filebeat/rootca.pem"]
+  ssl.certificate: "/etc/filebeat/edgecert.pem"
+  ssl.key: "/etc/filebeat/edgecert.key"
+
+logging.level: debug

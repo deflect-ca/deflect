@@ -1,0 +1,36 @@
+filebeat.inputs:
+- type: docker
+  combine_partial: true
+  containers:
+    path: "/var/lib/docker/containers"
+    stream: "stdout"
+    ids:
+      - "*"
+  fields:
+    dnet: "${DEFLECT_DNET}"
+  processors:
+    - add_docker_metadata:
+        host: "unix:///var/run/docker.sock"
+    - decode_json_fields:
+        fields: ["message"]
+        target: "decoded_message"
+        add_error_key: true
+    - convert:
+        fields:
+          - {from: "decoded_message.ngx_request_time", to: "ngx_request_time", type: "float"}
+        ignore_missing: true
+        fail_on_error: false
+
+# XXX
+setup.kibana.host: "http://kibana:5601"
+setup.kibana.ssl.enabled: true
+ssl.certificate_authorities:
+  - /usr/share/filebeat/ca.crt
+
+output.elasticsearch:
+  hosts: '${ELASTICSEARCH_HOST}'
+  ssl.certificate_authorities:
+    - /usr/share/filebeat/ca.crt
+  ssl.verification_mode: certificate
+  username: elastic  # T0DO: XXX make less-priveleged user for this
+  password: '${ELASTICSEARCH_PASSWORD}'

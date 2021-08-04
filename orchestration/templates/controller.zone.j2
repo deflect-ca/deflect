@@ -1,0 +1,13 @@
+$TTL    300
+@       IN      SOA     {{ name }}. root.{{ name }}. (
+                              2         ; Serial
+                            300         ; Refresh
+                            300         ; Retry
+                        2419200         ; Expire
+                            300 )       ; Negative Cache TTL
+;
+@       IN      NS      {{ name }}.
+@       IN      NS      {{ name }}.
+@       IN      A       {{ ip }}
+ns1     IN      A       {{ ip }}
+ns2     IN      A       {{ ip }}
