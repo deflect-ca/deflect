@@ -4,9 +4,9 @@ This repo contains the orchestration scripts and Docker images that make up the
 Deflect service.
 
 ## Installation
-After cloning the repository:
 ```bash
-cd /path/to/deflect-next-orchestration
+git clone https://github.com/equalitie/deflect-next-orchestration.git
+cd deflect-next-orchestration
 pip install -e .
 ```
 `-e` is if you need it to be editable, you can skip it.
@@ -17,6 +17,8 @@ The main configuration files are:
 - orchestration/input/old-sites.yaml
 - orchestration/system-sites.yaml
 - orchestration/deflect-next_config.yaml
+
+There are example yamls of all of the above.
 
 Before running Deflect-next, you need to have the correct values in the above configuration files.
 
@@ -34,24 +36,15 @@ This will run the three main steps for deflect-next and it should be ran on the 
 The orchestration scripts are under `orchestration/` and the outside world will
 probably mostly ask them to do two things:
   * install the prerequisites on a newly-provisioned remote server.
-    * `install_base.sh` - this just sshes in and installs Docker.
+    * `install_base.py` - this just ssh-es in and installs Docker.
   * given a `sites.yml` dump from the `deflect-web` dashboard, generate and
     install a new set of config files for `nginx`, `bind-server`, `certbot`,
     and `banjax-next`.
     * `install_delta_config.py` and `start_or_upgrade_nginx_image.py` - these
       need to be renamed and combined.
 
-The scripts are plain Python. So far, I've been running them manually from my
-shell on my laptop. In production, they will probably mostly be called into by
-the `deflect-core` API as a result of a customer making a change in
-`deflect-web`.
-
 Not checked into the repo:
-  * `orchestration/input/current/old-sites.yml`
-    * the `clients.yml` from `deflect-web`
-  * `orchestration/input/etc-ssl-sites.tar-good-24-mar-4`
-    * yes, this should be renamed. we don't want to request 700 certs every time
-      we run the script. this holds the existing ones.
+  * `orchestration/input/etc-ssl-sites.tar`
   * `orchestration/input/tls_bundles/`
     * encrypted files from `deflect-web`
   * `orchestration/.gnupg/`
