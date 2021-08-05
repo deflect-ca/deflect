@@ -1,4 +1,4 @@
-# Copyright (c) 2020, eQualit.ie inc.
+# Copyright (c) 2021, eQualit.ie inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -12,10 +12,12 @@ from orchestration.make_nginx_public import main as make_nginx_public_main
 from orchestration.shared import get_all_sites
 
 if __name__ == '__main__':
-    # todo: use arg parser for the path?
-    # todo: also at some point we need to introduce a config for the project e.g. deflect-next config
+    # todo: many things to be fleshed out to deflect-next config
     config = parse_config('input/current/config.yml')
+    dn_config = parse_config('input/deflect-next_config.yaml')
+
     all_sites, formatted_time = get_all_sites()
-    cert_converter_main(formatted_time)
+    if dn_config['certs']['convert']:
+        cert_converter_main(formatted_time)
     install_delta_config(config)
     make_nginx_public_main(config)

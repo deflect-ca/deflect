@@ -1,10 +1,15 @@
+# Copyright (c) 2021, eQualit.ie inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
 import os
 import unittest
 from unittest import mock
 
 import docker
-from orchestration.helpers import get_path_to_input, \
-    get_orchestration_path, FILENAMES_TO_TAIL, DEFAULT_RESTART_POLICY
+from orchestration.helpers import get_orchestration_path, FILENAMES_TO_TAIL, \
+    DEFAULT_RESTART_POLICY
 
 
 class TestShared(unittest.TestCase):

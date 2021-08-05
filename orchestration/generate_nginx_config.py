@@ -1,4 +1,4 @@
-# Copyright (c) 2020, eQualit.ie inc.
+# Copyright (c) 2021, eQualit.ie inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -7,7 +7,6 @@
 import nginx
 import os
 import shutil
-import yaml
 import tarfile
 import json
 from jinja2 import Template
@@ -15,6 +14,7 @@ from pyaml_env import parse_config
 
 # TODO: use config
 test_domain = 'test.me.uk'
+
 
 def redirect_to_https_server_block(site: dict):
     """
@@ -34,10 +34,15 @@ def redirect_to_https_server_block(site: dict):
 
 
 def access_log_banjax_next_format():
-    return nginx.Key('access_log', "/var/log/banjax-next/banjax-next-format.log banjax_next_format")
+    return nginx.Key(
+        'access_log',
+        "/var/log/banjax-next/banjax-next-format.log banjax_next_format"
+    )
 
 
-def proxy_pass_to_origin_server_block(site, global_config, edge_https, origin_https):
+def proxy_pass_to_origin_server_block(
+        site, global_config, edge_https, origin_https
+):
     server = nginx.Server()
 
     server.add(nginx.Key('server_name', " ".join(site["server_names"])))
@@ -52,10 +57,14 @@ def proxy_pass_to_origin_server_block(site, global_config, edge_https, origin_ht
             server.add(nginx.Key('ssl_certificate_key',
                                  f"/etc/ssl-uploaded/{filename}.key"))
         else:
-            server.add(nginx.Key('ssl_certificate',
-                                 f"/etc/ssl/sites/{site['public_domain']}.le.fullchain.crt"))
-            server.add(nginx.Key('ssl_certificate_key',
-                                 f"/etc/ssl/sites/{site['public_domain']}.le.key"))
+            server.add(nginx.Key(
+                'ssl_certificate',
+                f"/etc/ssl/sites/{site['public_domain']}.le.fullchain.crt"
+            ))
+            server.add(nginx.Key(
+                'ssl_certificate_key',
+                f"/etc/ssl/sites/{site['public_domain']}.le.key"
+            ))
         # XXX config
         server.add(nginx.Key('ssl_ciphers', global_config["ssl_ciphers"]))
     else:
@@ -100,7 +109,9 @@ def proxy_pass_to_banjax_keys(origin_https, site):
 # XXX make sure trailing slashes are right
 
 
-def proxy_pass_password_protected_path(password_protected_path, origin_https, site):
+def proxy_pass_password_protected_path(
+        password_protected_path, origin_https, site
+):
     location = nginx.Location(f"/{password_protected_path}/")
     location.add(nginx.Key('set', "$loc_in \"pass_protected\""))
     # XXX force no-cache here
@@ -117,7 +128,9 @@ def proxy_pass_cache_exception(cache_exception, origin_https, site):
     location = nginx.Location(f"~* {cache_exception['location_regex']}")
     location.add(nginx.Key('set', "$loc_in \"cache_exception\""))
     location.add(
-        *default_site_content_cache_include_conf(cache_exception['cache_time_minutes'], site))
+        *default_site_content_cache_include_conf(
+            cache_exception['cache_time_minutes'], site
+        ))
 
     location.add(nginx.Key('error_page', "500 @access_granted"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
@@ -139,7 +152,9 @@ def proxy_pass_to_origin_location_block(origin_https, site):
 # XXX somehow this needs to be an @access_granted_cache_static block or something
 
 
-def proxy_pass_to_origin_location_block_dont_challenge_static_files(site, global_config, edge_https, origin_https):
+def proxy_pass_to_origin_location_block_dont_challenge_static_files(
+        site, global_config, edge_https, origin_https
+):
     # XXX how to avoid sending js challenger pages to (embedded) filetypes?
     location = nginx.Location(
         '~* \.(css|js|json|png|gif|ico|jpg|jpeg|svg|ttf|woff|woff2)$')
@@ -158,9 +173,13 @@ def proxy_pass_to_origin_location_block_dont_challenge_static_files(site, global
     return location
 
 
-def _access_granted_fail_open_location_contents(site, global_config, edge_https, origin_https):
+def _access_granted_fail_open_location_contents(
+        site, global_config, edge_https, origin_https
+):
     location_contents = []
-    location_contents += default_site_content_cache_include_conf(site['default_cache_time_minutes'], site)
+    location_contents += default_site_content_cache_include_conf(
+        site['default_cache_time_minutes'], site
+    )
 
     limit_except = nginx.LimitExcept(
         'GET POST PUT MKCOL COPY MOVE OPTIONS PROPFIND PROPPATCH LOCK UNLOCK PATCH')

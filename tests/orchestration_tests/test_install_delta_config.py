@@ -1,3 +1,9 @@
+# Copyright (c) 2021, eQualit.ie inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import unittest
 from unittest import mock
 
@@ -76,6 +82,7 @@ class TestInstallDeltaConfig(unittest.TestCase):
     @mock.patch("tarfile.open", return_value=mock.MagicMock())
     def test_run_certbot_and_get_certs(self, mock_tarfile_open, mock_find):
         from orchestration.install_delta_config import run_certbot_and_get_certs
+        self.mock_client.image.build.return_value = ['a', 'b']
         mock_open = mock.mock_open(read_data=b'test')
         mock_find.return_value.exec_run.return_value = 'exit_code', b'output'
         mock_find.return_value.get_archive.return_value = ['chunks'], 'stat'
@@ -121,7 +128,9 @@ class TestInstallDeltaConfig(unittest.TestCase):
                 self.mock_client,
                 config,
                 {},
-                self.image_build_timestamp
+                {},
+                self.image_build_timestamp,
+                self.image_build_timestamp,
             )
             self.assertEqual(result, expected_result)
             container = mock_kill.return_value
@@ -191,6 +200,7 @@ class TestInstallDeltaConfig(unittest.TestCase):
             self.mock_client,
             config,
             {},
+            {},
             self.image_build_timestamp,
             self.image_build_timestamp
         )
@@ -210,6 +220,7 @@ class TestInstallDeltaConfig(unittest.TestCase):
             self.mock_client,
             config,
             {},
+            {},
             self.image_build_timestamp,
             self.image_build_timestamp
         )
@@ -218,9 +229,11 @@ class TestInstallDeltaConfig(unittest.TestCase):
             self.mock_client, "legacy-filebeat", self.image_build_timestamp, config
         )
 
+    @mock.patch("orchestration.shared.kill_containers_with_label",
+                return_value=mock.MagicMock())
     @mock.patch("orchestration.shared.find_existing_or_start_new_container",
                 return_value=mock.MagicMock())
-    def test_install_legacy_logstash(self, mock_find):
+    def test_install_legacy_logstash(self, mock_find, mock_kill):
         from orchestration.install_delta_config import install_legacy_logstash
         expected_result = None
         config = {}
@@ -233,6 +246,7 @@ class TestInstallDeltaConfig(unittest.TestCase):
             self.image_build_timestamp
         )
         self.assertEqual(result, expected_result)
+        mock_kill.assert_called_once()
         mock_find.assert_called_once_with(
             self.mock_client, "legacy-logstash", self.image_build_timestamp, config
         )

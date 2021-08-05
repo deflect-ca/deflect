@@ -1,5 +1,33 @@
+# Deflect-next Orchestration
+
 This repo contains the orchestration scripts and Docker images that make up the
 Deflect service.
+
+## Installation
+After cloning the repository:
+```bash
+cd /path/to/deflect-next-orchestration
+pip install -e .
+```
+`-e` is if you need it to be editable, you can skip it.
+
+## How to run
+The main configuration files are:
+- orchestration/input/config.yaml
+- orchestration/input/old-sites.yaml
+- orchestration/system-sites.yaml
+- orchestration/deflect-next_config.yaml
+
+Before running Deflect-next, you need to have the correct values in the above configuration files.
+
+`orchestration/install_base.py` will install docker on each edge defined in `orchestration/input/config.yaml` under `dnets_to_edges`.
+
+Under `orchestration` there is a `main.py`
+This will run the three main steps for deflect-next and it should be ran on the controller:
+- [optional] cert_converter_main
+- install_delta_config
+- make_nginx_public_main
+
 
 ##### Orchestration scripts
 

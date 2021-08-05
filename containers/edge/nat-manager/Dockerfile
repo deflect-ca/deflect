@@ -1,4 +1,4 @@
-# Copyright (c) 2020, eQualit.ie inc.
+# Copyright (c) 2021, eQualit.ie inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the

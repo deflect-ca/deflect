@@ -1,3 +1,10 @@
+# Copyright (c) 2021, eQualit.ie inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+
 import subprocess
 import yaml
 
@@ -15,8 +22,8 @@ import yaml
 # iptables -I OUTPUT -t nat -p tcp -m addrtype --dst-type LOCAL --dport 443 -j REDIRECT --to-ports 10443 -m statistic --mode random --probability 1.0
 # iptables -I OUTPUT -t nat -p tcp -m addrtype --dst-type LOCAL --dport 80 -j REDIRECT --to-ports 10080 -m statistic --mode random --probability 0.5
 #
-# iptables -I DOCKER -t nat ! -i docker0 -p tcp -m tcp --dport 443 -j DNAT --to-destination 172.17.0.12:443 -m statistic --mode random --probability 1.0
-# iptables -I DOCKER -t nat ! -i docker0 -p tcp -m tcp --dport 80 -j DNAT --to-destination 172.17.0.12:80 -m statistic --mode random --probability 1.0
+# iptables -I DOCKER -t nat ! -i docker0 -p tcp -m tcp --dport 443 -j DNAT --to-destination edge_ip:443 -m statistic --mode random --probability 1.0
+# iptables -I DOCKER -t nat ! -i docker0 -p tcp -m tcp --dport 80 -j DNAT --to-destination edge_ip:80 -m statistic --mode random --probability 1.0
 
 if __name__ == "__main__":
     config = {}
@@ -25,8 +32,6 @@ if __name__ == "__main__":
 
     all_names = []
     for dnet, edge_names in config["dnets_to_edges"].items():
-        if dnet != "dnet2":
-            continue
         for name in edge_names:
             print("running `hostname` on %s" % name)
             subprocess.run(["ssh", "deflect@%s" % name, "docker stop $(docker ps -aq)"])

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, eQualit.ie inc.
+# Copyright (c) 2021, eQualit.ie inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -181,7 +181,7 @@ def main(config, all_sites, timestamp):
                     dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
                 a_rdataset.add(rd, 300)
 
-            # XXX gross
+            # XXX TODO: improve
             for server_name in set(site["server_names"]) - set([site_name]):
                 sub_zone = server_name.replace("." + site_name, "")
                 logger.debug(f'find_rdataset: sub_zone {sub_zone}, A')
