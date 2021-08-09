@@ -29,11 +29,12 @@ class TestGenerateNginxConfig(unittest.TestCase):
         mock_config.assert_called_once()
         mock_key.assert_has_calls(
             [
-            ['set', "$loc_in \"redir_to_ssl\""],
-            ['set', "$loc_out \"redir_to_ssl\""],
-            ['server_name', "a b c"],
-            ['listen', '80'],
-            ['return', f"301 https://$server_name$request_uri/"],
+                mock.call(*['set', "$loc_in \"redir_to_ssl\""]),
+                mock.call(*['set', "$loc_out \"redir_to_ssl\""]),
+                mock.call(*['server_name', "a b c"]),
+                mock.call(*['listen', '80']),
+                mock.call(
+                    *['return', f"301 https://$server_name$request_uri/"]),
             ]
         )
 
@@ -55,7 +56,8 @@ class TestGenerateNginxConfig(unittest.TestCase):
     def test_proxy_pass_to_origin_location_block(self):
         raise NotImplementedError
 
-    def test_proxy_pass_to_origin_location_block_dont_challenge_static_files(self):
+    def test_proxy_pass_to_origin_location_block_dont_challenge_static_files(
+            self):
         raise NotImplementedError
 
     def test_access_granted_fail_open_location_contents(self):

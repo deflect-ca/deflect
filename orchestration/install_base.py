@@ -26,6 +26,7 @@ import yaml
 # iptables -I DOCKER -t nat ! -i docker0 -p tcp -m tcp --dport 80 -j DNAT --to-destination edge_ip:80 -m statistic --mode random --probability 1.0
 
 if __name__ == "__main__":
+    # TODO: change deflect@ ...
     config = {}
     with open('input/current/config.yml', 'r') as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
