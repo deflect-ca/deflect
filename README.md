@@ -3,6 +3,8 @@
 This repo contains the orchestration scripts and Docker images that make up the
 Deflect service.
 
+![How it works](https://raw.githubusercontent.com/equalitie/banjax-next/master/edge-diagram.svg)
+
 ## Installation
 ```bash
 git clone https://github.com/equalitie/deflect-next-orchestration.git
@@ -13,12 +15,12 @@ pip install -e .
 
 ## How to run
 The main configuration files are:
-- orchestration/input/config.yaml
-- orchestration/input/old-sites.yaml
-- orchestration/system-sites.yaml
-- orchestration/deflect-next_config.yaml
+- `orchestration/input/config.yaml`
+- `orchestration/input/old-sites.yaml`
+- `orchestration/system-sites.yaml`
+- `orchestration/deflect-next_config.yaml`
 
-There are example yamls in the respective directories of all of the above.
+There are example yamls in the respective directories for all the above.
 
 Before running Deflect-next, you need to have the correct values in the above configuration files.
 
@@ -29,7 +31,7 @@ cd orchestration
 python3 install_base.py
 ```
 
-Under `orchestration` there is a `main.py`
+Under `orchestration` there is a `main.py` file.
 This will run the three main steps for deflect-next and it should be ran on the controller:
 - [optional] cert_converter_main
 - install_delta_config
