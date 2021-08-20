@@ -128,15 +128,15 @@ services:
         - /var/run/:/var/run/  # if you just mount the socket and the docker daemon restarts, filebeat won't re-find it
         - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
 
-    legacy-logstash:
-      build:
-        context: ./containers/legacy-logstash
-        dockerfile: Dockerfile
-      ports:
-        - 5044:5044
-      environment:
-        ELASTICSEARCH_URL: http://elasticsearch:9200
-        ELASTICSEARCH_HOST: http://elasticsearch:9200
+#    legacy-logstash:
+#      build:
+#        context: ./containers/legacy-logstash
+#        dockerfile: Dockerfile
+#      ports:
+#        - 5044:5044
+#      environment:
+#        ELASTICSEARCH_URL: http://elasticsearch:9200
+#        ELASTICSEARCH_HOST: http://elasticsearch:9200
 
     pebble:
       image: letsencrypt/pebble:latest

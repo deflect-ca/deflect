@@ -70,7 +70,7 @@ sitewide_sha_inv_list:
   example.com: block
   foobar.com: no_block
 server_log_file: /var/log/banjax-next/banjax-next-format.log
-banning_log_file: /root/banjax-next/ban_ip_list.log
+banning_log_file: /var/log/banjax-next/ban_ip_list.log
 expiring_decision_ttl_seconds: 10
 too_many_failed_challenges_interval_seconds: 10
 too_many_failed_challenges_threshold: 3

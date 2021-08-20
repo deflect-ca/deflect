@@ -22,6 +22,7 @@ COPY ./certificate.pem /etc/banjax-next/
 COPY ./key.pem /etc/banjax-next/
 
 RUN mkdir -p /var/log/banjax-next
+RUN touch /var/log/banjax-next/ban_ip_list.log
 
 EXPOSE 8081
 
