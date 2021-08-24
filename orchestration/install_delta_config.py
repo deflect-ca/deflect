@@ -401,11 +401,11 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, orchestrati
     logger.info(f"%%%% finished all edges %%%")
 
 
-def install_delta_config(config=None, orchestration_config=None):
+def install_delta_config(config=None, orchestration_config=None, preload_old_client_sites=None, preload_system_sites=None):
     # TODO: moved these for convenience
     # TODO: configurable paths - would be more easy for deployment
     logger.info('Getting all sites from config...')
-    all_sites, formatted_time = shared.get_all_sites()
+    all_sites, formatted_time = shared.get_all_sites(preload_old_client_sites, preload_system_sites)
 
     # XXX maybe reconsider this all_sites = {'client': ..., 'system': ... } pattern.
     # generate_bind_config() treats both roles identically (flattens the dict).
