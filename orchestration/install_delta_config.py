@@ -336,7 +336,7 @@ def install_metricbeat(client, config, dnet, all_sites, config_timestamp, image_
 
 def install_all_edge_components(edge_name, config, dnet, all_sites, config_timestamp, image_build_timestamp):
     logger.debug(f"$$$ starting install_all_edge_components for {edge_name}")
-    edge_client = docker.DockerClient(base_url=f"ssh://deflect@{edge_name}")
+    edge_client = docker.DockerClient(base_url=f"ssh://{config['edge_username']}@{config['edge_names_to_ips'][edge_name]}")
 
     logger.debug(f'Installing nginx config')
     install_nginx_config(      edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
@@ -344,8 +344,8 @@ def install_all_edge_components(edge_name, config, dnet, all_sites, config_times
     install_banjax_next_config(edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
     logger.debug(f'Installing filebeat')
     install_filebeat(          edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
-    logger.debug(f'Installing legacy filebeat')
-    install_legacy_filebeat(   edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    # logger.debug(f'Installing legacy filebeat')
+    # install_legacy_filebeat(   edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
     logger.debug(f'Installing metricbeat')
     install_metricbeat(        edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
     logger.debug(f"$$$ finished install_all_edge_components for {edge_name}")
@@ -404,38 +404,31 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, orchestrati
 def install_delta_config(config=None, orchestration_config=None):
     # TODO: moved these for convenience
     # TODO: configurable paths - would be more easy for deployment
-    previous_formatted_time = ""
-    while True:
-        logger.info('Getting all sites from config...')
-        all_sites, formatted_time = shared.get_all_sites()
-        if formatted_time == previous_formatted_time:
-            logger.info("no changes detected, sleeping 30 seconds and checking again...")
-            time.sleep(30)
-            continue
-        previous_formatted_time = formatted_time
+    logger.info('Getting all sites from config...')
+    all_sites, formatted_time = shared.get_all_sites()
 
-        # XXX maybe reconsider this all_sites = {'client': ..., 'system': ... } pattern.
-        # generate_bind_config() treats both roles identically (flattens the dict).
-        # generate_nginx_config() has its own treatment of kibana and doh (doesn't use the system sites list).
-        # the rest only care about client sites.
-        logger.info('>>> Running decrypt_and_verify_cert_bundlesg...')
-        decrypt_and_verify_cert_bundles.main(all_sites, formatted_time)
-        logger.info('>>> Cert Converter...')
-        cert_converter.main(formatted_time)
-        logger.info('>>> Generating bind config...')
-        generate_bind_config.main(config, all_sites, formatted_time)
-        logger.info('>>> Generating nginx config...')
-        generate_nginx_config.main(all_sites, config, formatted_time)
-        logger.info('>>> Generating banjax-next config...')
-        generate_banjax_next_config.main(config, all_sites, formatted_time)
+    # XXX maybe reconsider this all_sites = {'client': ..., 'system': ... } pattern.
+    # generate_bind_config() treats both roles identically (flattens the dict).
+    # generate_nginx_config() has its own treatment of kibana and doh (doesn't use the system sites list).
+    # the rest only care about client sites.
+    logger.info('>>> Running decrypt_and_verify_cert_bundlesg...')
+    decrypt_and_verify_cert_bundles.main(all_sites, formatted_time)
+    logger.info('>>> Cert Converter...')
+    cert_converter.main(formatted_time)
+    logger.info('>>> Generating bind config...')
+    generate_bind_config.main(config, all_sites, formatted_time)
+    logger.info('>>> Generating nginx config...')
+    generate_nginx_config.main(all_sites, config, formatted_time)
+    logger.info('>>> Generating banjax-next config...')
+    generate_banjax_next_config.main(config, all_sites, formatted_time)
 
-        main(
-            config,
-            all_sites,
-            formatted_time,
-            formatted_time,
-            orchestration_config=orchestration_config
-        )
+    main(
+        config,
+        all_sites,
+        formatted_time,
+        formatted_time,
+        orchestration_config=orchestration_config
+    )
 
 
 if __name__ == "__main__":

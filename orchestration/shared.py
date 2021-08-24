@@ -600,16 +600,10 @@ def get_all_sites():
     logger.info('Getting all sites')
     old_client_sites = {}
     old_client_sites_timestamp = None
-    # with open("input/current/old-sites.yml", "r") as f:
-    while True:
-        try:
-            with open("/opt/deflect/modules/autodeflect/clients.yml", "r") as f:
-                old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
-                old_client_sites_timestamp = old_client_sites_dict["timestamp"]
-                old_client_sites = old_client_sites_dict["remap"]
-                break
-        except FileNotFoundError:
-            time.sleep(5)
+    with open("input/current/old-sites.yml", "r") as f:
+        old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
+        old_client_sites_timestamp = old_client_sites_dict["timestamp"]
+        old_client_sites = old_client_sites_dict["remap"]
 
     time_from_inside_file = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)
     formatted_time = time_from_inside_file.strftime("%Y-%m-%d_%H:%M:%S")
