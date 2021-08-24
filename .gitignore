@@ -4,6 +4,7 @@
 *.swm
 *.swl
 orchestration/output/*
+!orchestration/output/.gitkeep
 orchestration/input/certs/*.tar
 orchestration/input/certs/**/*.crt
 orchestration/input/certs/**/*.key
