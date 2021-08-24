@@ -49,14 +49,28 @@ def get_logger(
     return logger
 
 
-def get_orchestration_path():
+def orchestration_path():
     return os.path.dirname(os.path.realpath(__file__))
 
 
-def get_path_to_input():
+def path_to_input():
     return os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), '', '..', '..', 'input'
+        orchestration_path(), '', '..', '..', 'input'
     )
+
+
+def path_to_output():
+    return os.path.join(
+        orchestration_path(), '', '..', '..', 'output'
+    )
+
+
+def get_sites_yml_path():
+    return os.path.join(path_to_input(), 'current/sites.yml')
+
+
+def get_config_yml_path():
+    return os.path.join(path_to_input(), 'current/config.yml')
 
 
 class RoleEnum(Enum):

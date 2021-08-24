@@ -34,8 +34,8 @@ class TestContainers(unittest.TestCase):
             print(self.current_container.get_container_host_ip())
             result = self.current_container.exec('cat /etc/nginx/nginx.conf')
             self.assertEqual(result.exit_code, 0)
-            from orchestration.helpers import get_orchestration_path, NAME_TO_ROLE
-            path = f"{get_orchestration_path()}/../containers/" \
+            from orchestration.helpers import orchestration_path, NAME_TO_ROLE
+            path = f"{orchestration_path()}/../containers/" \
                    f"{NAME_TO_ROLE[image_name].value}/{image_name}/nginx.conf"
             with open(path, 'r') as f:
                 self.assertEqual(

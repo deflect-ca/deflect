@@ -8,8 +8,8 @@ import unittest
 from unittest import mock
 
 import docker
-from orchestration.helpers import get_orchestration_path, FILENAMES_TO_TAIL, \
-    DEFAULT_RESTART_POLICY
+from orchestration.helpers import orchestration_path, FILENAMES_TO_TAIL, \
+    DEFAULT_RESTART_POLICY, path_to_input, get_sites_yml_path
 
 
 class TestShared(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestShared(unittest.TestCase):
     def old_sites_yaml(self):
         if os.path.isfile(self.old_sites_path):
             os.rename(self.old_sites_path, self.old_sites_path)
-        with open('input/current/old-sites.yml', 'w+') as f:
+        with open(get_sites_yml_path(), 'w+') as f:
             pass
 
     def test_find_existing_or_start_new_container(self):
@@ -69,7 +69,7 @@ class TestShared(unittest.TestCase):
         expected_value = 1, 1
         image_name = 'nginx'
         image_build_timestamp = 'image_build_timestamp'
-        expected_path = f"{get_orchestration_path()}/../containers/edge/nginx"
+        expected_path = f"{orchestration_path()}/../containers/edge/nginx"
         expected_tag = f"deflect-next-{image_name}-{image_build_timestamp}"
         mock_client = mock.MagicMock()
         mock_client.images.build.return_value = 1, 1

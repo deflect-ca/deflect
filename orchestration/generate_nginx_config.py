@@ -13,6 +13,8 @@ from jinja2 import Template
 from pyaml_env import parse_config
 
 # TODO: use config
+from orchestration.helpers import get_config_yml_path
+
 test_domain = 'test.me.uk'
 
 
@@ -502,7 +504,7 @@ def main(all_sites, config, formatted_time):
 if __name__ == "__main__":
     from orchestration.shared import get_all_sites
 
-    config = parse_config('input/current/config.yml')
+    config = parse_config(get_config_yml_path())
 
     all_sites, formatted_time = get_all_sites()
 

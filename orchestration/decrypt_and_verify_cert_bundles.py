@@ -25,7 +25,7 @@ from OpenSSL.crypto import X509Store, X509StoreContext
 # todo: use configuration for the logger
 from pyaml_env import parse_config
 
-from orchestration.helpers import get_logger
+from orchestration.helpers import get_logger, get_config_yml_path
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -251,7 +251,7 @@ def main(all_sites, formatted_time):
 
 if __name__ == "__main__":
     from orchestration.shared import get_all_sites
-    config = parse_config('input/current/config.yml')
+    config = parse_config(get_config_yml_path())
 
     all_sites, formatted_time = get_all_sites()
 

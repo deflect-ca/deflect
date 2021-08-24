@@ -25,6 +25,9 @@ import requests
 
 # stealing this from deflect-web (thanks, donncha)
 import yaml
+from pyaml_env import parse_config
+
+from orchestration.helpers import get_sites_yml_path, get_config_yml_path
 
 
 class override_dns(object):
@@ -118,12 +121,9 @@ def banjax_next_config_versions_are_expected(timestamp):
 
 
 if __name__ == "__main__":
-    config = []
-    with open('input/config.yml', 'r') as f:
-        config = yaml.load(f, Loader=yaml.SafeLoader)
-
+    config = parse_config(get_config_yml_path())
     all_sites = []
-    with open('input/sites.yml', 'r') as f:
+    with open(get_sites_yml_path(), 'r') as f:
         all_sites = yaml.load(f, Loader=yaml.SafeLoader)
 
     if not correct_dns_for_new_site('hostname'):
