@@ -23,6 +23,7 @@ services:
       - "80:80"
     volumes:
       - /var/log/banjax-next/:/var/log/banjax-next/
+      - /var/log/nginx/:/var/log/nginx/
 
   test-origin:
     build:
