@@ -55,13 +55,13 @@ def orchestration_path():
 
 def path_to_input():
     return os.path.join(
-        orchestration_path(), '', '..', '..', 'input'
+        orchestration_path(), 'input'
     )
 
 
 def path_to_output():
     return os.path.join(
-        orchestration_path(), '', '..', '..', 'output'
+        orchestration_path(), 'output'
     )
 
 

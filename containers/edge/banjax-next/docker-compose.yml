@@ -13,7 +13,7 @@ services:
     cap_add:
       - NET_ADMIN  # we use iptables for banning
     volumes:
-      - var-log-banjax-next:/var/log/banjax-next/
+      - /var/log/banjax-next/:/var/log/banjax-next/
 
   nginx:
     build:
@@ -22,7 +22,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - var-log-banjax-next:/var/log/banjax-next/
+      - /var/log/banjax-next/:/var/log/banjax-next/
 
   test-origin:
     build:
