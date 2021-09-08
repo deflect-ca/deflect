@@ -104,7 +104,7 @@ def main(formatted_time):
     # deflect-next certs: convert to the autodeflect format if necessary
 
     # TODO: refactor
-    previous_run_dir = sorted(glob.glob("output/*"))[-2]
+    previous_run_dir = sorted(glob.glob("output/*"))[-1]
     print(f"previous run dir: {previous_run_dir}")
     in_dirs = glob.glob(f"{previous_run_dir}/archive/*")
 

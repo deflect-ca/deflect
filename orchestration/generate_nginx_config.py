@@ -12,10 +12,7 @@ import json
 from jinja2 import Template
 from pyaml_env import parse_config
 
-# TODO: use config
 from orchestration.helpers import get_config_yml_path
-
-test_domain = 'test.me.uk'
 
 
 def redirect_to_https_server_block(site: dict):
@@ -435,7 +432,7 @@ def main(all_sites, config, formatted_time):
         os.mkdir(output_dir + "/sites.d")
 
         # XXX another special case that needs to be handled properly eventually
-        test_origin_site = all_sites['system'][f"test-origin.{test_domain}"]
+        test_origin_site = all_sites['system'][f"test-origin.{config['controller_domain']}"]
         public_domain = test_origin_site['public_domain']
         with open(f"{output_dir}/sites.d/{public_domain}.conf", "w") as f:
             nginx.dump(per_site_include_conf(test_origin_site, config), f)
@@ -470,7 +467,7 @@ def main(all_sites, config, formatted_time):
                 if name == "prod.deflect.ca":
                     continue
                 # XXX fix these special cases
-                if name == f"test-origin.{test_domain}":
+                if name == f"test-origin.{config['controller_domain']}":
                     continue
                 with open(f"{output_dir}/sites.d/{name}.conf", "w") as f:
                     f.write(template.render(

@@ -4,6 +4,10 @@
 *.swm
 *.swl
 orchestration/output/*
+!orchestration/output/.gitkeep
+orchestration/input/certs/*.tar
+orchestration/input/certs/**/*.crt
+orchestration/input/certs/**/*.key
 orchestration/__pycache__
 !orchestration/output/.keep
 containers/edge/auth-server/auth-server

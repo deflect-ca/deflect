@@ -597,20 +597,19 @@ def kill_containers_with_label(client, label):
             pass
 
 
-def get_all_sites():
-    logger.info('Getting all sites')
-    old_client_sites = {}
-    old_client_sites_timestamp = None
-    # with open("input/current/old-sites.yml", "r") as f:
-    while True:
-        try:
-            with open(get_sites_yml_path(), "r") as f:
-                old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
-                old_client_sites_timestamp = old_client_sites_dict["timestamp"]
-                old_client_sites = old_client_sites_dict["remap"]
-                break
-        except FileNotFoundError:
-            time.sleep(5)
+def get_all_sites(preload_old_client_sites=None, preload_system_sites=None):
+    if preload_old_client_sites:
+        logger.info('Getting all sites from preload')
+        old_client_sites_timestamp = preload_old_client_sites["timestamp"]
+        old_client_sites = preload_old_client_sites["remap"]
+    else:
+        logger.info('Getting all sites')
+        old_client_sites = {}
+        old_client_sites_timestamp = None
+        with open("input/current/old-sites.yml", "r") as f:
+            old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
+            old_client_sites_timestamp = old_client_sites_dict["timestamp"]
+            old_client_sites = old_client_sites_dict["remap"]
 
     time_from_inside_file = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)
     formatted_time = time_from_inside_file.strftime("%Y-%m-%d_%H:%M:%S")
@@ -620,11 +619,15 @@ def get_all_sites():
         old_client_sites, old_client_sites_timestamp
     )
 
-    logger.debug('Getting new system_sites')
-    system_sites = {}
-    with open("input/system-sites.yml", "r") as f:
-        system_sites = yaml.load(f.read(), Loader=yaml.SafeLoader)
+    if preload_system_sites:
+        logger.info('Getting system sites from preload')
+        system_sites = preload_system_sites
+    else:
+        logger.debug('Getting new system_sites')
+        system_sites = {}
+        with open("input/system-sites.yml", "r") as f:
+            system_sites = yaml.load(f.read(), Loader=yaml.SafeLoader)
 
     all_sites = {'client': new_client_sites, 'system': system_sites}
-    logger.debug(f'All sites:{json.dumps(all_sites, indent=2)}')
+    # logger.debug(f'All sites:{json.dumps(all_sites, indent=2)}')
     return all_sites, formatted_time
