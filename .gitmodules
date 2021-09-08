@@ -1,0 +1,3 @@
+[submodule "containers/edge/banjax-next"]
+	path = containers/edge/banjax-next
+	url = git@github.com:deflect-ca/banjax.git
