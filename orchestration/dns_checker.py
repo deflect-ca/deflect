@@ -1,11 +1,13 @@
 from pyaml_env import parse_config
 import dns.resolver
 
+from orchestration.helpers import get_sites_yml_path
+
 if __name__ == '__main__':
 
     IP_A = '1.2.3.4'
     IP_B = '5.6.7.8'
-    base_names_to_sites = parse_config("input/current/old-sites.yml")["remap"]
+    base_names_to_sites = parse_config(get_sites_yml_path())["remap"]
 
     all_names_and_types = []
 

@@ -12,7 +12,9 @@ import yaml
 import subprocess
 
 # todo: use configuration for the logger
-from orchestration.helpers import get_logger
+from pyaml_env import parse_config
+
+from orchestration.helpers import get_logger, get_config_yml_path
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -130,8 +132,5 @@ def main(config):
 
 
 if __name__ == "__main__":
-    config = {}
-    with open('input/current/config.yml', 'r') as f:
-        config = yaml.load(f, Loader=yaml.SafeLoader)
-
+    config = parse_config(get_config_yml_path())
     main(config)

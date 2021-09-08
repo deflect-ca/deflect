@@ -12,7 +12,8 @@ from datetime import datetime
 
 from orchestration import old_to_new_site_dict
 from orchestration.helpers import get_logger, NAME_TO_ROLE, \
-    get_orchestration_path, FILENAMES_TO_TAIL, DEFAULT_RESTART_POLICY
+    orchestration_path, FILENAMES_TO_TAIL, DEFAULT_RESTART_POLICY, \
+    get_sites_yml_path
 
 # todo: use configuration for the logger
 logger = get_logger(__name__, logging_level=logging.DEBUG)
@@ -99,7 +100,7 @@ def build_new_image(name, client, timestamp, registry=''):
     logger.info(f'Building for {name}: {role}')
 
     (image, image_logs) = client.images.build(
-        path=f"{get_orchestration_path()}/../containers/{role}/{name}",
+        path=f"{orchestration_path()}/../containers/{role}/{name}",
         tag=get_image_name(name, timestamp, registry),
         rm=True     # remove intermediate containers to avoid system pollution
     )

@@ -12,7 +12,7 @@ import yaml
 from pyaml_env import parse_config
 
 import orchestration.shared as shared
-from orchestration.helpers import get_logger
+from orchestration.helpers import get_logger, get_config_yml_path
 from orchestration.shared import (
     find_existing_or_start_new_container, kill_containers_with_label)
 from datetime import datetime
@@ -433,7 +433,7 @@ def install_delta_config(config=None, orchestration_config=None, preload_old_cli
 
 if __name__ == "__main__":
     orchestration_config = parse_config('input/deflect-next_config.yaml')
-    config = parse_config('input/current/config.yml')
+    config = parse_config(get_config_yml_path())
     install_delta_config(
         config=config,
         orchestration_config=orchestration_config

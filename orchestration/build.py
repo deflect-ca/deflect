@@ -7,12 +7,13 @@
 
 import datetime
 import logging
+import os
 import traceback
 
 import docker
 
 from orchestration import shared
-from orchestration.helpers import NAME_TO_ROLE, get_logger
+from orchestration.helpers import NAME_TO_ROLE, get_logger, path_to_input
 from pyaml_env import parse_config
 
 
@@ -94,7 +95,7 @@ def push_all_to_registry(images, client, registry, pull=False):
 
 
 if __name__ == '__main__':
-    config = parse_config('input/current/config.yaml')
+    config = parse_config(get_clients_yaml_path())
     logger = get_logger(__name__, logging_level=logging.DEBUG)
     dn_config = parse_config('input/deflect-next_config.yaml')
     docker_conf = dn_config['docker']

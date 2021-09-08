@@ -15,10 +15,10 @@ pip install -e .
 
 ## How to run
 The main configuration files are:
-- `orchestration/input/config.yaml`
-- `orchestration/input/old-sites.yaml`
-- `orchestration/system-sites.yaml`
-- `orchestration/deflect-next_config.yaml`
+- `orchestration/input/config.yml`
+- `orchestration/input/old-sites.yml`
+- `orchestration/system-sites.yml`
+- `orchestration/deflect-next_config.yml`
 
 There are example yamls in the respective directories for all the above.
 

@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
+import traceback
 
 import yaml
 import os
@@ -16,7 +17,8 @@ import base64
 # todo: use configuration for the logger
 from pyaml_env import parse_config
 
-from orchestration.helpers import get_logger, PEMS, LIST_NAME_TO_DECISION
+from orchestration.helpers import get_logger, PEMS, LIST_NAME_TO_DECISION, \
+    get_config_yml_path
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -106,8 +108,10 @@ def main(config, all_sites, formatted_time):
     try:
         for each in PEMS:
             shutil.copy(f"input/banjax-next/{each}", output_dir)
-    except:
-        logger.error('Missing PEMS, this is just for debugging, REMOVE')
+    except FileNotFoundError:
+        traceback.print_exc()
+        logger.error('Missing Kafka pems, ignore if you don\'t need the '
+                     'connection to Baskerville / Kafka')
 
     if os.path.isfile(f"{output_dir}.tar"):
         os.remove(f"{output_dir}.tar")
@@ -119,7 +123,7 @@ def main(config, all_sites, formatted_time):
 if __name__ == "__main__":
     from orchestration.shared import get_all_sites
 
-    config = parse_config('input/current/config.yml')
+    config = parse_config(get_config_yml_path())
 
     all_sites, formatted_time = get_all_sites()
 
