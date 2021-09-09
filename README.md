@@ -81,8 +81,4 @@ the `bind-server` and `certbot` containers defined in this repo. Probably this
 could be the same server that hosts the `deflect-core` API and the
 orchestration scripts.
 
-##### Things to think about (XXX: lots more)
-* the `install_delta_config.py` starts a `certbot` container and copies new
-  Let's Encrypt certs to the edges. so in addition to this task being called on
-  dashboard changes, it should probably be run as a scheduled task as well, or
-  when a certificate is close to expiring.
+
