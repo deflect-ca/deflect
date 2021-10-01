@@ -19,6 +19,7 @@ The main configuration files are:
 - `orchestration/input/old-sites.yml`
 - `orchestration/system-sites.yml`
 - `orchestration/deflect-next_config.yml`
+- `local_certs_dir = f"input/certs/{formatted_time}/"` # XXX formatted_time comes from inside the `old-sites.yml` file
 
 There are example yamls in the respective directories for all the above.
 
@@ -32,12 +33,12 @@ python3 install_base.py
 ```
 
 Under `orchestration` there is a `main.py` file.
-This will run the three main steps for deflect-next and it should be ran on the controller:
+This will run the three main steps for deflect-next and it should be run on the controller:
 - [optional] cert_converter_main
 - install_delta_config
 - make_nginx_public_main
 
-In short, to run deflect-next:
+In short, the following will generate config (from old-sites.yml), get certs from LE, and build/start/reload any containers that need it.
 ```bash
 python3 main.py
 ```
