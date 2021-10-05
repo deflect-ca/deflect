@@ -38,7 +38,6 @@ if __name__ == "__main__":
             print("running `hostname` on %s" % name)
             subprocess.run(["ssh", "deflect@%s" % name, "docker stop $(docker ps -aq)"])
             subprocess.run(["ssh", "deflect@%s" % name, "docker ps"])
-            continue
             subprocess.run(["ssh", "deflect@%s" % name, "hostname"])
             docker_ps_proc = subprocess.run(["ssh", "deflect@%s" % name, "docker ps"])
             docker_ps_return_code = docker_ps_proc.returncode

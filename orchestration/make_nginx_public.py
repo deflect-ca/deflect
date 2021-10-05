@@ -52,14 +52,11 @@ def main(config):
 
             # todo: remove sites
             if dnet == "dnet1":
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "accesoalajusticia.org", 60)
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "no-such-website.com", 35)
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "radiozamaneh.com", 0)
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "deflect.ca", 0)
+                # curl_and_expect_return_code_or_exit(dnet, edge_name, "example.ca", 0)
+                pass
             elif dnet == "dnet2":
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "kaktus.media", 60)
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "no-such-website.com", 35)
-                curl_and_expect_return_code_or_exit(dnet, edge_name, "farmal.in", 0)
+                # curl_and_expect_return_code_or_exit(dnet, edge_name, "example.ca", 0)
+                pass
             else:
                 print("have not got sites for that dnet yet")
                 exit()
@@ -84,22 +81,17 @@ def do_edge(config, new_probability, dnet, edge_name):
     print(f"\ndnet: {dnet}, edge_name: {edge_name}, nginx private_ip: {private_ip}")
 
     if dnet == "dnet1":
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "accesoalajusticia.org", 60)
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "no-such-website.com", 35)
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "radiozamaneh.com", 0)
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "deflect.ca", 0)
+        # curl_and_expect_return_code_or_exit(dnet, edge_name, "example.ca", 0)
+        pass
     elif dnet == "dnet2":
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "kaktus.media", 60)
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "no-such-website.com", 35)
-        curl_and_expect_return_code_or_exit(dnet, edge_name, "farmal.in", 0)
+        # curl_and_expect_return_code_or_exit(dnet, edge_name, "example.ca", 0)
+        pass
     elif dnet == "controller":
         print("not doing any checks for controller")
         pass
     else:
         print("have not got sites for that dnet yet")
         exit()
-
-    # continue
 
     list_proc = subprocess.run(["ssh", f"{user}@{edge_name}", "sudo iptables -t nat -S"], stdout=subprocess.PIPE, check=True)
     # XXX will need to be more careful about the ordering when ATS isn't there
@@ -125,8 +117,6 @@ def main(config):
                 continue
             print(f"doing {dnet}")
             for edge_name in edge_names:
-                if edge_name != "lime20.prod.deflect.ca":
-                    continue
                 print(f"doing0 {dnet}: {edge_name}")
                 executor.submit(do_edge, config, new_probability, dnet, edge_name)
 
