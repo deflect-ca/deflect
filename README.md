@@ -1,7 +1,32 @@
 ## Table of Contents
-1. [What is Deflect](#what_is_deflect)
+1. [What is Deflect](#what-is-deflect)
     1. [Overview](#overview)
     2. [Technology](#technology)
+2. [Basic Component Overview](#basic-component-overview)
+3. [Request Life-Cycle](#request-life-cycle)
+4. [Components & Concepts](#components--concepts)
+    1. [Controller](#controller)
+    2. [Edge](#edge)
+    3. [Baskerville](#baskerville)
+    4. [Certbot](#certbot)
+    5. [DNETs](#dnets)
+    6. [Edge Rotation/Management](#edge-rotationmanagement)
+    7. [Content Caching](#content-caching)
+    8. [ELK Stack](#elk-stack)
+    9. [DNS Load Balancing](#dns-load-balancing)
+5. [DNS Options](#dns-options)
+    1. [DNS Provider](#dns-provider)
+    2. [Your Own DNS](#your-own-dns)
+6. [Hardware Considerations](#hardware-considerations)
+    1. [Controller](#controller-1)
+    2. [Edges](#edges)
+7. [Installation](#installation)
+    1. [Controller](#controller-2)
+    2. [Edge](#edge-1)
+8. [How to Run](#how-to-run)
+    1. [Configuration](#configuration)
+    2. [Orchestration](#orchestration)
+
  
 # What is Deflect
 
