@@ -1,53 +1,46 @@
 ## Table of Contents
 1. [What is Deflect](#what-is-deflect)
     1. [Overview](#overview)
-    2. [Technology](#technology)
-2. [Basic Component Overview](#basic-component-overview)
-3. [Request Life-Cycle](#request-life-cycle)
-4. [Components & Concepts](#components--concepts)
+    1. [Technology](#technology)
+1. [Basic Component Overview](#basic-component-overview)
+1. [Request Life-Cycle](#request-life-cycle)
+1. [Components & Concepts](#components--concepts)
     1. [Controller](#controller)
-    2. [Edge](#edge)
-    3. [Baskerville](#baskerville)
-    4. [Certbot](#certbot)
-    5. [DNETs](#dnets)
-    6. [Edge Rotation/Management](#edge-rotationmanagement)
-    7. [Content Caching](#content-caching)
-    8. [ELK Stack](#elk-stack)
-    9. [DNS Load Balancing](#dns-load-balancing)
-5. [DNS Options](#dns-options)
-    1. [DNS Provider](#dns-provider)
-    2. [Your Own DNS](#your-own-dns)
-6. [Hardware Considerations](#hardware-considerations)
+    1. [Edge](#edge)
+    1. [Baskerville](#baskerville)
+    1. [DNETs](#dnets)
+    1. [Edge Rotation/Management](#edge-rotationmanagement)
+    1. [Content Caching](#content-caching)
+    1. [ELK Stack](#elk-stack)
+    1. [DNS Load Balancing](#dns-load-balancing)
+1. [DNS](#dns)
+1. [Hardware Considerations](#hardware-considerations)
     1. [Controller](#controller-1)
-    2. [Edges](#edges)
-7. [Installation](#installation)
-    1. [Controller](#controller-2)
-    2. [Edge](#edge-1)
-8. [How to Run](#how-to-run)
+    1. [Edges](#edges)
+1. [Installation](#installation)
+1. [How to Run](#how-to-run)
     1. [Configuration](#configuration)
-    2. [Orchestration](#orchestration)
+    1. [Orchestration](#orchestration)
 
  
 # What is Deflect
 
 ## Overview
 
-Deflect has specialized in defending high-profile human rights and independent media websites since 2010, serving millions of readers readers the world over and confounding the aims of state-sponsored hacking teams trying to silence them. We release our time tested tooling for standing up an entire DDoS mitigation infrastructure, including machine lead bot mitigation, as FOSS - to ensure that these protections are afforded to everyone and DDoS attacks cannot prevent freedom of expression and association on the Internet. We also tackle the problem of censorship from the user&#39;s perspective - looking to circumvent website censorship in their locale - in another one of our [projects.](https://censorship.no/)
+Deflect has specialized in defending high-profile human rights and independent media websites since 2010, serving millions of readers readers the world over and confounding the aims of state-sponsored hacking teams trying to silence them. We release our time tested tooling for standing up an entire DDoS mitigation infrastructure, including our machine learning anomaly detection system, as FOSS - to ensure that these protections are afforded to everyone and DDoS attacks cannot prevent freedom of expression and association on the Internet. We also tackle the problem of censorship from the user's perspective - looking to circumvent website censorship in their locale - in another one of our [projects.](https://censorship.no/)
 
-This repository allows any individual or organization to setup their own DDoS mitigation service. It contains all necessary components to setup your network controller and edge servers - essentially acting as a reverse proxy to your (clients&#39;) origin web servers. Edge deployment software includes Banjax - regex-based bot detection, challenge and banning software. Optionally, you can also install an instance of [Baskerville](https://github.com/deflect-ca/baskerville) - an anomaly detection system using machine learning to detect malicious network behaivour. Baskerville can be deployed as a module on your edge servers, communicating with our clearinghouse for predictions, or in its entirety with a base model.
+This repository allows any individual or organization to set up their own DDoS mitigation service. It contains all necessary components to set up your network controller and edge servers - essentially acting as a reverse proxy to you or your clients' origin web servers. Nginx carries our edge server traffic, and our sidecar service Banjax helps it with access control decisions. Optionally, you can also install an instance of [Baskerville](https://github.com/deflect-ca/baskerville) - an anomaly detection system using machine learning to detect malicious network behaivour. Baskerville can be deployed as a module on your edge servers, communicating with our clearinghouse for predictions, or in its entirety with a base model.
 
 ## Technology
 
-- [Docker](https://www.docker.com/) (each service/component is run in its own docker container)
+- [Docker](https://www.docker.com/)
 - [Nginx](https://www.nginx.com/)
 - [Certbot](https://certbot.eff.org/)
-- [Bind-server](https://hub.docker.com/r/internetsystemsconsortium/bind9)
-- [Kafka-server](https://hub.docker.com/r/wurstmeister/kafka/)
-- [Elk Stack](https://www.elastic.co/what-is/elk-stack) (used for visualizing traffic logs generated by nginx)
-- [Filebeat](https://www.elastic.co/beats/filebeat)
-- [Metricbeat](https://www.elastic.co/beats/metricbeat)
-- [Banjax](https://github.com/deflect-ca/banjax)(built in Go)
-- [Baskerville](https://github.com/deflect-ca/baskerville)(optional, can be used together with Deflect to detect anomalous traffic and with Banjax to challenge and ban anomalous behavior)
+- [Bind9](https://hub.docker.com/r/internetsystemsconsortium/bind9)
+- [Kafka](https://hub.docker.com/r/wurstmeister/kafka/)
+- [ELK Stack](https://www.elastic.co/what-is/elk-stack) (for request logging and system metrics)
+- [Banjax](https://github.com/deflect-ca/banjax) (our sidecar for Nginx written in Go)
+- [Baskerville](https://github.com/deflect-ca/baskerville) (optional, can be used together with Deflect to detect anomalous traffic and with Banjax to challenge and ban anomalous behavior)
 
 # Basic Component Overview
 
@@ -57,9 +50,9 @@ The diagram below visualizes the basic configuration of different Deflect compon
 
 **Client Origins:** One or more web servers that host website platforms. They are protected from direct access to the outside world by having incoming connections proxied through one or more edges. All requests to your website(s) will come from these edges.
 
-# Request Life-Cycle
+# Request Lifecycle
 
-The diagram below highlights the request life-cycle inside a fully-deployed Deflect DDoS mitigation infrastructure.
+The diagram below highlights the request lifecycle inside a fully deployed Deflect DDoS mitigation infrastructure.
 
 ![](docs/request.png)
 
@@ -67,144 +60,108 @@ The diagram below highlights the request life-cycle inside a fully-deployed Defl
 
 ## Controller
 
-The controller is where the certbot and bind-server services reside, and should be deployed on its own server. The controller handles SSL certificate generation, as well as DNS configuration propagation.
+We put our central services on a host called the controller. The most important parts are Bind9 and Certbot, for pointing DNS names at healthy edges and getting HTTPS certificates from LetsEncrypt. For demonstration purposes here, we have Elasticsearch and Kibana on the controller, though you might want to do that differently. And we have some services which help with end-to-end testing: a dns-over-https proxy (for setting up a browser that points to a staging environment), a pebble service (a fake LetsEncrypt backend), and a test origin server with some helper endpoints. The orchestration scripts in this repo can live anywhere, but the controller might be a natural place (a sysadmin's laptop would be the other obvious place, since the scripts don't need to run continuously).
 
-Site configuration also resides on the controller, and is propagated to each edge whenever a change is made.
-
-The controller presents a necessary soft single point of failure. It is required for propagating DNS changes, and should it go offline - further DNS and network configuration changes cannot be deployed or propagated. For websites that do not change their DNS info often, this is not a major problem. However, if you were to deploy Deflect to a larger network of websites, you will have to consider extra server hardening and masking its location wherever possible. Edges do not publicly expose the location of the controller.
+That's a lot of important services, so you should take care to keep this server safe and online. We use a third-party DNS provider that sends zone transfers to our Bind server so that we can keep the IP hidden and reduce the attack surface.
 
 ## Edge
 
-The edge server acts as a reverse proxy to the origin web servers. You can setup one or more edges in your network. And you can organize them into one or more dnets (see below). Edges run two docker containers: nginx and Banjax. While nginx handles client requests and caching, Banjax handles several things:
+The edge server acts as a reverse proxy to the origin web servers. You can set up one or more edges in your network. And you can organize sets of edges into what we call Dnets (see below). Edges run two services: Nginx and [Banjax](https://github.com/deflect-ca/banjax). Nginx is well known, and it carries our traffic and caches content. Nginx talks to Banjax for access control help:
 
-- Hosts a couple of http endpoints that nginx talks to for access control decisions.
-- Tails the nginx logs and matches regex rules to make blocking/challenging decisions (like fail2ban)
-- Instructs nginx to respond with either a 403 &quot;you are blocked&quot;, a 401 &quot;solve this captcha or javascript proof-of-work challenge&quot;, or proxies the request to the origin server.
-- Generates the challenge pages and manages the related cookies.
-- creates and expires iptables ban rules.
-- Talks to Baskerville (our machine learning bot classification service, if installed &amp; configured) over a Kafka bus.
-
-For more detailed information on [Banjax](https://github.com/deflect-ca/banjax)
-
-Your edges also function as a caching server, as they can serve cached pages to users, and consequently speed-up your page load times. This functionality can be enabled with Nginx&#39;s content caching ability (see below).
+- Nginx asks Banjax whether requests it sees should be allowed, challenged (the familiar "checking your browser" page), or blocked. These decisions are cached so you don't pay the ~500us penalty every time.
+- Banjax tails the Nginx access logs and matches regex rules to make blocking/challenging decisions (like fail2ban).
+- Banjax creates and expires iptables ban rules.
+- Banjax optionally talks to Baskerville (our machine learning bot classification service) over a Kafka bus.
 
 ## Baskerville
 
-[Baskerville](https://github.com/deflect-ca/baskerville)is our ML-powered anomaly detection system that looks for bot-like behavior in otherwise normal traffic. Although it is not packaged by default with this project, you can install it on a separate server and configure your edges to connect to its kafka server. Once the connection is made, Banjax can receive ban or challenge messages from Baskerville for specific IPs, and Banjax will respond with feedback for IPs base don if they get banned, pass challenges, or fail challenges.
+[Baskerville](https://github.com/deflect-ca/baskerville) is our ML-powered anomaly detection system. It's not included in this repo, but it analyzes access logs from the Elasticsearch cluster and communicates with Banjax over a Kafka bus. Anomalous-seeming IPs can be served challenge pages by Banjax, and bots that fail many challenge pages can be banned at the HTTP or IP levels.
 
-Baskerville will require you to send it logs from each edge. This can be accomplished using filebeat in conjunction with logstash. Specific information can be found on the [Baskerville repo](https://github.com/deflect-ca/baskerville).
+## Dnets
 
-## Certbot
-
-The certbot services is installed on the controller, and generates LetsEncrypt certificates for your configured websites. You can also bypass this process by defining your own LE certs and disabling automatic cert generation in the sites.yml file.
-
-## Bind-server
-
-The BIND server handles DNS configuration propagation. You can configure it as you see fit using the included configuration file. What the BIND server does is propagate your website&#39;s DNS zones to the internet&#39;s DNS servers (optionally, your DNS provider) where your site&#39;s A records point to your edges. This allows users (and malicious bots) to visit your website through the edge, as opposed to directly connecting to your origin webserver.
-
-## DNETs
-
-The concept of a DNET is to allow you to organize edges into several groupings, which consequently allows you to organize multiple websites into different DNETs. This organization ability allows you to setup hot/cold edge pools where you can, for example, move actively targeted websites to a &quot;hot&quot; zone where edges in that pool can bear the brunt of an attack while edges in the &quot;cold&quot; zone continue to service other websites without issue.
-
-There are also other uses you can come up with for DNETs like segregating certain types of websites from others. For example, higher traffic websites can be assigned to a specific DNET with more edges, while smaller websites can be setup on DNETs with less edges. The different configurations and uses cases are up to you and your specific needs.
+In our experience protecting hundreds of websites with dozens of edges, we've found it useful to assign each website to a subset of the total edges. This has been useful for putting edges closer to a website's visitors, for allocating hardware resources fairly, and for quarantining the effects of internet censorship.
 
 ## Edge Rotation/Management
 
-Out of the box, this project does not offer the ability for you to rotate multiple edges in and out of service. When an edge is in service, it is actively ready to receive and respond to requests from visitors to your website. And its IP address is included in the zone transfers to DNS servers around the world. When an edge is out of service, it is still functional, but no longer actively serving traffic.
-
-For this rotation to occur, you need a mechanism to keep track of edge health, and make the necessary DNS zone file changes so that requests are routed correctly.
-
-If you require this kind of functionality, you could build your own management software or you could use [EdgeManage](https://github.com/deflect-ca/edgemanage). We use EdgeManage at Deflect to automatically keep track of our edges&#39; health and rotate them in and out of service when required.
-
-You can have up to 8 active edges at any given time (the limit is based on DNS response packet limitations). When an edge becomes unresponsive, Edgemanage will remove its entry from the zone files for all of your websites and replace it with another edge..
-
-For this to work correctly, you need more edges in your edge pool than you have in active rotation. So, if you have Edgemanage configured to have 4 active edges at any given time, you should have at least 5 edges total in your pool.
-
-## Content Caching
-
-As previously mentioned, you can setup your edges to also at as content caches for static files. Enabling content caching accomplishes two things:
-
-- Your website page loads times speed-up as nginx simply returns cached static files to users as opposed to having your webserver render any dynamically loaded content
-- Increases your resilience to DDoS attack, as your origin server is far less affected during attacks, since bots will be receiving cached pages from your edges as opposed to simply getting passed-through to your origin.
-
-To enable content caching, you need to follow the in-depth steps [found here](https://docs.nginx.com/nginx/admin-guide/content-cache/content-caching/).
+Not yet included in this repository is a service of ours called [edgemanage](https://github.com/deflect-ca/edgemanage). Edgemanage performs end-to-end health checks against edge servers and fills in Bind9 zone file templates with the healthiest ones. At the time of writing, it's still being extracted from our production systems and will soon be included here.
 
 ## ELK Stack
 
-You can optionally setup an ELK stack using the included docker images which allow you to monitor and visualize the logs being generated by your edges. Filebeat and Metricbeat are also included in this package to facilitate this functionality. If you already have an ELK stack, you can configure filebeat/metricbeat to push to that environment instead.
+Single-node Elasticsearch clusters are easy to set up, and multi-node ones have a reputation as being a bit tough. We include a single-node ES cluster, a Kibana frontend, and a dashboard of handy queries, histograms, and plots.
 
 ## DNS Load Balancing
 
-When running more than one edge in your DNET, you automatically benefit from the way browsers and operating systems determine which A record IP to use to fetch site content.
+DNS round robin is a decades-old technique for balancing load across many servers. A widely-implemented IETF proposal called [Happy Eyeballs](https://en.wikipedia.org/wiki/Happy_Eyeballs) makes it even better. Instead of picking an essentially random IP from the set returned by a DNS server, clients will begin connections to many IPs at once, keep the winner, and close the rest. CDNs often use GeoIP databases to get closer to users, but this could be even better.
 
-When you run more than one edge, your websites&#39; DNS A records will contain up to 8 edge IPs (based on the amount of edges and your configuration). When a domain goes through DNS resolution, different operating systems, browsers, and DNS resolvers use various techniques to pick which A record IP is returned for any given request.
+# DNS
 
-That means a browser for User A might use one particular edge IP, while the same browser for User B will use the IP of another edge IP. Some DNS resolvers/operating systems use a round-robin system, while others use a random-like function.
-
-Regardless of the method, investing in multiple edges will bring the added benefit of this load balancing technique to your network, allowing to to handle higher volumes of traffic without hindering performance drastically.
-
-# DNS Options
-
-## DNS Provider
-
-Deflect uses a DNS Provider for client websites, masking our controller&#39;s IP address by having clients nominate our nameservers at their registrar. This is an optional step, though, it is recommended to use a third-party DNS provider for the reasons mentioned above.
-
-When using a 3rd-party DNS provider, you need to configure the bind9 server to send NOTIFY requests to your DNS provider, and they will handle zone propagation and edge IP distribution from that point on.
-
-## Your Own DNS
-
-You can also use a hidden Primary/public Secondary DNS server setup to mask your controller&#39;s location. In this configuration, your controller acts as the hidden Primary, that sends NOTIFY requests to your public Secondary. This effectively makes your Secondary the AUTHORITATIVE name server for your website(s).
+If you want to protext example.com with Deflect, you just need to point the NS record at the Bind9 server included here (or if you're like us, you point it at at a third-party DNS host which in turn points at this one). That makes this Bind9 server authoritative, and our configuration generation here will serve A records pointing at the edge servers. At the time of writing, Edgemanage isn't included in this repo. We use it in production to direct traffic at our healthiest edge servers. It's currently being extracted from our production systems and will be integrated here shortly.
 
 # Hardware Considerations
 
 ## Controller
 
-Your controller server does not require a lot of resources, as it is mostly handling orchestration to your edges and handling cert generation/DNS propagation. We suggest a minimum of 4GB of memory, 4 CPU cores, 50GB of disk space. If you decide to run the Elk Stack and use Kibana to visualize logs, you will likely need to provision more CPU cores and memory, as well as disk space. This is highly dependent on how much traffic your website(s) generate on a daily basis.
-
-For ideas about sizing machines for the ELK stack, [please see this page](https://www.elastic.co/blog/benchmarking-and-sizing-your-elasticsearch-cluster-for-logs-and-metrics).
+By far the most resource-intensive service we run on the controller is Elasticsearch. There are two things you might want to benchmark here: the indexing speed (documents per second) and the querying speed (how fast your Kibana dashboard renders). It's going to depend a lot on your traffic, but a $40 VPS has sufficed for us in production.
 
 ## Edges
 
-Edges are for all intents and purposes your public-facing webservers. Requests get sent to these servers, and they proxy those requests to your origin server or return cached content (if enabled). Depending on your traffic volume, and number of edges, you may want to provision sufficient hardware to be able to handle the volume of requests you expect to receive.
-
-We suggest a minimum of 16GB of memory, 4 CPU cores, and 50GB of disk space. Remember that edges are technically throw-away machines. Under a DDoS attack, edges may become overwhelmed and can be rotated out (if implemented) or brought down altogether and have DNS changes point to another, fresh, edge server. Despite this throw-away concept, it is still a good idea to properly provision these servers so that they can serve regular traffic without issue, and can handle normal traffic spikes.
+Nginx is going to be the resource-hungry one here, and you're going to have to benchmark it yourself.
 
 # Installation
 
-## Controller
+You can run the orchestration scripts from anywhere. They can be on the controller, or on your laptop. The following commands install the Python dependencies and make the scripts ready to run.
 
 ```bash
 git clone https://github.com/equalitie/deflect-next-orchestration.git
 cd deflect-next-orchestration
-pip install -e .
+pip install -e .  # -e to make the scripts editable in place
 ```
--e is if you need it to be editable
 
-These steps effectively install your controller.From here, you run orchestration scripts (manually or triggered from events or via cron) to accomplish tasks such as:
+Next, you need to make sure:
+* your controller and edge IPs are in the appropriate config files.
+* you have SSH access to the controller and edges from the user you're running the scripts as.
 
-- Deploy edges
-- Update website DNS information
-- Change various configuration values
-
-## Edge
-
-Before deploying to edges (or running Deflect in general), you need to make sure you have configured Deflect correct (link to following section).
-
-When provisioning a new edge, you first need to run the following command from the controller:
+The next command SSHes into your controller and edges and basically does `apt install docker` (that's the only requirement for the host). You might have to tweak it a bit depending on the distros on the remote hosts.
 
 ```bash
-python3 orchestration/install\_base.py
+python3 orchestration/install_base.py
 ```
 
-This will install docker on each edge defined in orchestration/input/config.yaml under dnets\_to\_edges
+Next we need to:
+* generate the config files for Nginx, Bind, and Banjax
+* build the necessary Docker images
+* start all the Docker containers
+* run certbot if necessary
+* copy a bunch of config files and certs around and tell the main services to reload
 
-To update configuration for provisioned edges, run the following command from the controller:
+That's a lot of moving parts, but if everything is in place, the following command does it all:
 
 ```bash
 python3 orchestration/main.py
 ```
 
-# How to Run
+## Where you'll want to start looking when things don't work
+
+A good starting point would be querying the Bind9 server for your website. Run `dig @127.0.0.1 example.com` on the controller. Maybe run it from a different vantage point.
+
+You can force curl to connect through a specific edge like this:
+```
+curl --resolve example.com:443:127.0.0.1 https://example.com
+```
+
+A common problem is Nginx not being able to find certificates that you told it to look for. On any edge server, run
+```
+docker logs nginx-error-log-tailer-<timestamp>
+```
+and you'll see Nginx's error.log.
+
+If you want to look at the output of the configuration generation code, you can look under `orchestration/output/<timestamp>/`.
+
+You can get a shell into a Docker container with:
+```
+docker exec -it <container name> /bin/bash
+```
+
 
 ## Configuration
 
@@ -215,23 +172,6 @@ The main configuration files are:
 - orchestration/system-sites.yml
 - orchestration/deflect-next\_config.yml
 - local\_certs\_dir = f&quot;input/certs/{formatted\_time}/&quot; # XXX formatted\_time comes from inside the old-sites.yml file
-
-There are example yamls in the respective directories for all the above.
-Before running Deflect, you need to have the correct values in the above configuration files.
-
-## Orchestration
-
-Under orchestration there is a main.py file. This will run the three main steps for Deflect and it should be run on the controller:
-
-- [optional] cert\_converter\_main
-- install\_delta\_config
-- make\_nginx\_public\_main
-
-In short, the following will generate config (from old-sites.yml), get certs from LetsEncrypt, and build/start/reload any containers that need it.
-
-```bash
-python3 orchestration/main.py
-```
 
 ---
 
