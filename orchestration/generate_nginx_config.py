@@ -15,7 +15,7 @@ from pyaml_env import parse_config
 # TODO: use config
 from orchestration.helpers import get_config_yml_path
 
-test_domain = 'test.me.uk'
+test_domain = 'dflct.xyz'
 
 
 def redirect_to_https_server_block(site: dict):
@@ -61,11 +61,11 @@ def proxy_pass_to_origin_server_block(
         else:
             server.add(nginx.Key(
                 'ssl_certificate',
-                f"/etc/ssl/sites/{site['public_domain']}.le.fullchain.crt"
+                f"/etc/ssl/sites/{site['public_domain']}/fullchain1.pem"
             ))
             server.add(nginx.Key(
                 'ssl_certificate_key',
-                f"/etc/ssl/sites/{site['public_domain']}.le.key"
+                f"/etc/ssl/sites/{site['public_domain']}/privkey1.pem"
             ))
         # XXX config
         server.add(nginx.Key('ssl_ciphers', global_config["ssl_ciphers"]))
@@ -484,10 +484,10 @@ def main(all_sites, config, formatted_time):
             # which results in a mismatch between the Host header and the SNI field.
             # usually, we use the --resolve thing, or equivalent, which does not result in a mismatch.
             # so i have to do a wildcard server_name here to account for this.
-        with open(f"{output_dir}/sites.d/prod.deflect.ca.conf", "w") as f:
+        with open(f"{output_dir}/sites.d/prod.dflct.xyz.conf", "w") as f:
             f.write(template.render(
-                server_name="prod.deflect.ca *.prod.deflect.ca",
-                cert_name="prod.deflect.ca",
+                server_name="prod.dflct.xyz *.prod.dflct.xyz",
+                cert_name="prod.dflct.xyz",
                 ssl_ciphers=config['ssl_ciphers'],
                 proxy_pass=f"http://85.10.195.146:80", # XXX
             ))

@@ -146,8 +146,8 @@ def start_new_nginx_container(client, image_id, timestamp):
         #     '443/tcp': ('0.0.0.0', None), # XXX making these private ports public for now
         # },
         ports={
-            '80/tcp': ('0.0.0.0', 10080),
-            '443/tcp': ('0.0.0.0', 10443),
+            '80/tcp': ('0.0.0.0', 80),
+            '443/tcp': ('0.0.0.0', 443),
         },
         labels={
             'name': "nginx",
@@ -393,7 +393,7 @@ def start_new_metricbeat_container(client, image_id, timestamp, config):
     )
 
     if len(nginx_containers) != 1:
-        print(f"start_new_banjax_next_container() expected to find a single running nginx container (whose namespaces we can join)")
+        print(f"start_new_metricbeat_container() expected to find a single running nginx container (whose namespaces we can join)")
         raise Exception
 
     nginx_container = nginx_containers[0]
@@ -553,6 +553,9 @@ def start_new_container(client, image_name, new_image, image_build_timestamp, co
     elif image_name == "filebeat":
         new_container = start_new_filebeat_container(
             client, new_image.id, image_build_timestamp, config)
+    elif image_name == "legacy-filebeat":
+        new_container = start_new_legacy_filebeat_container(
+            client, new_image.id, image_build_timestamp, config)
     elif image_name == "elasticsearch":
         new_container = start_new_elasticsearch_container(
             client, new_image.id, image_build_timestamp)
@@ -563,7 +566,7 @@ def start_new_container(client, image_name, new_image, image_build_timestamp, co
         new_container = start_new_metricbeat_container(
             client, new_image.id, image_build_timestamp, config)
     else:
-        msg = f"!!! bug !!! need start_new_ {image_name} function call"
+        msg = f"!!! bug !!! need start_new_{image_name} function call"
         logger.error(msg)
         raise Exception(msg)
     return new_container

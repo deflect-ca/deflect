@@ -4,6 +4,7 @@
 *.swm
 *.swl
 orchestration/output/*
+orchestration/prev-run/*
 orchestration/__pycache__
 !orchestration/output/.keep
 containers/edge/auth-server/auth-server
