@@ -21,10 +21,6 @@ import tarfile
 import io
 import subprocess
 
-from orchestration import generate_bind_config, \
-    generate_nginx_config, generate_banjax_next_config, \
-    decrypt_and_verify_cert_bundles, cert_converter
-
 # XXX the zero-downtime upgrade version i want to work on more later
 # from start_or_upgrade_nginx_image import install_nginx_config
 
@@ -82,8 +78,11 @@ def run_certbot_and_get_certs(client, config, all_sites, config_timestamp, image
     (exit_code, output) = certbot_container.exec_run(
         "mkdir -p /etc/letsencrypt/archive")
 
-    with open(f"./input/certs/{config_timestamp}.tar", "rb") as f:
-        certbot_container.put_archive("/etc/letsencrypt/", f.read())
+    try:
+        with open(f"./input/certs/{config_timestamp}.tar", "rb") as f:
+            certbot_container.put_archive("/etc/letsencrypt/", f.read())
+    except FileNotFoundError:
+        logger.debug("didn't find previous certs... continuing")
 
     (exit_code, output) = certbot_container.exec_run(
         f"certbot register {config['production_certbot_options']} --agree-tos --non-interactive"
@@ -100,9 +99,9 @@ def run_certbot_and_get_certs(client, config, all_sites, config_timestamp, image
         "ls /etc/letsencrypt/archive")
     sites_with_certs = output.decode().splitlines()
 
-    # client_and_system_sites = {**all_sites['client'], **all_sites['system']}
+    client_and_system_sites = {**all_sites['client'], **all_sites['system']}
     # XXX always get a real non-staging cert for sites in the system list?
-    client_and_system_sites = {**all_sites['system']}
+    # client_and_system_sites = {**all_sites['system']}
 
     for domain, site in client_and_system_sites.items():
         # the autodeflect-formatted ones...
@@ -174,7 +173,7 @@ def install_banjax_next_config(client, config, dnet, all_sites, config_timestamp
 
 # XXX duplication from start_or_upgrade_nginx_image.py
 def install_nginx_config(client, config, dnet, all_sites, config_timestamp, image_build_timestamp):
-    # nginx_container = kill_build_and_start_container(client, "nginx", image_build_timestamp)
+    nginx_container = kill_build_and_start_container(client, "nginx", image_build_timestamp, config)
     nginx_container = find_existing_or_start_new_container(
         client, "nginx", image_build_timestamp, config)
     logger.debug("have nginx container")
@@ -336,22 +335,28 @@ def install_metricbeat(client, config, dnet, all_sites, config_timestamp, image_
 
 def install_all_edge_components(edge_name, config, dnet, all_sites, config_timestamp, image_build_timestamp):
     logger.debug(f"$$$ starting install_all_edge_components for {edge_name}")
-    edge_client = docker.DockerClient(base_url=f"ssh://deflect@{edge_name}")
+    edge_ip = config['edge_names_to_ips'][edge_name]
+    edge_client = docker.DockerClient(base_url=f"ssh://root@{edge_ip}")
 
     logger.debug(f'Installing nginx config')
     install_nginx_config(      edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug(f'Installing banjax next config')
     install_banjax_next_config(edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug(f'Installing filebeat')
     install_filebeat(          edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug(f'Installing legacy filebeat')
     install_legacy_filebeat(   edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug(f'Installing metricbeat')
     install_metricbeat(        edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug(f"$$$ finished install_all_edge_components for {edge_name}")
 
 
-def main(config, all_sites, config_timestamp, image_build_timestamp, orchestration_config=None):
+def main(config, all_sites, config_timestamp, image_build_timestamp, temp_config=None):
     # XXX should be called something else now that i'm not building new images every time
     image_build_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -359,30 +364,32 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, orchestrati
     # TODO: the base_url needs to be in a config. This is not flexible for debugging
     # TODO: or testing/ staging env
     controller_client = docker.DockerClient(base_url=f"ssh://root@{config['controller_ip']}")
+
     logger.debug('Installing bind config...')
     install_bind_config(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug('Installing DOH proxy config...')
     install_doh_proxy_config(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug('Running certbot and getting certs...')
     run_certbot_and_get_certs(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
+
     logger.debug('Installing test origin config...')
     install_test_origin_config(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
 
     # TODO: fixme use a config for this
-    elastic = orchestration_config.get('elastic') if orchestration_config else None
-    if elastic:
-        config['elastic_password'] = elastic['password']
-    else:
-        raise ValueError('Could not find elastic configuration')
+    # XXX the password gets set the first time elasticsearch is built. i copy/paste the
+    # password out of my terminal...
+    elastic_password = temp_config.get('elastic_password') if temp_config else None
+    config['elastic_password'] = elastic_password
 
+    # XXX FIXME there's a weird/non-obvious pattern where this has to be commented out after the first run...
     # install_elasticsearch_kibana(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
-    # install_filebeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
+    install_filebeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
+    # legacy logstash was for testing, i think we can get rid of it
     # install_legacy_logstash(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
-    # install_metricbeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
-    # install_nginx_config(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
-
-    # TODO: fixme use a config for this - is there a reason for duplication?
-    config['elastic_password'] = elastic['password']
+    install_nginx_config(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
+    install_metricbeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
 
     for dnet, edge_names in config['dnets_to_edges'].items():
         if dnet == "controller":
@@ -401,47 +408,10 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, orchestrati
     logger.info(f"%%%% finished all edges %%%")
 
 
-def install_delta_config(config=None, orchestration_config=None):
-    # TODO: moved these for convenience
-    # TODO: configurable paths - would be more easy for deployment
-    previous_formatted_time = ""
-    while True:
-        logger.info('Getting all sites from config...')
-        all_sites, formatted_time = shared.get_all_sites()
-        if formatted_time == previous_formatted_time:
-            logger.info("no changes detected, sleeping 30 seconds and checking again...")
-            time.sleep(30)
-            continue
-        previous_formatted_time = formatted_time
-
-        # XXX maybe reconsider this all_sites = {'client': ..., 'system': ... } pattern.
-        # generate_bind_config() treats both roles identically (flattens the dict).
-        # generate_nginx_config() has its own treatment of kibana and doh (doesn't use the system sites list).
-        # the rest only care about client sites.
-        logger.info('>>> Running decrypt_and_verify_cert_bundlesg...')
-        decrypt_and_verify_cert_bundles.main(all_sites, formatted_time)
-        logger.info('>>> Cert Converter...')
-        cert_converter.main(formatted_time)
-        logger.info('>>> Generating bind config...')
-        generate_bind_config.main(config, all_sites, formatted_time)
-        logger.info('>>> Generating nginx config...')
-        generate_nginx_config.main(all_sites, config, formatted_time)
-        logger.info('>>> Generating banjax-next config...')
-        generate_banjax_next_config.main(config, all_sites, formatted_time)
-
-        main(
-            config,
-            all_sites,
-            formatted_time,
-            formatted_time,
-            orchestration_config=orchestration_config
-        )
-
-
 if __name__ == "__main__":
-    orchestration_config = parse_config('input/deflect-next_config.yaml')
+    temp_config = parse_config('input/temp/config.yml')
     config = parse_config(get_config_yml_path())
     install_delta_config(
         config=config,
-        orchestration_config=orchestration_config
+        temp_config=temp_config
     )
