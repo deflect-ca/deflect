@@ -1,9 +1,9 @@
 ## Table of Contents
-1. [What is Deflect](#what-is-deflect)
+1. [What is Deflect?](#what-is-deflect)
     1. [Overview](#overview)
     1. [Technology](#technology)
 1. [Basic Component Overview](#basic-component-overview)
-1. [Request Life-Cycle](#request-life-cycle)
+1. [Request Lifecycle](#request-life-cycle)
 1. [Components & Concepts](#components--concepts)
     1. [Controller](#controller)
     1. [Edge](#edge)
@@ -23,7 +23,7 @@
     1. [Orchestration](#orchestration)
 
  
-# What is Deflect
+# What is Deflect?
 
 ## Overview
 
