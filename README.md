@@ -112,8 +112,8 @@ Nginx is going to be the resource-hungry one here, and you're going to have to b
 You can run the orchestration scripts from anywhere. They can be on the controller, or on your laptop. The following commands install the Python dependencies and make the scripts ready to run.
 
 ```bash
-git clone https://github.com/equalitie/deflect-next-orchestration.git
-cd deflect-next-orchestration
+git clone https://github.com/deflect-ca/deflect.git
+cd deflect
 pip install -e .  # -e to make the scripts editable in place
 ```
 
