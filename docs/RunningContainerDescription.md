@@ -17,7 +17,8 @@ aea296888dde        debian:buster-slim   "tail --retry --foll…"   3 weeks ago 
 dc01aeca793a        ecc6661e980a         "/bin/sh -c 'doh-htt…"   3 weeks ago         Up 3 weeks                                                                                                   doh-proxy
 ```
 * origin-server
-    * this is just some little Go http server with some endpoints that are useful for doing e2e tests.
+    * this is just some little Go http server with some endpoints that facilitate e2e
+      tests.
 
 * certbot
     * this shares a network namespace with bind-server.
@@ -36,6 +37,11 @@ dc01aeca793a        ecc6661e980a         "/bin/sh -c 'doh-htt…"   3 weeks ago 
     * one notable thing is that it's configured to watch `/var/lib/docker/containers/`
       on the host, so it picks up the output of all running containers without us having
       to list them.
+    * the docker plugin and json decoder are useful in that we don't have to specify a
+      schema up front, *but* this can get annoying later when ES/Kibana don't auto-map
+      your documents as you expected. i'm not really sure where this should be fixed:
+      i think ES should enforce a schema (rather than trust all of its clients), but
+      filebeat has to know it as well.
 
 * kibana
     * i've been treating my ES and Kibana as disposable, but you'll definitely want to
@@ -45,8 +51,9 @@ dc01aeca793a        ecc6661e980a         "/bin/sh -c 'doh-htt…"   3 weeks ago 
       where i'm doing the import bit after we start a new Kibana instance.
 
 * elasticsearch
-    * i've running my own Elasticsearch because:
-        * we don't know how to not break the existing one.
+    * i'm running my own Elasticsearch because:
+        * we don't know how to not break the existing one (a bad auto-mapping breaks
+          subsequent indexing).
         * i want to send lots of debug logs and metrics to it without impacting opsdash.
         * it's very easy to run a one node cluster on a $30 VPS (and it kept up when my
           Nginxes were handling 90% of production traffic).
@@ -60,14 +67,20 @@ dc01aeca793a        ecc6661e980a         "/bin/sh -c 'doh-htt…"   3 weeks ago 
       that need these credentials. my very expedient way of persisting that password for
       the next run has been to copy/paste it out of the output on the screen and into the
       python source code. this is definitely one of the places i've punted on coming up
-      with a better solution.
+      with a better solution (probably i have to add a folder like `persisted-between-runs/`
+      to my `input/` and `output/` folders).
 
 * bind-server
     * i hate bind9. if you look at the config in `container/controller/bind-server/`,
       you'll see some of what i had to do to get useful logs.
+    * from what i've read, i understand that much of bind9's complexity comes from it being
+      both a recursive resolver and an authoritative nameserver. we only need the latter
+      part. we should probably investigate using something simpler *or* (since we're
+      using a third party dns host anyway) a third party host that we post records to over
+      http.
 
 * pebble
-    * if certbot is an acme/LetsEncrypt frontent, this is the backend. it's only for
+    * certbot is an acme/LetsEncrypt frontend, this is the backend. it's only for
       generating fake certs in testing/staging environments.
     * IIRC one inconvenient thing was that (as an anti-footgun measure), when you deploy
       a new instance of this, you can't give it an existing private key to use -- it always
