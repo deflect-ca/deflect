@@ -174,12 +174,12 @@ def main(config, all_sites, timestamp):
                 rdtype=dns.rdatatype.A,
                 create=True
             )
-            for edge in config['edges']:
+            # XXX gross
+            for edge in [config['controller']] + config['edges']:
                 if edge['dnet'] == site['dnet']:
-                    logger.debug(f'Edge name: {edge_name}')
-                    edge_ip = config["edge_names_to_ips"][edge_name]
+                    logger.debug(f"Edge name: {edge['hostname']}")
                     rd = dns.rdtypes.IN.A.A(
-                        dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
+                        dns.rdataclass.IN, dns.rdatatype.A, edge['ip'])
                     a_rdataset.add(rd, 300)
 
             # XXX TODO: improve
@@ -191,11 +191,11 @@ def main(config, all_sites, timestamp):
                     rdtype=dns.rdatatype.A,
                     create=True
                 )
-                for edge in config['edges']:
+                # XXX gross
+                for edge in [config['controller']] + config['edges']:
                     if edge['dnet'] == site['dnet']:
-                        edge_ip = config["edge_names_to_ips"][edge_name]
                         rd = dns.rdtypes.IN.A.A(
-                            dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
+                            dns.rdataclass.IN, dns.rdatatype.A, edge['ip'])
                         a_rdataset.add(rd, 300)
 
                 logger.debug(f'find_rdataset: _acme-challenge.{sub_zone} NS')

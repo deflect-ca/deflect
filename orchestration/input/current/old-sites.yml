@@ -61,7 +61,7 @@ remap:
     http_type: https_redirect
     https: true
     letsencrypt: true
-    network: dnet1
+    network: dnet_a
     ns_monitoring_disabled: false
     ns_on_deflect: true
     origin: 2.3.4.6
