@@ -58,10 +58,14 @@ if __name__ == '__main__':
             with open("input/named.example.conf.local", "r") as src:
                 dest.write(src.read().replace("test.me.uk", test_root))
 
+    # XXX serial numbers aren't updating until i get edgemanage working
     if not os.path.isfile(f"input/{test_root}.zone"):
         with open(f"input/{test_root}.zone", "w") as dest:
             with open("input/test.me.uk.zone", "r") as src:
-                dest.write(src.read().replace("test.me.uk", test_root))
+                z = src.read().replace("test.me.uk", test_root)
+                z = z.replace("0.0.0.0", config['controller']['ip'])
+                dest.write(z)
+                dest.write("\n")
     ### end temporary kludge ###
 
     all_sites, formatted_time = get_all_sites()
