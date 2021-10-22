@@ -65,28 +65,29 @@ kibana.test.me.uk:
   #   server_names:
   #   - banjax-next.test.me.uk
   #   uploaded_cert_bundle_name: null
-prod.deflect.ca:
-  allow_http_delete_push: false
-  cache_exceptions: []
-  challenge_everyone_captcha: false
-  challenge_everyone_sha_inv: false
-  default_cache_time_minutes: 10
-  disable_logging: false
-  dnet: controller
-  dns_records: {}
-  http_request_does: http_proxy_pass
-  https_request_does: http_proxy_pass
-  letsencrypt: false
-  origin_http_port: 80
-  origin_https_port: 443
-  origin_ip: 1.2.3.4
-  password_protected_paths: []
-  password_protected_paths_password: password
-  public_domain: prod.deflect.ca
-  rate_limited_regexes: []
-  server_names:
-  - prod.deflect.ca
-  uploaded_cert_bundle_name: null
+# XXX awful non-standard fake site for legacy monitoring
+  # prod.deflect.ca:
+  #   allow_http_delete_push: false
+  #   cache_exceptions: []
+  #   challenge_everyone_captcha: false
+  #   challenge_everyone_sha_inv: false
+  #   default_cache_time_minutes: 10
+  #   disable_logging: false
+  #   dnet: controller
+  #   dns_records: {}
+  #   http_request_does: http_proxy_pass
+  #   https_request_does: http_proxy_pass
+  #   letsencrypt: false
+  #   origin_http_port: 80
+  #   origin_https_port: 443
+  #   origin_ip: 1.2.3.4
+  #   password_protected_paths: []
+  #   password_protected_paths_password: password
+  #   public_domain: prod.deflect.ca
+  #   rate_limited_regexes: []
+  #   server_names:
+  #   - prod.deflect.ca
+  #   uploaded_cert_bundle_name: null
 test-origin.test.me.uk:
   allow_http_delete_push: false
   cache_exceptions: []

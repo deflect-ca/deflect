@@ -12,9 +12,9 @@ import yaml
 from pyaml_env import parse_config
 
 import orchestration.shared as shared
-from orchestration.helpers import get_logger, get_config_yml_path
+from orchestration.helpers import get_logger, get_config_yml_path, get_persisted_config_yml_path
 from orchestration.shared import (
-    find_existing_or_start_new_container, kill_containers_with_label)
+    find_existing_or_start_new_container, kill_containers_with_label, find_running_container)
 from datetime import datetime
 import time
 import tarfile
@@ -153,7 +153,7 @@ def run_certbot_and_get_certs(client, config, all_sites, config_timestamp, image
     logger.debug("got certs from certbot")
 
 
-def install_banjax_next_config(client, config, dnet, all_sites, config_timestamp, image_build_timestamp):
+def install_banjax_next_config(client, config, host, all_sites, config_timestamp, image_build_timestamp):
     # XXX i think my config reload code needs to be more thorough, so for now i'm just restarting every time
     banjax_next_container = kill_build_and_start_container(client, "banjax-next", image_build_timestamp, config)
     # XXX building + starting this container involves downloading go dependencies, so it might
@@ -172,7 +172,7 @@ def install_banjax_next_config(client, config, dnet, all_sites, config_timestamp
 
 
 # XXX duplication from start_or_upgrade_nginx_image.py
-def install_nginx_config(client, config, dnet, all_sites, config_timestamp, image_build_timestamp):
+def install_nginx_config(client, config, host, all_sites, config_timestamp, image_build_timestamp):
     nginx_container = kill_build_and_start_container(client, "nginx", image_build_timestamp, config)
     nginx_container = find_existing_or_start_new_container(
         client, "nginx", image_build_timestamp, config)
@@ -181,7 +181,7 @@ def install_nginx_config(client, config, dnet, all_sites, config_timestamp, imag
     nginx_container.exec_run("rm -rf /etc/nginx")
     nginx_container.exec_run("mkdir -p /etc/nginx")
 
-    with open(f"output/{config_timestamp}/etc-nginx-{dnet}.tar", "rb") as f:
+    with open(f"output/{config_timestamp}/etc-nginx-{host['dnet']}.tar", "rb") as f:
         nginx_container.put_archive("/etc/nginx", f.read())
 
     # XXX should i do this? stale certs?
@@ -266,9 +266,16 @@ def get_elastic_password_from_command_output(output):
         raise Exception("!!! did not find elastic password")
 
 
-def install_elasticsearch_kibana(client, config, all_sites, config_timestamp, image_build_timestamp):
+def install_elasticsearch(client, config, all_sites, config_timestamp, image_build_timestamp):
     kill_containers_with_label(client, "elasticsearch")
-    kill_containers_with_label(client, "kibana")
+
+    try:
+        find_running_container(client, "elasticsearch")
+    except RuntimeError:
+        logger.debug("no running elasticsearch container, starting a new one")
+    else:
+        logger.debug("leaving the existing elasticsearch container alone")
+        return
 
     elasticsearch_container = find_existing_or_start_new_container(
         client, "elasticsearch", image_build_timestamp, config)
@@ -290,7 +297,20 @@ def install_elasticsearch_kibana(client, config, all_sites, config_timestamp, im
             continue
     else:
         raise Exception("!!! did not find elastic password 5 times !!!")
-    config['elastic_password'] = elastic_password  # XXX is this the best way to save it for later? (kibana, filebeat)
+
+    # XXX this is weird
+    p_conf = {}
+    with open(get_persisted_config_yml_path(), "r") as f:
+        p_conf = yaml.load(f)
+        if p_conf is None:
+            p_conf = {}
+
+    p_conf['elastic_password'] = elastic_password
+    with open(get_persisted_config_yml_path(), "w") as f:
+        yaml.dump(p_conf, f)
+
+def install_kibana(client, config, all_sites, config_timestamp, image_build_timestamp):
+    kill_containers_with_label(client, "kibana")
 
     kibana_container = find_existing_or_start_new_container(
         client, "kibana", image_build_timestamp, config)
@@ -300,15 +320,15 @@ def install_elasticsearch_kibana(client, config, all_sites, config_timestamp, im
     # import_kibana_saved_objects(config)
 
 
-def install_filebeat(client, config, dnet, all_sites, config_timestamp, image_build_timestamp):
-    # kill_containers_with_label(client, "filebeat")
+def install_filebeat(client, config, host, all_sites, config_timestamp, image_build_timestamp):
+    kill_containers_with_label(client, "filebeat")
 
     filebeat_container = find_existing_or_start_new_container(
         client, "filebeat", image_build_timestamp, config)
     logger.debug("have filebeat container")
 
 
-def install_legacy_filebeat(client, config, dnet, all_sites, config_timestamp, image_build_timestamp):
+def install_legacy_filebeat(client, config, host, all_sites, config_timestamp, image_build_timestamp):
     # kill_containers_with_label(client, "legacy-filebeat")
 
     legacy_filebeat_container = find_existing_or_start_new_container(
@@ -324,36 +344,36 @@ def install_legacy_logstash(client, config, all_sites, config_timestamp, image_b
     logger.debug("have legacy-logstash container")
 
 
-
-def install_metricbeat(client, config, dnet, all_sites, config_timestamp, image_build_timestamp):
-    # kill_containers_with_label(client, "metricbeat")
+def install_metricbeat(client, config, host, all_sites, config_timestamp, image_build_timestamp):
+    kill_containers_with_label(client, "metricbeat")
 
     metricbeat_container = find_existing_or_start_new_container(
         client, "metricbeat", image_build_timestamp, config)
     print("have metricbeat container")
 
 
-def install_all_edge_components(edge_name, config, dnet, all_sites, config_timestamp, image_build_timestamp):
-    logger.debug(f"$$$ starting install_all_edge_components for {edge_name}")
-    edge_ip = config['edge_names_to_ips'][edge_name]
-    edge_client = docker.DockerClient(base_url=f"ssh://root@{edge_ip}")
+def install_all_edge_components(edge, config, all_sites, config_timestamp, image_build_timestamp):
+    logger.debug(f"$$$ starting install_all_edge_components for {edge['hostname']}")
+    # XXX very annoyingly you can't specify a specific ssh key here... has to be in a (the?) default
+    # location OR the socket / ssh-agent thing.
+    edge_client = docker.DockerClient(base_url=f"ssh://root@{edge['ip']}")
 
     logger.debug(f'Installing nginx config')
-    install_nginx_config(      edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    install_nginx_config(      edge_client, config, edge, all_sites, config_timestamp, image_build_timestamp)
 
     logger.debug(f'Installing banjax next config')
-    install_banjax_next_config(edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    install_banjax_next_config(edge_client, config, edge, all_sites, config_timestamp, image_build_timestamp)
 
     logger.debug(f'Installing filebeat')
-    install_filebeat(          edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    install_filebeat(          edge_client, config, edge, all_sites, config_timestamp, image_build_timestamp)
 
     logger.debug(f'Installing legacy filebeat')
-    install_legacy_filebeat(   edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    install_legacy_filebeat(   edge_client, config, edge, all_sites, config_timestamp, image_build_timestamp)
 
     logger.debug(f'Installing metricbeat')
-    install_metricbeat(        edge_client, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    install_metricbeat(        edge_client, config, edge, all_sites, config_timestamp, image_build_timestamp)
 
-    logger.debug(f"$$$ finished install_all_edge_components for {edge_name}")
+    logger.debug(f"$$$ finished install_all_edge_components for {edge}")
 
 
 def main(config, all_sites, config_timestamp, image_build_timestamp, temp_config=None):
@@ -377,27 +397,22 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, temp_config
     logger.debug('Installing test origin config...')
     install_test_origin_config(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
 
-    # TODO: fixme use a config for this
-    # XXX the password gets set the first time elasticsearch is built. i copy/paste the
-    # password out of my terminal...
-    elastic_password = temp_config.get('elastic_password') if temp_config else None
-    config['elastic_password'] = elastic_password
 
-    # XXX FIXME there's a weird/non-obvious pattern where this has to be commented out after the first run...
-    # install_elasticsearch_kibana(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
-    install_filebeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
+    install_elasticsearch(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
+    install_kibana(       controller_client, config, all_sites, config_timestamp, image_build_timestamp)
+    install_filebeat(controller_client, config, config['controller'], all_sites, config_timestamp, image_build_timestamp)
     # legacy logstash was for testing, i think we can get rid of it
     # install_legacy_logstash(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
-    install_nginx_config(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
-    install_metricbeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
+    install_nginx_config(controller_client, config, config['controller'], all_sites, config_timestamp, image_build_timestamp)
+    install_metricbeat(controller_client, config, config['controller'], all_sites, config_timestamp, image_build_timestamp)
 
     for edge in config['edges']:
-        install_all_edge_components(edge['hostname'], config, edge['dnet'], all_sites, config_timestamp, image_build_timestamp)
+        install_all_edge_components(edge, config, all_sites, config_timestamp, image_build_timestamp)
 
     # XXX check future results for exceptions
     # with ThreadPoolExecutor(max_workers=16) as executor:
     #     for edge in config['edges']:
-    #         executor.submit(install_all_edge_components, edge['hostname'], config, edge['dnet'], all_sites, config_timestamp, image_build_timestamp)
+    #         executor.submit(install_all_edge_components, edge, config, all_sites, config_timestamp, image_build_timestamp)
 
     logger.info(f"%%%% finished all edges %%%")
 

@@ -484,15 +484,16 @@ def main(all_sites, config, formatted_time):
             # which results in a mismatch between the Host header and the SNI field.
             # usually, we use the --resolve thing, or equivalent, which does not result in a mismatch.
             # so i have to do a wildcard server_name here to account for this.
-        with open(f"{output_dir}/sites.d/prod.dflct.xyz.conf", "w") as f:
-            f.write(template.render(
-                server_name="prod.dflct.xyz *.prod.dflct.xyz",
-                cert_name="prod.dflct.xyz",
-                ssl_ciphers=config['ssl_ciphers'],
-                proxy_pass=f"http://85.10.195.146:80", # XXX
-            ))
+        # XXX don't even need this awful legacy thing for the public release
+        # with open(f"{output_dir}/sites.d/prod.dflct.xyz.conf", "w") as f:
+        #     f.write(template.render(
+        #         server_name="prod.dflct.xyz *.prod.dflct.xyz",
+        #         cert_name="prod.dflct.xyz",
+        #         ssl_ciphers=config['ssl_ciphers'],
+        #         proxy_pass=f"http://85.10.195.146:80", # XXX
+        #     ))
 
-    for dnet in config['dnets'].items():
+    for dnet in config['dnets']:
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
         if os.path.isfile(f"{output_dir}.tar"):
             os.remove(f"{output_dir}.tar")

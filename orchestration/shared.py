@@ -13,7 +13,7 @@ from datetime import datetime
 from orchestration import old_to_new_site_dict
 from orchestration.helpers import get_logger, NAME_TO_ROLE, \
     orchestration_path, FILENAMES_TO_TAIL, DEFAULT_RESTART_POLICY, \
-    get_sites_yml_path
+    get_sites_yml_path, get_persisted_config_yml_path
 
 # todo: use configuration for the logger
 logger = get_logger(__name__, logging_level=logging.DEBUG)
@@ -350,6 +350,13 @@ def start_new_elasticsearch_container(client, image_id, timestamp):
         restart_policy=DEFAULT_RESTART_POLICY,
     )
 
+# XXX this is weird and should be cleaned up
+def get_persisted_config():
+    p_conf = {}
+    with open(get_persisted_config_yml_path(), "r") as f:
+        p_conf = yaml.load(f)
+    return p_conf
+
 
 def start_new_kibana_container(client, image_id, timestamp, config):
     return client.containers.run(
@@ -369,7 +376,7 @@ def start_new_kibana_container(client, image_id, timestamp, config):
             "ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES": "/etc/kibana/ca.crt",
             "ELASTICSEARCH_SSL_VERIFICATIONMODE": "none",
             "ELASTICSEARCH_USERNAME": "elastic",
-            "ELASTICSEARCH_PASSWORD": config['elastic_password'],
+            "ELASTICSEARCH_PASSWORD": get_persisted_config()['elastic_password'],
         },
         volumes={
             '/var/run/':  # XXX
@@ -382,16 +389,16 @@ def start_new_kibana_container(client, image_id, timestamp, config):
         restart_policy=DEFAULT_RESTART_POLICY,
     )
 
-def get_edge_hostname_and_dnet(client):
-    edge_name = f"{client.info().get('Name')}"
+def get_hostname_and_dnet(config, client):
+    hostname = f"{client.info().get('Name')}"
     for c_edge in config['edges']:
-        if c_edge['hostname'].startswith(edge_name):
-            return (c_edge['hostname'], c_edge['dnet'])
-    raise Exception("XXX fix this")
+        if c_edge['hostname'].startswith(hostname):
+            return (hostname, c_edge['dnet'])
+    return hostname, "controller"
 
 
 def start_new_metricbeat_container(client, image_id, timestamp, config):
-    (edge_name, dnet) = get_edge_name_and_dnet(client)
+    (edge_name, dnet) = get_hostname_and_dnet(config, client)
 
     # XXX consider a different approach (making the caller pass in the network and fs namespaces?)
     nginx_containers = client.containers.list(
@@ -416,7 +423,7 @@ def start_new_metricbeat_container(client, image_id, timestamp, config):
             # "ELASTICSEARCH_URL": f"http://{config['controller']['ip']}:9200",   # XXX authentication, encryption
             "ELASTICSEARCH_HOST": f"https://{config['controller']['ip']}:9200",
             "KIBANA_HOST": f"https://{config['controller']['ip']}:5601",
-            "ELASTICSEARCH_PASSWORD": config['elastic_password'],
+            "ELASTICSEARCH_PASSWORD": get_persisted_config()['elastic_password'],
             "DEFLECT_EDGE_NAME": edge_name,
             "DEFLECT_DNET": dnet,
         },
@@ -445,7 +452,7 @@ def start_new_metricbeat_container(client, image_id, timestamp, config):
 
 
 def start_new_filebeat_container(client, image_id, timestamp, config):
-    (edge_name, dnet) = get_edge_name_and_dnet(client)
+    (edge_name, dnet) = get_hostname_and_dnet(config, client)
 
     return client.containers.run(
         image_id,
@@ -460,7 +467,7 @@ def start_new_filebeat_container(client, image_id, timestamp, config):
             # "ELASTICSEARCH_URL": f"http://{config['controller']['ip']}:9200",   # XXX authentication, encryption
             "ELASTICSEARCH_HOST": f"https://{config['controller']['ip']}:9200",
             "KIBANA_HOST": f"https://{config['controller']['ip']}:5601",
-            "ELASTICSEARCH_PASSWORD": config['elastic_password'],
+            "ELASTICSEARCH_PASSWORD": get_persisted_config()['elastic_password'],
             "DEFLECT_EDGE_NAME": edge_name,
             "DEFLECT_DNET": dnet,
         },
@@ -482,7 +489,7 @@ def start_new_filebeat_container(client, image_id, timestamp, config):
 
 
 def start_new_legacy_filebeat_container(client, image_id, timestamp, config):
-    (edge_name, dnet) = get_edge_name_and_dnet(client)
+    (edge_name, dnet) = get_hostname_and_dnet(config, client)
 
     return client.containers.run(
         image_id,
@@ -617,6 +624,7 @@ def get_all_sites():
                 old_client_sites = old_client_sites_dict["remap"]
                 break
         except FileNotFoundError:
+            logger.info(f"didn't find anything at {get_sites_yml_path()}, sleeping...")
             time.sleep(5)
 
     time_from_inside_file = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)

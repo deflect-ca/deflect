@@ -25,9 +25,44 @@ if __name__ == '__main__':
     # todo: many things to be fleshed out to deflect-next config
     config = parse_config(get_config_yml_path())
     dn_config = parse_config('input/deflect-next_config.yaml')
-    # XXX figure out how to save stuff between runs (elastic password, certs)
     temp_config = parse_config('input/temp/config.yml')
 
+    ### begin temporary kludge ###
+    import os.path
+    import yaml
+
+    system_sites = []
+    with open("input/system-sites.example.yml", "r") as f:
+        system_sites = yaml.load(f)
+
+    # get example.com from controller.example.com
+    test_root = ".".join(config['controller']['hostname'].split(".")[1:])
+
+    if not os.path.isfile("input/system-sites.yml"):
+        fixed_system_sites = {}
+        for name, site in system_sites.items():
+            fixed_name = name.replace("test.me.uk", test_root)
+            fixed_site = site
+            fixed_server_names = []
+            for server_name in fixed_site['server_names']:
+                fixed_server_names.append(server_name.replace("test.me.uk", test_root))
+            fixed_site['server_names'] = fixed_server_names
+            fixed_site['public_domain'] = fixed_site['public_domain'].replace("test.me.uk", test_root)
+            fixed_site['origin_ip'] = config['controller']['ip']  # system sites all live on the controller
+            fixed_system_sites[fixed_name] = fixed_site
+        with open("input/system-sites.yml", "w") as f:
+            yaml.dump(fixed_system_sites, f)
+
+    if not os.path.isfile("input/named.conf.local"):
+        with open("input/named.conf.local", "w") as dest:
+            with open("input/named.example.conf.local", "r") as src:
+                dest.write(src.read().replace("test.me.uk", test_root))
+
+    if not os.path.isfile(f"input/{test_root}.zone"):
+        with open(f"input/{test_root}.zone", "w") as dest:
+            with open("input/test.me.uk.zone", "r") as src:
+                dest.write(src.read().replace("test.me.uk", test_root))
+    ### end temporary kludge ###
 
     all_sites, formatted_time = get_all_sites()
 

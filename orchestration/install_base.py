@@ -96,11 +96,15 @@ if __name__ == "__main__":
 
     # run the stuff that only makes sense on the controller
     controller_commands = [
-        "sudo ufw --force enable",
-        f"sudo ufw allow from any to any port 22 proto tcp",
-        # XXX i don't get why/when we would be generating a new key here?
-        # surely our hosting providers put some existing public key under ~/.ssh/authorized_keys ?
+        # XXX not doing the ufw stuff for now
+        # f"sudo ufw allow from any to any port 22 proto tcp",
+        # "sudo ufw --force enable",
+        # XXX i'm not sure how to generally bootstrap the controller having creds for everywhere else
         # f"ssh-keygen -t rsa -f {config['ssh_key_file']} -N {config['ssh_key_pass']} -q -C edgeKey -b 4096",
+        "sudo systemctl disable systemd-resolved", # we run our own dns server
+        "sudo systemctl stop systemd-resolved",
+        "rm /etc/resolv.conf",
+        "echo 'nameserver 1.1.1.1' > /etc/resolv.conf",
     ]
     for host in [config['controller']]:
         for command in controller_commands:
@@ -109,8 +113,9 @@ if __name__ == "__main__":
 
     # run the stuff that only makes sense on the edges
     edge_commands = [
-        "sudo ufw --force enable",
-        f"sudo ufw allow from {config['controller']['ip']} to any port 22 proto tcp",
+        # XXX not doing the ufw stuff for now
+        # f"sudo ufw allow from {config['controller']['ip']} to any port 22 proto tcp",
+        # "sudo ufw --force enable",
     ]
     for host in config['edges']:
         for command in edge_commands:

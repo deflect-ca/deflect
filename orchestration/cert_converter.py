@@ -61,7 +61,7 @@ def main(formatted_time):
     # TODO: @joe: 2021-06-29_09:19:33 is this a previous formatted time?
     prev_dirs_to_check = [
         f"{local_certs_dir}/*.cert.crt",
-        "output/2021-06-29_09:19:33/archive/*"
+        "persisted/archive/*"
     ]
     for prev_dir_to_check in prev_dirs_to_check:
         in_certs = glob.glob(prev_dir_to_check)

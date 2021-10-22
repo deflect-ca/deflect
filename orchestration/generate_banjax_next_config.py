@@ -79,6 +79,8 @@ def main(config, all_sites, formatted_time):
             if password_b64 is None:
                 raise Exception("missing password_protected_paths_password!!!")
             all_site_password_protected_paths[site['public_domain']] = paths
+            # banjax expects to read something generated like:
+            # python3 -c "import hashlib; print(hashlib.sha256('password'.encode()).hexdigest())"
             password_bytes = base64.b64decode(password_b64)
             password_hex = password_bytes.hex()
             all_site_password_hashes[site['public_domain']] = password_hex

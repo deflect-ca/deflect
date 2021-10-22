@@ -64,14 +64,20 @@ def path_to_output():
         orchestration_path(), 'output'
     )
 
+def path_to_persisted():
+    return os.path.join(
+        orchestration_path(), 'persisted'
+    )
 
 def get_sites_yml_path():
-    return os.path.join(path_to_input(), 'current/sites.yml')
+    return os.path.join(path_to_input(), 'current/old-sites.yml')
 
 
 def get_config_yml_path():
     return os.path.join(path_to_input(), 'current/config.yml')
 
+def get_persisted_config_yml_path():
+    return os.path.join(path_to_persisted(), 'config.yml')
 
 class RoleEnum(Enum):
     edge = 'edge'
