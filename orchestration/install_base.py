@@ -15,100 +15,105 @@ from orchestration.helpers import get_config_yml_path
 USER = "root"
 
 # needed for apt-add-repository
-reqs_for_apt = [
-	"apt-transport-https",
-	"ca-certificates",
-	"curl",
-	"gnupg2",
-	"software-properties-common",
-].join(" ")
+reqs_for_apt = " ".join([
+    "apt-transport-https",
+    "ca-certificates",
+    "curl",
+    "gnupg2",
+    "software-properties-common",
+])
 
-other_packages = [
-	"software-properties-common",
-	"apt-transport-https",
-	"vim",
-	"screen",
-	"tmux",
-	"haveged",
-	"tzdata",
-	"unzip",
-	"zip",
-	"bzip2",
-	"locales",
-	"acl",
-	"sudo",
-	"ufw",
-	"iptables",
-	"iproute2",
-].join(" ")
+other_packages = " ".join([
+    "software-properties-common",
+    "apt-transport-https",
+    "vim",
+    "screen",
+    "tmux",
+    "haveged",
+    "tzdata",
+    "unzip",
+    "zip",
+    "bzip2",
+    "locales",
+    "acl",
+    "sudo",
+    "ufw",
+    "iptables",
+    "iproute2",
+])
 
 # XXX sudo not needed here if we're running as root
 controller_and_edge_commands = [
-	f"sudo apt-get update && sudo apt-get -yq install {reqs_for_apt} {other_packages}",
-	"sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -",
-	"sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\"",
-	"sudo apt-get -yq update",
-	"sudo apt-cache policy docker-ce",
-	"sudo apt-get -yq install docker-ce",
-	"sudo timedatectl set-timezone UTC",
-	"sudo useradd --create-home deflect",
-	"sudo usermod --append --groups docker deflect", # installing docker above added the 'docker' group
+    f"sudo apt-get update && sudo apt-get -yq install {reqs_for_apt} {other_packages}",
+    "sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -",
+    "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\"",
+    "sudo apt-get -yq update",
+    "sudo apt-cache policy docker-ce",
+    "sudo apt-get -yq install docker-ce",
+    "sudo timedatectl set-timezone UTC",
+    "sudo useradd --create-home deflect",
+    "sudo usermod --append --groups docker deflect", # installing docker above added the 'docker' group
 ]
 
-def run_remote(user_at_ip, command):
-    proc = subprocess.run(["ssh", user_at_ip, command])
+def run_remote_noraise(config, host, command):
+    print(f"\n===== running \"{command}\" on {host['hostname']} ({host['ip']}) =====")
+    proc = subprocess.run(
+            ["ssh", "-i", config['ssh_key_file'], f"root@{host['ip']}", command],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
+    for line in proc.stdout.splitlines():
+        print(f"\t{line.decode()}")
+    return proc
+
+def run_remote_raise(config, host, command):
+    proc = run_remote_noraise(config, host, command)
     if proc.returncode != 0:
         raise Exception(f"command '{command}' returned non-zero code: {proc.returncode}")
 
 if __name__ == "__main__":
     config = parse_config(get_config_yml_path())
 
-	# install the stuff that's common to the controller and edges
-	controller_and_edges = config['edge_names_to_ips'].update(
-	        {config['controller_hostname'], config['controller_ip']}
-    )
-    for hostname, ip in controller_and_edges.items():
-        user_at_ip = f"{USER}@{ip}"
-
-        print("running `hostname` on %s" % ip)
-        subprocess.run(["ssh", user_at_ip, "hostname"])
-
-        docker_ps_proc = subprocess.run(["ssh", user_at_ip, "docker ps"])
-        if docker_ps_proc.returncode == 0:
-            print(f"found docker on {ip}, skipping")
+    # install the stuff that's common to the controller and edges
+    for host in [config['controller']] + config['edges']:
+        try:
+            run_remote_raise(config, host, "docker ps")
+        except Exception:
+            print(f"docker not found")
+        else:
+            print(f"docker found, skipping the rest of install for {host['ip']}")
             continue
 
-        print(f"installing requirements on {ip}...")
+        print(f"installing requirements on {host['ip']}...")
 
         # these commands need variables from this inner scope
         controller_and_edge_commands.extend([
-            f"sudo hostnamectl set-hostname {hostname}",
+            f"sudo hostnamectl set-hostname {host['hostname']}",
         ])
 
         for command in controller_and_edge_commands:
-            run_remote(user_at_ip, command)
+            run_remote_raise(config, host, command)
 
 
     # run the stuff that only makes sense on the controller
     controller_commands = [
-        "sudo ufw enable",
+        "sudo ufw --force enable",
         f"sudo ufw allow from any to any port 22 proto tcp",
         # XXX i don't get why/when we would be generating a new key here?
         # surely our hosting providers put some existing public key under ~/.ssh/authorized_keys ?
-        # f"ssh-keygen -t rsa -f {config['edge_key_file']} -N {config['edge_key_pass']} -q -C edgeKey -b 4096",
+        # f"ssh-keygen -t rsa -f {config['ssh_key_file']} -N {config['ssh_key_pass']} -q -C edgeKey -b 4096",
     ]
-    for hostname, ip in {config['controller_hostname'], config['controller_ip']}.items():
+    for host in [config['controller']]:
         for command in controller_commands:
-            run_remote(user_at_ip, command)
+            run_remote_raise(config, host, command)
 
 
     # run the stuff that only makes sense on the edges
     edge_commands = [
-        "sudo ufw enable",
-        f"sudo ufw allow from {config['controller_ip']} to any port 22 proto tcp",
+        "sudo ufw --force enable",
+        f"sudo ufw allow from {config['controller']['ip']} to any port 22 proto tcp",
     ]
-    for hostname, ip in config['edge_names_to_ips'].items():
+    for host in config['edges']:
         for command in edge_commands:
-            run_remote(user_at_ip, command)
+            run_remote_raise(config, host, command)
 
 

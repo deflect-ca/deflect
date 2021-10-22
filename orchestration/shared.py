@@ -363,8 +363,8 @@ def start_new_kibana_container(client, image_id, timestamp, config):
             'version': timestamp
         },
         environment={
-            # "ELASTICSEARCH_URL": f"http://{config['controller_ip']}:9200",
-            "ELASTICSEARCH_HOSTS": f"https://{config['controller_ip']}:9200",
+            # "ELASTICSEARCH_URL": f"http://{config['controller']['ip']}:9200",
+            "ELASTICSEARCH_HOSTS": f"https://{config['controller']['ip']}:9200",
             # "SERVER_SSL_ENABLED": "true",
             "ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES": "/etc/kibana/ca.crt",
             "ELASTICSEARCH_SSL_VERIFICATIONMODE": "none",
@@ -382,10 +382,16 @@ def start_new_kibana_container(client, image_id, timestamp, config):
         restart_policy=DEFAULT_RESTART_POLICY,
     )
 
+def get_edge_hostname_and_dnet(client):
+    edge_name = f"{client.info().get('Name')}"
+    for c_edge in config['edges']:
+        if c_edge['hostname'].startswith(edge_name):
+            return (c_edge['hostname'], c_edge['dnet'])
+    raise Exception("XXX fix this")
+
 
 def start_new_metricbeat_container(client, image_id, timestamp, config):
-    edge_name = f"{client.info().get('Name')}.prod.deflect.ca"
-    dnet = config["edge_names_to_dnets"].get(edge_name, "no-dnet")
+    (edge_name, dnet) = get_edge_name_and_dnet(client)
 
     # XXX consider a different approach (making the caller pass in the network and fs namespaces?)
     nginx_containers = client.containers.list(
@@ -407,9 +413,9 @@ def start_new_metricbeat_container(client, image_id, timestamp, config):
             'version': timestamp
         },
         environment={
-            # "ELASTICSEARCH_URL": f"http://{config['controller_ip']}:9200",   # XXX authentication, encryption
-            "ELASTICSEARCH_HOST": f"https://{config['controller_ip']}:9200",
-            "KIBANA_HOST": f"https://{config['controller_ip']}:5601",
+            # "ELASTICSEARCH_URL": f"http://{config['controller']['ip']}:9200",   # XXX authentication, encryption
+            "ELASTICSEARCH_HOST": f"https://{config['controller']['ip']}:9200",
+            "KIBANA_HOST": f"https://{config['controller']['ip']}:5601",
             "ELASTICSEARCH_PASSWORD": config['elastic_password'],
             "DEFLECT_EDGE_NAME": edge_name,
             "DEFLECT_DNET": dnet,
@@ -439,8 +445,7 @@ def start_new_metricbeat_container(client, image_id, timestamp, config):
 
 
 def start_new_filebeat_container(client, image_id, timestamp, config):
-    edge_name = f"{client.info().get('Name')}.prod.deflect.ca"
-    dnet = config["edge_names_to_dnets"].get(edge_name, "no-dnet")
+    (edge_name, dnet) = get_edge_name_and_dnet(client)
 
     return client.containers.run(
         image_id,
@@ -452,9 +457,9 @@ def start_new_filebeat_container(client, image_id, timestamp, config):
         },
         hostname=edge_name,
         environment={
-            # "ELASTICSEARCH_URL": f"http://{config['controller_ip']}:9200",   # XXX authentication, encryption
-            "ELASTICSEARCH_HOST": f"https://{config['controller_ip']}:9200",
-            "KIBANA_HOST": f"https://{config['controller_ip']}:5601",
+            # "ELASTICSEARCH_URL": f"http://{config['controller']['ip']}:9200",   # XXX authentication, encryption
+            "ELASTICSEARCH_HOST": f"https://{config['controller']['ip']}:9200",
+            "KIBANA_HOST": f"https://{config['controller']['ip']}:5601",
             "ELASTICSEARCH_PASSWORD": config['elastic_password'],
             "DEFLECT_EDGE_NAME": edge_name,
             "DEFLECT_DNET": dnet,
@@ -477,8 +482,7 @@ def start_new_filebeat_container(client, image_id, timestamp, config):
 
 
 def start_new_legacy_filebeat_container(client, image_id, timestamp, config):
-    edge_name = f"{client.info().get('Name')}.prod.deflect.ca"
-    dnet = config["edge_names_to_dnets"].get(edge_name)
+    (edge_name, dnet) = get_edge_name_and_dnet(client)
 
     return client.containers.run(
         image_id,
@@ -490,7 +494,7 @@ def start_new_legacy_filebeat_container(client, image_id, timestamp, config):
         },
         hostname=edge_name,
         environment={
-            # "LOGSTASH_HOST": f"{config['controller_ip']}:5044",   # XXX authentication, encryption
+            # "LOGSTASH_HOST": f"{config['controller']['ip']}:5044",   # XXX authentication, encryption
 			"LOGSTASH_HOST": "opsdash.deflect.ca:5044",
                         "DEFLECT_EDGE_NAME": edge_name,
                         "DEFLECT_DNET": dnet,
@@ -519,7 +523,7 @@ def start_new_legacy_logstash_container(client, image_id, timestamp, config):
             'version': timestamp
         },
         environment={
-            "ELASTICSEARCH_HOST": f"{config['controller_ip']}:9200",
+            "ELASTICSEARCH_HOST": f"{config['controller']['ip']}:9200",
         },
         name="legacy-logstash",
         restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},

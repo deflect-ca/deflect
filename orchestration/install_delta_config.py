@@ -234,7 +234,7 @@ def import_kibana_saved_objects(config):
     async def main():
         async with aiohttp.ClientSession() as session:
             with open("kibana-saved-objects.ndjson", "r") as f:
-                url = f"https://kibana.{config['controller_domain']}/api/saved_objects/_import?overwrite=true"
+                url = f"https://kibana.{config['controller']['hostname']}/api/saved_objects/_import?overwrite=true"
                 headers = {"kbn-xsrf": "true"}
                 data = aiohttp.FormData()
                 data.add_field("file", f)
@@ -363,7 +363,7 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, temp_config
     logger.debug('Getting a Docker client...')
     # TODO: the base_url needs to be in a config. This is not flexible for debugging
     # TODO: or testing/ staging env
-    controller_client = docker.DockerClient(base_url=f"ssh://root@{config['controller_ip']}")
+    controller_client = docker.DockerClient(base_url=f"ssh://root@{config['controller']['ip']}")
 
     logger.debug('Installing bind config...')
     install_bind_config(controller_client, config, all_sites, config_timestamp, image_build_timestamp)
@@ -391,19 +391,13 @@ def main(config, all_sites, config_timestamp, image_build_timestamp, temp_config
     install_nginx_config(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
     install_metricbeat(controller_client, config, "controller", all_sites, config_timestamp, image_build_timestamp)
 
-    for dnet, edge_names in config['dnets_to_edges'].items():
-        if dnet == "controller":
-            continue
-        for edge_name in edge_names:
-            install_all_edge_components(edge_name, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    for edge in config['edges']:
+        install_all_edge_components(edge['hostname'], config, edge['dnet'], all_sites, config_timestamp, image_build_timestamp)
 
     # XXX check future results for exceptions
     # with ThreadPoolExecutor(max_workers=16) as executor:
-    #     for dnet, edge_names in config['dnets_to_edges'].items():
-    #         if dnet == "controller":
-    #             continue
-    #         for edge_name in edge_names:
-    #             executor.submit(install_all_edge_components, edge_name, config, dnet, all_sites, config_timestamp, image_build_timestamp)
+    #     for edge in config['edges']:
+    #         executor.submit(install_all_edge_components, edge['hostname'], config, edge['dnet'], all_sites, config_timestamp, image_build_timestamp)
 
     logger.info(f"%%%% finished all edges %%%")
 

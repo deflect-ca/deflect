@@ -72,8 +72,8 @@ def main(config, all_sites, timestamp):
     sites_dir = output_dir + "/deflect"
     os.mkdir(sites_dir)
 
-    nameserver_hostname = f"ns1.{config['controller_domain']}"
-    nameserver_admin = f"root.{config['controller_domain']}"  # XXX what's this actually called?
+    nameserver_hostname = f"ns1.{config['controller']['hostname']}"
+    nameserver_admin = f"root.{config['controller']['hostname']}"  # XXX what's this actually called?
 
     named_conf_string = ""
 
@@ -82,18 +82,18 @@ def main(config, all_sites, timestamp):
 
     # XXX controller/nameserver is special-cased here kinda sloppily. fix it later.
     named_conf_string += zone_block_root(
-            config['controller_domain'],
-            f"/etc/bind/{config['controller_domain']}.zone"
+            config['controller']['hostname'],
+            f"/etc/bind/{config['controller']['hostname']}.zone"
     )
 
     logger.debug('Write controller zone')
     # XXX figure out if we want to do it the dnspython way or the template way
     with open("templates/controller.zone.j2", "r") as tf:
         template = Template(tf.read())
-        with open(output_dir + "/" + config['controller_domain'] + ".zone", "w") as zf:
+        with open(output_dir + "/" + config['controller']['hostname'] + ".zone", "w") as zf:
             zf.write(template.render(
-                name=config['controller_domain'],
-                ip=config['controller_ip'],
+                name=config['controller']['hostname'],
+                ip=config['controller']['ip'],
             ))
 
     # TODO: I keep seeing this, why two kinds of sites?
@@ -174,12 +174,13 @@ def main(config, all_sites, timestamp):
                 rdtype=dns.rdatatype.A,
                 create=True
             )
-            for edge_name in config["dnets_to_edges"][site["dnet"]]:
-                logger.debug(f'Edge name: {edge_name}')
-                edge_ip = config["edge_names_to_ips"][edge_name]
-                rd = dns.rdtypes.IN.A.A(
-                    dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
-                a_rdataset.add(rd, 300)
+            for edge in config['edges']:
+                if edge['dnet'] == site['dnet']:
+                    logger.debug(f'Edge name: {edge_name}')
+                    edge_ip = config["edge_names_to_ips"][edge_name]
+                    rd = dns.rdtypes.IN.A.A(
+                        dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
+                    a_rdataset.add(rd, 300)
 
             # XXX TODO: improve
             for server_name in set(site["server_names"]) - set([site_name]):
@@ -190,11 +191,12 @@ def main(config, all_sites, timestamp):
                     rdtype=dns.rdatatype.A,
                     create=True
                 )
-                for edge_name in config["dnets_to_edges"][site["dnet"]]:
-                    edge_ip = config["edge_names_to_ips"][edge_name]
-                    rd = dns.rdtypes.IN.A.A(
-                        dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
-                    a_rdataset.add(rd, 300)
+                for edge in config['edges']:
+                    if edge['dnet'] == site['dnet']:
+                        edge_ip = config["edge_names_to_ips"][edge_name]
+                        rd = dns.rdtypes.IN.A.A(
+                            dns.rdataclass.IN, dns.rdatatype.A, edge_ip)
+                        a_rdataset.add(rd, 300)
 
                 logger.debug(f'find_rdataset: _acme-challenge.{sub_zone} NS')
                 # XXX duplication, very very gross

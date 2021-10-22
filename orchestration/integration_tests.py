@@ -55,7 +55,7 @@ class override_dns(object):
 
 def correct_dns_for_new_site(hostname):
     resolver = dns.resolver.Resolver(configure=False)
-    resolver.nameservers = [config['controller_ip']]
+    resolver.nameservers = [config['controller']['ip']]
 
     a = resolver.query(hostname, "A")
     ips = list(map(lambda x: x.address, a))

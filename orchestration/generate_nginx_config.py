@@ -417,7 +417,7 @@ def fail_closed_location_block(site, global_config, edge_https, origin_https):
 
 # XXX ugh this needs redoing
 def main(all_sites, config, formatted_time):
-    for dnet, _ in config['dnets_to_edges'].items():
+    for dnet in config['dnets']:
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
         if os.path.isdir(output_dir):
             print(f"removing {output_dir}")
@@ -492,7 +492,7 @@ def main(all_sites, config, formatted_time):
                 proxy_pass=f"http://85.10.195.146:80", # XXX
             ))
 
-    for dnet, _ in config['dnets_to_edges'].items():
+    for dnet in config['dnets'].items():
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
         if os.path.isfile(f"{output_dir}.tar"):
             os.remove(f"{output_dir}.tar")
