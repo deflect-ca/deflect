@@ -267,7 +267,7 @@ def get_elastic_password_from_command_output(output):
 
 
 def install_elasticsearch(client, config, all_sites, config_timestamp, image_build_timestamp):
-    kill_containers_with_label(client, "elasticsearch")
+    # kill_containers_with_label(client, "elasticsearch")
 
     try:
         find_running_container(client, "elasticsearch")
