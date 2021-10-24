@@ -24,7 +24,7 @@ tests_require = [
     'mock',
 ]
 
-setup(name='orchestration',
+setup(name='deflect',
       version='0.0.1',
       description='Provides the orchestration functionality for Deflect-next',
       long_description=long_description,
@@ -38,5 +38,7 @@ setup(name='orchestration',
       package_dir={'': '.'},
       packages=[
           'orchestration',
+          'config_generation',
+          'util',
       ],
       )

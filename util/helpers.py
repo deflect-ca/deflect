@@ -7,14 +7,7 @@
 import os
 import logging
 from enum import Enum
-
-# TODO: needs to be in config, especially because we might need different
-# TODO:.. retry policies per container
-CONTAINER_MAX_RETRY_COUNT = 5
-DEFAULT_RESTART_POLICY = {
-    "Name": "on-failure", "MaximumRetryCount": CONTAINER_MAX_RETRY_COUNT
-}
-
+from pathlib import Path
 
 def get_logger(
         name, logging_level=logging.DEBUG, output_file='deflect-next.log'
@@ -49,24 +42,29 @@ def get_logger(
     return logger
 
 
-def orchestration_path():
-    return os.path.dirname(os.path.realpath(__file__))
+def module_root_path():
+    return str(Path(__file__).parent.parent)
 
 
 def path_to_input():
     return os.path.join(
-        orchestration_path(), 'input'
+        module_root_path(), 'input'
     )
 
 
 def path_to_output():
     return os.path.join(
-        orchestration_path(), 'output'
+        module_root_path(), 'output'
     )
 
 def path_to_persisted():
     return os.path.join(
-        orchestration_path(), 'persisted'
+        module_root_path(), 'persisted'
+    )
+
+def path_to_containers():
+    return os.path.join(
+        module_root_path(), 'containers'
     )
 
 def get_sites_yml_path():
@@ -78,6 +76,12 @@ def get_config_yml_path():
 
 def get_persisted_config_yml_path():
     return os.path.join(path_to_persisted(), 'config.yml')
+
+def get_banjax_config_yml_path():
+    return os.path.join(path_to_input(), 'banjax_config.yml')
+
+def get_kibana_saved_objects_path():
+    return os.path.join(path_to_input(), 'kibana-saved-objects.ndjson')
 
 class RoleEnum(Enum):
     edge = 'edge'

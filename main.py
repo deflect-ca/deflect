@@ -6,26 +6,26 @@
 
 from pyaml_env import parse_config
 
-from orchestration.cert_converter import main as cert_converter_main
-from orchestration.helpers import get_config_yml_path
-from orchestration.make_nginx_public import main as make_nginx_public_main
-from orchestration.shared import get_all_sites
+from util.helpers import get_config_yml_path
+from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert_bundles
+from config_generation.site_dict import get_all_sites
 
 import logging
-from orchestration.helpers import get_logger, get_config_yml_path
+from util.helpers import get_logger, get_config_yml_path
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
-from orchestration import generate_bind_config, \
-    generate_nginx_config, generate_banjax_next_config, \
-    decrypt_and_verify_cert_bundles, cert_converter
+from config_generation import (
+    generate_bind_config,
+    generate_nginx_config,
+    generate_banjax_config,
+)
 
-from orchestration import install_delta_config
+from orchestration.everything import install_everything
 
 if __name__ == '__main__':
     # todo: many things to be fleshed out to deflect-next config
     config = parse_config(get_config_yml_path())
     dn_config = parse_config('input/deflect-next_config.yaml')
-    temp_config = parse_config('input/temp/config.yml')
 
     ### begin temporary kludge ###
     import os.path
@@ -70,30 +70,22 @@ if __name__ == '__main__':
 
     all_sites, formatted_time = get_all_sites()
 
-    logger.info('>>> Running decrypt_and_verify_cert_bundlesg...')
-    decrypt_and_verify_cert_bundles.main(all_sites, formatted_time)
-
-    if dn_config['certs']['convert']:
-        logger.info('>>> Running cert_converter...')
-        cert_converter_main(formatted_time)
+    # # XXX specific to our internals
+    # logger.info('>>> Running decrypt_and_verify_cert_bundlesg...')
+    # decrypt_and_verify_cert_bundles(all_sites, formatted_time)
 
     logger.info('>>> Generating bind config...')
-    generate_bind_config.main(config, all_sites, formatted_time)
+    generate_bind_config(config, all_sites, formatted_time)
 
     logger.info('>>> Generating nginx config...')
-    generate_nginx_config.main(all_sites, config, formatted_time)
+    generate_nginx_config(all_sites, config, formatted_time)
 
     logger.info('>>> Generating banjax-next config...')
-    generate_banjax_next_config.main(config, all_sites, formatted_time)
+    generate_banjax_config(config, all_sites, formatted_time)
 
+    # XXX specific to our internals
     # logger.info('>>> Running make_nginx_public...')
     # make_nginx_public_main(config)
 
-    logger.info('>>> Running install_delta_config...')
-    install_delta_config.main(
-        config,
-        all_sites,
-        formatted_time,
-        formatted_time,
-        temp_config=temp_config
-    )
+    logger.info('>>> Running install_everything...')
+    install_everything(config, all_sites, formatted_time)

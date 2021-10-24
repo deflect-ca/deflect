@@ -28,7 +28,7 @@ import dns.rdtypes.IN.SRV
 # todo: use configuration for the logger
 from pyaml_env import parse_config
 
-from orchestration.helpers import get_logger, get_config_yml_path
+from util.helpers import get_logger, get_config_yml_path, path_to_input, path_to_output
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -52,21 +52,21 @@ def zone_block_acme_challenge(domain):
         f"}};\n\n"
 
 
-def main(config, all_sites, timestamp):
+def generate_bind_config(config, all_sites, timestamp):
     """
     Create all the zone files
     """
     # TODO: extract methods wherever possible
     # XXX this scares me.
     # maybe don't delete old stuff and just move a symlink to point to the new one?
-    output_dir = f"./output/{timestamp}/etc-bind"
+    output_dir = f"{path_to_output()}/{timestamp}/etc-bind"
     output_dir_tar = f"{output_dir}.tar"
     if len(output_dir) == 0:  # TODO: fixme did we mean to check for something else here?
         raise Exception("output_dir cannot be empty")
     if os.path.isdir(output_dir):
         logger.debug(f'Removing output dir: {output_dir}')
         # XXX making extra sure this is a local dir?
-        shutil.rmtree(f"./{output_dir}")
+        shutil.rmtree(f"{output_dir}")
     os.mkdir(output_dir)
 
     sites_dir = output_dir + "/deflect"
@@ -88,7 +88,7 @@ def main(config, all_sites, timestamp):
 
     logger.debug('Write controller zone')
     # XXX figure out if we want to do it the dnspython way or the template way
-    with open("templates/controller.zone.j2", "r") as tf:
+    with open(f"{path_to_input()}/templates/controller.zone.j2", "r") as tf:
         template = Template(tf.read())
         with open(output_dir + "/" + config['controller']['hostname'] + ".zone", "w") as zf:
             zf.write(template.render(
@@ -311,4 +311,4 @@ if __name__ == "__main__":
 
     all_sites, formatted_time = get_all_sites()
 
-    main(config, all_sites, formatted_time)
+    generate_bind_config(config, all_sites, formatted_time)

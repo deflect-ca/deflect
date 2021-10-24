@@ -12,9 +12,9 @@ import json
 from jinja2 import Template
 from pyaml_env import parse_config
 
-# TODO: use config
-from orchestration.helpers import get_config_yml_path
+from util.helpers import get_config_yml_path, path_to_input
 
+# TODO: use config
 test_domain = 'dflct.xyz'
 
 
@@ -35,10 +35,10 @@ def redirect_to_https_server_block(site: dict):
     )
 
 
-def access_log_banjax_next_format():
+def access_log_banjax_format():
     return nginx.Key(
         'access_log',
-        "/var/log/banjax-next/banjax-next-format.log banjax_next_format"
+        "/var/log/banjax/banjax-format.log banjax_format"
     )
 
 
@@ -266,7 +266,7 @@ def top_level_conf(timestamp):
             nginx.Key(
                 'log_format', "main '$time_local | $status | $request_time (s)| $remote_addr | $request'"),
             nginx.Key(
-                'log_format', "banjax_next_format '$msec $remote_addr $request_method $host $request $http_user_agent'"),
+                'log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"),
             nginx.Key(
                 'log_format', "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host $status $bytes_sent \"$http_user_agent\" $upstream_cache_status $content_type $hostname $request_time $scheme://$host$uri \"$http_referer\" \"$http_x_forwarded_for\"'"),
 
@@ -295,8 +295,8 @@ def top_level_conf(timestamp):
 
             nginx.Key('error_log', "/dev/stdout warn"),
             nginx.Key('access_log', "/var/log/nginx/access.log json_combined"),
-            nginx.Key('access_log', "/var/log/banjax-next/banjax-next-format.log banjax_next_format"),
-            nginx.Key('access_log', "/var/log/banjax-next/nginx-logstash-format.log logstash_format"),
+            nginx.Key('access_log', "/var/log/banjax/banjax-format.log banjax_format"),
+            nginx.Key('access_log', "/var/log/banjax/nginx-logstash-format.log logstash_format"),
 
             nginx.Key('proxy_cache_path',
                       "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"),
@@ -336,7 +336,7 @@ def top_level_conf(timestamp):
             # XXX https? authentication?
             nginx.Server(
                 nginx.Key('listen', "80"),
-                nginx.Key('server_name', "banjax-next"),
+                nginx.Key('server_name', "banjax"),
                 nginx.Key('access_log', "off"),  # XXX?
                 # XXX do this differently?
                 nginx.Location('/info',
@@ -411,12 +411,12 @@ def access_denied_location(site):
 def fail_closed_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location('@fail_closed')
     location.add(nginx.Key('set', "$loc_out \"fail_closed\""))
-    location.add(nginx.Key('return', "500 \"error talking to banjax-next, failing closed\""))
+    location.add(nginx.Key('return', "500 \"error talking to banjax, failing closed\""))
     return location
 
 
 # XXX ugh this needs redoing
-def main(all_sites, config, formatted_time):
+def generate_nginx_config(all_sites, config, formatted_time):
     for dnet in config['dnets']:
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
         if os.path.isdir(output_dir):
@@ -460,7 +460,7 @@ def main(all_sites, config, formatted_time):
                 nginx.dump(per_site_include_conf(site, config), f)
 
         # XXX handling system sites here. should clean this up someday.
-        with open("templates/kibana_doh_nginx.conf.j2", "r") as tf:
+        with open(f"{path_to_input()}/templates/kibana_doh_nginx.conf.j2", "r") as tf:
             template = Template(tf.read())
             with open(output_dir + "/nginx.conf", "w") as f:
                 nginx.dump(top_level_conf(formatted_time), f)
@@ -509,4 +509,4 @@ if __name__ == "__main__":
 
     all_sites, formatted_time = get_all_sites()
 
-    main(all_sites, config, formatted_time)
+    generate_nginx_config(all_sites, config, formatted_time)

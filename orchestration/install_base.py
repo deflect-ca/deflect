@@ -10,7 +10,7 @@ import yaml
 
 from pyaml_env import parse_config
 
-from orchestration.helpers import get_config_yml_path
+from util.helpers import get_config_yml_path
 
 USER = "root"
 

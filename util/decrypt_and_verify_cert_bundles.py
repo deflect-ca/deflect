@@ -21,11 +21,13 @@ from OpenSSL.crypto import load_certificate, dump_certificate
 from OpenSSL.crypto import FILETYPE_PEM
 from OpenSSL.crypto import X509Store, X509StoreContext
 
+from util.helpers import get_logger, FILENAMES_TO_TAIL, path_to_output
+
 
 # todo: use configuration for the logger
 from pyaml_env import parse_config
 
-from orchestration.helpers import get_logger, get_config_yml_path
+from util.helpers import get_logger, get_config_yml_path
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -217,14 +219,14 @@ def one_site(site, bundle_name, formatted_time):
 
 def main(all_sites, formatted_time):
     # XXX don't delete old stuff, just move symlinks around
-    output_dir = f"./output/{formatted_time}/etc-ssl-uploaded"
+    output_dir = f"{path_to_output()}/{formatted_time}/etc-ssl-uploaded"
     output_dir_tar = f"{output_dir}.tar"
     if len(output_dir) == 0: # TODO fixme: did we mean to check if path exists?
         # XXX ...clearly i changed something here
         raise Exception("output_dir cannot be empty")
     if os.path.isdir(output_dir):
         logger.debug(f'Removing output_dir: {output_dir}')
-        shutil.rmtree(f"./{output_dir}")
+        shutil.rmtree(f"{output_dir}")
     os.mkdir(output_dir)
 
     for name, site in all_sites['client'].items():

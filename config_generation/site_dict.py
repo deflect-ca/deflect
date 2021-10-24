@@ -8,8 +8,14 @@ import yaml
 import shutil
 import os
 from datetime import datetime
-import orchestration.shared
-from orchestration.helpers import get_sites_yml_path
+from util.helpers import (
+        get_sites_yml_path,
+        get_logger,
+)
+import logging
+import json
+
+logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 
 def old_to_new_rate_limited_regexes(old_regexes, public_domain):
@@ -98,7 +104,41 @@ def old_to_new_site_dict(old_dict):
     return new_dict
 
 
-def main(old_sites, old_sites_timestamp):
+def get_all_sites():
+    logger.info('Getting all sites')
+    old_client_sites = {}
+    old_client_sites_timestamp = None
+    # with open("input/current/old-sites.yml", "r") as f:
+    while True:
+        try:
+            with open(get_sites_yml_path(), "r") as f:
+                old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
+                old_client_sites_timestamp = old_client_sites_dict["timestamp"]
+                old_client_sites = old_client_sites_dict["remap"]
+                break
+        except FileNotFoundError:
+            logger.info(f"didn't find anything at {get_sites_yml_path()}, sleeping...")
+            time.sleep(5)
+
+    time_from_inside_file = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)
+    formatted_time = time_from_inside_file.strftime("%Y-%m-%d_%H:%M:%S")
+
+    logger.debug('Getting new client sites: old_to_new_site_dict.main')
+    new_client_sites = convert_old_sites_to_new_sites(
+        old_client_sites, old_client_sites_timestamp
+    )
+
+    logger.debug('Getting new system_sites')
+    system_sites = {}
+    with open("input/system-sites.yml", "r") as f:
+        system_sites = yaml.load(f.read(), Loader=yaml.SafeLoader)
+
+    all_sites = {'client': new_client_sites, 'system': system_sites}
+    logger.debug(f'All sites:{json.dumps(all_sites, indent=2)}')
+    return all_sites, formatted_time
+
+
+def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
     print(len(old_sites))
 
     new_sites = {}
@@ -138,4 +178,4 @@ if __name__ == "__main__":
     time = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)
     formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S")
 
-    new_client_sites = main(old_client_sites, old_client_sites_timestamp)
+    new_client_sites = convert_old_sites_to_new_sites(old_client_sites, old_client_sites_timestamp)
