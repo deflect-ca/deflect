@@ -1,3 +1,3 @@
-[submodule "containers/edge/banjax-next"]
+[submodule "containers/banjax"]
 	path = containers/banjax
-	url = https://github.com/equalitie/banjax-next
+    url = https://github.com/deflect-ca/banjax
