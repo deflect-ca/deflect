@@ -14,10 +14,6 @@ from pyaml_env import parse_config
 
 from util.helpers import get_config_yml_path, path_to_input
 
-# TODO: use config
-test_domain = 'dflct.xyz'
-
-
 def redirect_to_https_server_block(site: dict):
     """
     Add a 301 to https
@@ -434,12 +430,6 @@ def generate_nginx_config(all_sites, config, formatted_time):
 
         os.mkdir(output_dir + "/sites.d")
 
-        # XXX another special case that needs to be handled properly eventually
-        test_origin_site = all_sites['system'][f"test-origin.{test_domain}"]
-        public_domain = test_origin_site['public_domain']
-        with open(f"{output_dir}/sites.d/{public_domain}.conf", "w") as f:
-            nginx.dump(per_site_include_conf(test_origin_site, config), f)
-
         for name, site in all_sites['client'].items():
             if dnet != site['dnet']:
                 continue
@@ -466,12 +456,6 @@ def generate_nginx_config(all_sites, config, formatted_time):
                 nginx.dump(top_level_conf(formatted_time), f)
 
             for name, site in all_sites['system'].items():
-                # XXX ugh... special case later
-                if name == "prod.deflect.ca":
-                    continue
-                # XXX fix these special cases
-                if name == f"test-origin.{test_domain}":
-                    continue
                 with open(f"{output_dir}/sites.d/{name}.conf", "w") as f:
                     f.write(template.render(
                         server_name=name,
@@ -479,19 +463,6 @@ def generate_nginx_config(all_sites, config, formatted_time):
                         ssl_ciphers=config['ssl_ciphers'],
                         proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
                     ))
-            # XXX edgemanage does the equivalent of
-            # curl -k --header "Host: prod.deflect.ca" https://one33.prod.deflect.ca/deflectlogo_RED.png
-            # which results in a mismatch between the Host header and the SNI field.
-            # usually, we use the --resolve thing, or equivalent, which does not result in a mismatch.
-            # so i have to do a wildcard server_name here to account for this.
-        # XXX don't even need this awful legacy thing for the public release
-        # with open(f"{output_dir}/sites.d/prod.dflct.xyz.conf", "w") as f:
-        #     f.write(template.render(
-        #         server_name="prod.dflct.xyz *.prod.dflct.xyz",
-        #         cert_name="prod.dflct.xyz",
-        #         ssl_ciphers=config['ssl_ciphers'],
-        #         proxy_pass=f"http://85.10.195.146:80", # XXX
-        #     ))
 
     for dnet in config['dnets']:
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
