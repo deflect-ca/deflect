@@ -108,7 +108,6 @@ def generate_banjax_config(config, all_sites, formatted_time):
         for each in PEMS:
             shutil.copy(f"{path_to_input()}/banjax/{each}", output_dir)
     except FileNotFoundError:
-        traceback.print_exc()
         logger.error('Missing Kafka pems, ignore if you don\'t need the '
                      'connection to Baskerville / Kafka')
 

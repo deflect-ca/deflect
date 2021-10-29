@@ -1,12 +1,16 @@
 remap:
-  test.me.uk:
+  example.com:
     add_banjax_whitelist:
     - 1.2.3.4
     - 5.6.7.8
     ats_purge_secret: purgesecret
     awstats_password: awstatspassword
     banjax_captcha: false
-    banjax_password: banjaxpassword
+    # banjax wants the hex digest:
+    # python3 -c "import hashlib; print(hashlib.sha256('password'.encode()).hexdigest())"
+    # but old-sites.yml outputs the base64:
+    # python3 -c "import hashlib; import base64; print(base64.b64encode(hashlib.sha256('password'.encode()).digest()))"
+    banjax_password: "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg="
     banjax_path:
     - wp-login.php
     - wp-admin/
@@ -24,45 +28,17 @@ remap:
         value: '"v=spf1 a mx ip4:1.2.3.5 ~all"'
       - type: TXT
         value: '"value"'
-      ads:
-      - type: A
-        value: 2.3.4.6
-      mail:
-      - type: A
-        value: 2.3.4.6
-      - type: MX
-        value:
-        - 0
-        - 2.3.4.6
-      ns1:
-      - type: A
-        value: 2.3.4.6
-      ns2:
-      - type: A
-        value: 2.3.4.6
-      pop:
-      - type: A
-        value: 2.3.4.6
-      server:
-      - type: A
-        value: 2.3.4.6
-      smtp:
-      - type: A
-        value: 2.3.4.6
-      webmail:
-      - type: A
-        value: 2.3.4.6
-    email: test.me.uk@email.com
+    email: example.com@email.com
     hidden: hidden
     http_type: https_redirect
     https: true
     letsencrypt: true
-    network: dnet1
+    network: dnet_a
     ns_monitoring_disabled: false
     ns_on_deflect: true
-    origin: 2.3.4.6
+    origin: 93.184.216.34  # XXX real IP for example.com
     origin_certificates: false
-    url: test.me.uk
+    url: example.com
     user_banjax_sha_inv: false
     validate_tls: false
 timestamp: 1621343136717

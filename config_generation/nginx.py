@@ -13,6 +13,9 @@ from jinja2 import Template
 from pyaml_env import parse_config
 
 from util.helpers import get_config_yml_path, path_to_input
+import logging
+from util.helpers import get_logger, get_config_yml_path, path_to_input, path_to_output
+logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 def redirect_to_https_server_block(site: dict):
     """
@@ -416,7 +419,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
     for dnet in config['dnets']:
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
         if os.path.isdir(output_dir):
-            print(f"removing {output_dir}")
+            logger.debug(f"removing {output_dir}")
             shutil.rmtree(f"./{output_dir}")
         os.makedirs(output_dir)
 
@@ -444,7 +447,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
                 # or
                 # site['ns_on_deflect'] == False
             ):
-                print(f"SKIPPING site: {public_domain:30} {site.get('https_request_does'):20} {site['letsencrypt']:5} {site['ns_on_deflect']:5}")
+                logger.debug(f"SKIPPING site: {public_domain:30} {site.get('https_request_does'):20} {site['letsencrypt']:5} {site['ns_on_deflect']:5}")
                 continue
             with open(f"{output_dir}/sites.d/{public_domain}.conf", "w") as f:
                 nginx.dump(per_site_include_conf(site, config), f)

@@ -1,0 +1,69 @@
+# hostnames here get appended with system_root_zone
+doh:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: https_proxy_pass
+  letsencrypt: true
+  origin_http_port: 8085
+  origin_https_port: 444
+  # set to the controller ip later
+  # origin_ip: xxx
+  password_protected_paths: []
+  password_protected_paths_password: password
+  public_domain: doh
+  rate_limited_regexes: []
+  server_names:
+  - doh
+  - www.doh
+  uploaded_cert_bundle_name: null
+kibana:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: https_proxy_pass
+  letsencrypt: true
+  origin_http_port: 5601
+  origin_https_port: 444
+  password_protected_paths: []
+  password_protected_paths_password: password
+  public_domain: kibana
+  rate_limited_regexes: []
+  server_names:
+  - kibana
+  - www.kibana
+  uploaded_cert_bundle_name: null
+test-origin:
+  allow_http_delete_push: false
+  cache_exceptions: []
+  challenge_everyone_captcha: false
+  challenge_everyone_sha_inv: false
+  default_cache_time_minutes: 10
+  disable_logging: false
+  dnet: controller
+  dns_records: {}
+  http_request_does: http_proxy_pass
+  https_request_does: http_proxy_pass
+  letsencrypt: true
+  origin_http_port: 8080
+  origin_https_port: 8080
+  password_protected_paths:
+  - /admin
+  password_protected_paths_password: password
+  public_domain: test-origin
+  rate_limited_regexes: []
+  server_names:
+  - test-origin
+  uploaded_cert_bundle_name: null

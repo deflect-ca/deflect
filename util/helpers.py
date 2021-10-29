@@ -68,17 +68,19 @@ def path_to_containers():
     )
 
 def get_sites_yml_path():
-    return os.path.join(path_to_input(), 'current/old-sites.yml')
+    return os.path.join(path_to_input(), 'config/old_sites.yml')
 
+def get_system_sites_yml_path():
+    return os.path.join(path_to_input(), 'config/system_sites.yml')
 
 def get_config_yml_path():
-    return os.path.join(path_to_input(), 'current/config.yml')
+    return os.path.join(path_to_input(), 'config/global_config.yml')
 
 def get_persisted_config_yml_path():
     return os.path.join(path_to_persisted(), 'config.yml')
 
 def get_banjax_config_yml_path():
-    return os.path.join(path_to_input(), 'banjax_config.yml')
+    return os.path.join(path_to_input(), 'config/banjax_config.yml')
 
 def get_kibana_saved_objects_path():
     return os.path.join(path_to_input(), 'kibana-saved-objects.ndjson')

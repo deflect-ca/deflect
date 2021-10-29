@@ -1,9 +1,6 @@
 from orchestration.run_container.base_class import Container
 import tarfile
 import subprocess
-import logging
-from util.helpers import get_logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 
 class Certbot(Container):
@@ -22,13 +19,13 @@ class Certbot(Container):
             with open(f"./input/certs/{config_timestamp}.tar", "rb") as f:
                 self.container.put_archive("/etc/letsencrypt/", f.read())
         except FileNotFoundError:
-            logger.debug("didn't find previous certs... continuing")
+            self.logger.debug("didn't find previous certs... continuing")
 
         (exit_code, output) = self.container.exec_run(
             f"certbot register {config['production_certbot_options']} --agree-tos --non-interactive"
         )
-        logger.debug(output)
-        logger.debug("registered")
+        self.logger.debug(output)
+        self.logger.debug("registered")
 
         # (exit_code, output) = self.container.exec_run(
         #     f"certbot renew {config['certbot_options']}"
@@ -50,9 +47,9 @@ class Certbot(Container):
             # the letsencrypt / deflect-next formatted ones...
             if domain in sites_with_certs:
                 continue
-            logger.debug(f"trying to get a cert for {site['server_names']}")
+            self.logger.debug(f"trying to get a cert for {site['server_names']}")
             domains_args = "-d " + " -d ".join(site['server_names'])
-            logger.debug(domains_args)
+            self.logger.debug(domains_args)
             (exit_code, output) = self.container.exec_run(
                 f"certbot certonly {config['staging_certbot_options']} --non-interactive --agree-tos"
                 # f"certbot certonly {config['production_certbot_options']} --non-interactive --agree-tos"
@@ -61,9 +58,9 @@ class Certbot(Container):
                 " --certbot-dns-standalone:dns-standalone-address=127.0.0.1"
                 f" --certbot-dns-standalone:dns-standalone-port=5053 {domains_args}"
             )
-            logger.debug(output.decode())
+            self.logger.debug(output.decode())
 
-        logger.debug("ran certbot certonly")
+        self.logger.debug("ran certbot certonly")
 
         with open(f"output/{config_timestamp}/etc-ssl-sites.tar", "wb") as tar_file:
             (chunks, stat) = self.container.get_archive(
@@ -82,8 +79,8 @@ class Certbot(Container):
         gzip_proc = subprocess.run(["gzip", "--keep", "--force", etc_ssl_sites_tarfile_name],
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if gzip_proc.returncode != 0:
-            logger.debug(gzip_proc.stdout)
-            logger.debug(gzip_proc.stderr)
+            self.logger.debug(gzip_proc.stdout)
+            self.logger.debug(gzip_proc.stderr)
             raise Exception("gzipping etc-ssl-sites.tar got non-zero exit code")
 
         # XXX put_archive() only accepts a tar, so...

@@ -1,10 +1,5 @@
 from orchestration.run_container.base_class import Container
 
-import logging
-from util.helpers import get_logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
-
-
 class Banjax(Container):
     def update(self, config_timestamp):
         with open(f"output/{config_timestamp}/etc-banjax.tar", "rb") as f:
@@ -21,7 +16,7 @@ class Banjax(Container):
         )
 
         if len(nginx_containers) != 1:
-            logger.error(
+            self.logger.error(
                 f"start_new_banjax_container() expected to find a single "
                 f"running nginx container (whose namespaces we can join)"
             )

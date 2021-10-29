@@ -6,8 +6,8 @@ $TTL    300
                         2419200         ; Expire
                             300 )       ; Negative Cache TTL
 ;
-@       IN      NS      {{ name }}.
-@       IN      NS      {{ name }}.
+@       IN      NS      ns1.{{ name }}.
+@       IN      NS      ns2.{{ name }}.
 @       IN      A       {{ ip }}
 ns1     IN      A       {{ ip }}
 ns2     IN      A       {{ ip }}

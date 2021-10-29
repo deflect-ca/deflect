@@ -112,33 +112,49 @@ Nginx is going to be the resource-hungry one here, and you're going to have to b
 You can run the orchestration scripts from anywhere. They can be on the controller, or on your laptop. The following commands install the Python dependencies and make the scripts ready to run.
 
 ```bash
-git clone https://github.com/deflect-ca/deflect.git
+git clone https://github.com/deflect-ca/deflect.git --recursive
 cd deflect
 pip install -e .  # -e to make the scripts editable in place
+cp -r input/config{-example/,}
+
+# edit input/config/global_config.yml to have real IP addresses
+
+python3 main.py --action info  # see that docker isn't installed on the controller or edges
+python3 main.py --action install-base
+python3 main.py --action info  # now we see the the docker versions installed
+
+# run the config generation
+python3 main.py --action gen-config
+
+# start/stop/reload containers with the latest config
+python3 main.py --action install-config
+
+# check if our ES certs + creds work
+python3 main.py --action test-es-auth
+
+# check all nginx/error.logs
+python3 main.py --action get-nginx-errors
+
+# XXX i can't get curl to trust my pebble CA. if i add persisted/pebble_ca.pem
+# to a (disposable!) firefox profile, it works.
+python3 main.py --action show-useful-curl-commands
+
+# trigger the challenge page. repeat it (failing it) until you get blocked.
+curl -v -k --resolve example.com:443:<edge_ip> "https://example.com?challengeme"
+
+# then run this. see your IP gets an expiring IptablesBlock.
+python3 main.py --action get-banjax-decision-lists
+
+# see your IP under the rate limit states.
+python3 main.py --action get-banjax-rate-limit-states
+
+# see the config version (from the site dict) that nginx and banjax are running.
+python3 main.py --action get-nginx-and-banjax-config-versions
+
+# loop through all our certs and print the expiration time
+python3 main.py --action check-cert-expiry
 ```
 
-Next, you need to make sure:
-* your controller and edge IPs are in the appropriate config files.
-* you have SSH access to the controller and edges from the user you're running the scripts as.
-
-The next command SSHes into your controller and edges and basically does `apt install docker` (that's the only requirement for the host). You might have to tweak it a bit depending on the distros on the remote hosts.
-
-```bash
-python3 orchestration/install_base.py
-```
-
-Next we need to:
-* generate the config files for Nginx, Bind, and Banjax
-* build the necessary Docker images
-* start all the Docker containers
-* run certbot if necessary
-* copy a bunch of config files and certs around and tell the main services to reload
-
-That's a lot of moving parts, but if everything is in place, the following command does it all:
-
-```bash
-python3 orchestration/main.py
-```
 
 ## Where you'll want to start looking when things don't work
 

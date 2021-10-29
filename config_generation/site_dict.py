@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 from util.helpers import (
         get_sites_yml_path,
+        get_system_sites_yml_path,
         get_logger,
 )
 import logging
@@ -104,7 +105,21 @@ def old_to_new_site_dict(old_dict):
     return new_dict
 
 
-def get_all_sites():
+def complete_system_sites(config, system_sites):
+    fixed_system_sites = {}
+    for name, site in system_sites.items():
+        fixed_name = f"{name}.{config['system_root_zone']}"
+        fixed_site = site
+        fixed_server_names = []
+        for server_name in fixed_site['server_names']:
+            fixed_server_names.append(f"{server_name}.{config['system_root_zone']}")
+        fixed_site['server_names'] = fixed_server_names
+        fixed_site['public_domain'] = f"{fixed_site['public_domain']}.{config['system_root_zone']}"
+        fixed_site['origin_ip'] = config['controller']['ip']  # system sites all live on the controller
+        fixed_system_sites[fixed_name] = fixed_site
+    return fixed_system_sites
+
+def get_all_sites(config):
     logger.info('Getting all sites')
     old_client_sites = {}
     old_client_sites_timestamp = None
@@ -130,11 +145,12 @@ def get_all_sites():
 
     logger.debug('Getting new system_sites')
     system_sites = {}
-    with open("input/system-sites.yml", "r") as f:
+    with open(get_system_sites_yml_path(), "r") as f:
         system_sites = yaml.load(f.read(), Loader=yaml.SafeLoader)
+        system_sites = complete_system_sites(config, system_sites)
 
     all_sites = {'client': new_client_sites, 'system': system_sites}
-    logger.debug(f'All sites:{json.dumps(all_sites, indent=2)}')
+    # logger.debug(f'All sites:{json.dumps(all_sites, indent=2)}')
     return all_sites, formatted_time
 
 

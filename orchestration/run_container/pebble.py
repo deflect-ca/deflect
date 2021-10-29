@@ -1,8 +1,23 @@
+import tarfile
 from orchestration.run_container.base_class import Container
+from util.helpers import (
+    path_to_persisted,
+    path_to_output,
+)
+import os.path
 
 class Pebble(Container):
-    def update(self, config_timestamp):
-        pass
+    # XXX i'm saving the CA to persisted/, but i'm not loading it from there yet
+    def update(self, timestamp):
+        self.logger.debug("getting intermediate cert from pebble...")
+        # XXX possible you need to wait for pebble to start accepting connections...
+        (exit_code, output) = self.container.exec_run(
+                f"curl --silent -k https://localhost:15000/intermediates/0"
+        )
+        self.logger.debug(output)
+        with open(os.path.join(path_to_persisted(), "pebble_ca.crt"), "wb") as dest:
+            dest.write(output)
+        self.logger.debug("saved intermediate cert from pebble to persisted/pebble_ca.crt")
 
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
