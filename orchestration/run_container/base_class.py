@@ -144,6 +144,7 @@ class Container:
         for host in [config['controller']] + config['edges']:
             if host['hostname'] == hostname:
                 self.dnet = host['dnet']
+                self.ip = host['ip']
                 break
         else:
             raise Exception("didn't find this host in config!")

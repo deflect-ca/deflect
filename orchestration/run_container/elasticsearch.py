@@ -9,7 +9,7 @@ import traceback
 import requests
 import tarfile
 
-def attempt_to_authenticate(hostname, logger):
+def attempt_to_authenticate(ip, logger):
     p_conf = get_persisted_config()
     if 'elastic_password' not in p_conf:
         logger.debug("'elastic_password' not in persisted/config, auth failed")
@@ -22,7 +22,7 @@ def attempt_to_authenticate(hostname, logger):
         logger.debug(f"attempting to auth with password {p_conf['elastic_password']}")
         try:
             r = requests.get(
-                    f"https://{hostname}:9200",
+                    f"https://{ip}:9200",
                     verify=ca_file,
                     auth=("elastic", p_conf['elastic_password'])
             )
@@ -118,11 +118,11 @@ class Elasticsearch(Container):
 
     def update(self, config_timestamp):
         # check if we already have certs + creds
-        if attempt_to_authenticate(self.hostname, self.logger):
+        if attempt_to_authenticate(self.ip, self.logger):
             return
         # self._generate_certs()
         self._generate_creds()
-        if not attempt_to_authenticate(self.hostname, self.logger):
+        if not attempt_to_authenticate(self.ip, self.logger):
             self.logger.error("!!! we tried to generate certs and creds but still can't connect to ES !!!")
             self.logger.error("curl -v --resolve <name>:9200:<ip> --cacert persisted/elastic_certs/ca.crt https://<name>:9200 --user 'elastic:<pass>'")
             self.logger.error("could be 1) bad certs, 2) bad user/pass, 3) your bind9 server isn't running")

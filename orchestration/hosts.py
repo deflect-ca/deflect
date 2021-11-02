@@ -126,11 +126,11 @@ def ensure_generic_requirements(config, host, logger):
     logger.debug(f"installing requirements on {host['ip']}...")
 
     # these commands need variables from this inner scope
-    controller_and_edge_commands.extend([
+    commands = controller_and_edge_commands + [
         f"sudo hostnamectl set-hostname {host['hostname']}",
-    ])
+    ]
 
-    for command in controller_and_edge_commands:
+    for command in commands:
         proc = run_local_or_remote_raise(config, host, command, logger)
 
     return True

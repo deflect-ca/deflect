@@ -135,7 +135,7 @@ if __name__ == '__main__':
             banjax.update(timestamp)
 
     elif args.action == "test-es-auth":
-        attempt_to_authenticate(config['controller']['hostname'], logger)
+        attempt_to_authenticate(config['controller']['ip'], logger)
 
     elif args.action == "kill-all-containers":
         command = "docker kill $(docker ps -q)"

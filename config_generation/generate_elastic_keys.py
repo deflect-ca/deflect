@@ -4,6 +4,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+import ipaddress
 import datetime
 
 from util.helpers import path_to_persisted, path_to_containers
@@ -11,7 +12,7 @@ import os.path
 import os
 
 
-def gen_key_and_cert(name, issuer_name, is_ca, logger):
+def gen_key_and_cert(name, alt_name, issuer_name, is_ca, logger):
     logger.debug(
         f"generating a new key and cert, subject={name}, issuer={issuer_name}")
 
@@ -32,6 +33,13 @@ def gen_key_and_cert(name, issuer_name, is_ca, logger):
         x509.NameAttribute(NameOID.COMMON_NAME, issuer_name),
     ]))
 
+    builder = builder.add_extension(
+        x509.SubjectAlternativeName(
+            [x509.IPAddress(ipaddress.IPv4Address(alt_name))]
+        ),
+        critical=False
+    )
+
     one_day = datetime.timedelta(days=1)
     one_year = datetime.timedelta(days=365)
 
@@ -40,13 +48,6 @@ def gen_key_and_cert(name, issuer_name, is_ca, logger):
 
     builder = builder.serial_number(x509.random_serial_number())
     builder = builder.public_key(pub_key)
-
-    builder = builder.add_extension(
-        x509.SubjectAlternativeName(
-            [x509.DNSName(name)]
-        ),
-        critical=False
-    )
 
     builder = builder.add_extension(
         x509.BasicConstraints(ca=is_ca, path_length=None), critical=True,
@@ -63,14 +64,17 @@ def sign_cert_with_key(cert, key):
 def generate_new_elastic_certs(config, logger):
     # XXX config
     ca_subject = "my ca"
+    ca_alt_name = config['controller']['ip']
+
     ins_subject = config['controller']['hostname']
+    ins_alt_name = config['controller']['ip']
 
     ca_key, ca_cert_uns = gen_key_and_cert(
-        ca_subject, ca_subject, True, logger)
+        ca_subject, ca_alt_name, ca_subject, True, logger)
     ca_cert = sign_cert_with_key(ca_cert_uns, ca_key)
 
     ins_key, ins_cert_uns = gen_key_and_cert(
-        ins_subject, ca_subject, False, logger)
+        ins_subject, ins_alt_name, ca_subject, False, logger)
     ins_cert = sign_cert_with_key(ins_cert_uns, ca_key)
 
     ca_key_bytes = ca_key.private_bytes(
