@@ -267,7 +267,7 @@ def top_level_conf(timestamp):
             nginx.Key(
                 'log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"),
             nginx.Key(
-                'log_format', "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host $status $bytes_sent \"$http_user_agent\" $upstream_cache_status $content_type $hostname $request_time $scheme://$host$uri \"$http_referer\" \"$http_x_forwarded_for\"'"),
+                'log_format', "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host $status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" $proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\"'"),
 
             # XXX i'd rather keep the nginx names, but if they collide with other names in ELK, i can't
             # get the correct types (numbers show up as strings)
