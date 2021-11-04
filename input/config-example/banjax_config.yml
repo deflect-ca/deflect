@@ -6,7 +6,7 @@ too_many_failed_challenges_interval_seconds: 30
 too_many_failed_challenges_threshold: 10
 password_cookie_ttl_seconds: 3600
 sha_inv_cookie_ttl_seconds: 3600
-server_log_file: "/var/log/banjax/banjax-format.log"
+server_log_file: "/var/log/nginx/banjax-format.log"
 banning_log_file: "/var/log/banjax/banjax-logstash-format.log"
 iptables_ban_seconds: 60
 iptables_unbanner_seconds: 10  # how often we check for and remove old bans

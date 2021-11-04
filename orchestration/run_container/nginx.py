@@ -98,11 +98,6 @@ class Nginx(Container):
                 {
                     'bind': '/var/log/nginx/',
                     'mode': 'rw'
-                },
-                '/root/banjax/':
-                {
-                    'bind': '/var/log/banjax/',
-                    'mode': 'rw'
                 }
             },
             name=f"nginx-{build_timestamp}",

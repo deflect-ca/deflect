@@ -1,3 +1,4 @@
+from datetime import datetime
 from orchestration.run_container.base_class import Container
 
 class Banjax(Container):
@@ -22,7 +23,20 @@ class Banjax(Container):
             )
             raise Exception
 
+        build_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        banjax_logs_volume = self.client.volumes.create(name=f"banjax-{build_timestamp}")
+
         nginx_container = nginx_containers[0]
+        nginx_d = self.client.api.inspect_container(nginx_container.id)
+        nginx_logs_volume_name = None
+        for mount in nginx_d["Mounts"]:
+            if mount["Type"] == "volume":
+                if mount["Destination"] == "/var/log/nginx":
+                    nginx_logs_volume_name = mount["Name"]
+                    break
+        else:
+            self.logger.error(nginx_d["Mounts"])
+            raise Exception("couldn't find log volume in nginx container")
 
         # XXX bad duplication with the nginx log tailers above
         filenames_to_tail = [
@@ -40,7 +54,7 @@ class Banjax(Container):
                         'banjax_next_log_file': base_name
                 },
                 volumes={  # XXX check out volumes_from?
-                    '/root/banjax/':  # XXX
+                    banjax_logs_volume.name:  # XXX
                     {
                         'bind': '/var/log/banjax/',
                         'mode': 'ro'
@@ -57,9 +71,9 @@ class Banjax(Container):
                 'name': "banjax",
             },
             volumes={  # XXX check out volumes_from?
-                '/root/banjax/':  # XXX
+                nginx_logs_volume_name:  # XXX
                 {
-                    'bind': '/var/log/banjax/',
+                    'bind': '/var/log/nginx/',
                     'mode': 'rw'
                 }
             },

@@ -34,13 +34,6 @@ def redirect_to_https_server_block(site: dict):
     )
 
 
-def access_log_banjax_format():
-    return nginx.Key(
-        'access_log',
-        "/var/log/banjax/banjax-format.log banjax_format"
-    )
-
-
 def proxy_pass_to_origin_server_block(
         site, global_config, edge_https, origin_https
 ):
@@ -294,8 +287,8 @@ def top_level_conf(timestamp):
 
             nginx.Key('error_log', "/dev/stdout warn"),
             nginx.Key('access_log', "/var/log/nginx/access.log json_combined"),
-            nginx.Key('access_log', "/var/log/banjax/banjax-format.log banjax_format"),
-            nginx.Key('access_log', "/var/log/banjax/nginx-logstash-format.log logstash_format"),
+            nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"),
+            nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format"),
 
             nginx.Key('proxy_cache_path',
                       "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"),

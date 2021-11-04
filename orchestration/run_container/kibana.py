@@ -30,6 +30,14 @@ class Kibana(Container):
 
 
     def start_new_container(self, config, image_id):
+        # XXX
+        controller_host = None
+        if config['controller']['ip'] == "127.0.0.1":
+            controller_host = "gateway.docker.internal"
+        else:
+            controller_host = config['controller']['ip']
+
+        self.logger.error(f"controller host: {controller_host}")
         return self.client.containers.run(
             image_id,
             detach=True,
@@ -40,7 +48,7 @@ class Kibana(Container):
                 'name': "kibana",
             },
             environment={
-                "ELASTICSEARCH_HOSTS": f"https://{config['controller']['ip']}:9200",
+                "ELASTICSEARCH_HOSTS": f"https://{controller_host}:9200",
                 "ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES": "/etc/kibana/ca.crt",
                 "ELASTICSEARCH_SSL_VERIFICATIONMODE": "none",
                 "ELASTICSEARCH_USERNAME": "elastic",

@@ -113,6 +113,22 @@ Nginx is going to be the resource-hungry one here, and you're going to have to b
 
 You can run the orchestration scripts from anywhere. They can be on the controller, or on your laptop. The following commands install the Python dependencies and make the scripts ready to run.
 
+You can install all of the controller and edge containers locally (under Docker Desktop) on your workstation with the following
+snippet in `global_config.yml`:
+```yaml
+controller:
+  hostname: docker-desktop
+  ip: 127.0.0.1
+  dnet: controller  # XXX fix this
+edges:
+  - hostname: docker-desktop
+    ip: 127.0.0.1
+    dnet: dnet_a
+```
+(More precisely, it won't install the controller's version of Nginx, Filebeat, or Metricbeat,
+but it will install everything else.)
+
+
 ```bash
 git clone https://github.com/deflect-ca/deflect.git --recursive
 cd deflect

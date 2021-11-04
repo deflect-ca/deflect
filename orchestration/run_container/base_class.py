@@ -141,7 +141,17 @@ class Container:
         hostname = f"{self.client.info().get('Name')}"
         self.logger.debug(f"found hostname to be: {hostname}")
         self.hostname = hostname
-        for host in [config['controller']] + config['edges']:
+        search_hosts = []
+        if hostname == "docker-desktop":
+            # XXX this is very non-obvious. if we're putting all the containers on a single
+            # workstation host, we skip the controller's usual Nginx, Filebeat, and Metricbeat
+            # because we can't have two Nginx instances on the same ports and because the edge
+            # instance is more useful. This little kludge makes it so the right Nginx config
+            # gets installed. Maybe it can be fixed in a cleaner way.
+            search_hosts = config['edges']
+        else:
+            search_hosts = [config['controller']] + config['edges']
+        for host in search_hosts:
             if host['hostname'] == hostname:
                 self.dnet = host['dnet']
                 self.ip = host['ip']

@@ -148,6 +148,11 @@ def host_to_role(config, host):
 def ensure_all_requirements(config, host, logger):
     res = ensure_generic_requirements(config, host, logger)
 
+    if host['ip'] == "127.0.0.1":
+        logger.error(f"Refusing to install base requirements on local host: {host}.")
+        logger.error(f"All you need on your workstation is Docker.")
+        return False
+
     role = host_to_role(config, host)
     if role == "edge":
         logger.debug(f"installing edge requirements on {host['hostname']}...")
