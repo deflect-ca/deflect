@@ -8,7 +8,7 @@
     1. [Controller](#controller)
     1. [Edge](#edge)
     1. [Baskerville](#baskerville)
-    1. [DNETs](#dnets)
+    1. [Dnets](#dnets)
     1. [Edge Rotation/Management](#edge-rotationmanagement)
     1. [Content Caching](#content-caching)
     1. [ELK Stack](#elk-stack)
