@@ -1,6 +1,7 @@
 from orchestration.run_container.base_class import Container
 from orchestration.run_container.base_class import get_persisted_config
 
+
 class Filebeat(Container):
     def update(self, config_timestamp):
         pass

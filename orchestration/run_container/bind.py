@@ -7,7 +7,6 @@ class Bind(Container):
             self.container.put_archive("/etc/bind", f.read())
         self.container.kill(signal="SIGHUP")
 
-
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
             image_id,
@@ -23,5 +22,3 @@ class Bind(Container):
             name="bind",
             restart_policy=Container.DEFAULT_RESTART_POLICY
         )
-
-

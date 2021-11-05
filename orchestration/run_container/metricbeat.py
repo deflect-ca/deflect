@@ -40,17 +40,17 @@ class Metricbeat(Container):
                 "DEFLECT_DNET": self.dnet,
             },
             volumes={
-                '/var/run/':  # XXX
+                '/var/run/':
                     {
                         'bind': '/var/run/',
                                 'mode': 'ro'
                     },
-                '/sys/fs/cgroup':  # XXX
+                '/sys/fs/cgroup':
                     {
                         'bind': '/hostfs/sys/fs/cgroup',
                                 'mode': 'ro'
                     },
-                '/proc':  # XXX
+                '/proc':
                     {
                         'bind': '/hostfs/proc',
                                 'mode': 'ro'
@@ -61,5 +61,3 @@ class Metricbeat(Container):
             # extra_hosts={"nginx": "127.0.0.1"}, # XXX can't set Host header in metricbeat
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},
         )
-
-

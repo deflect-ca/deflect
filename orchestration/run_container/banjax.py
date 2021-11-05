@@ -1,6 +1,7 @@
 from datetime import datetime
 from orchestration.run_container.base_class import Container
 
+
 class Banjax(Container):
     def update(self, config_timestamp):
         with open(f"output/{config_timestamp}/etc-banjax.tar", "rb") as f:
@@ -9,17 +10,16 @@ class Banjax(Container):
         # XXX config reload not implemented yet
         #  banjax_container.kill(signal="SIGHUP")
 
-
     def start_new_container(self, config, image_id):
         # XXX consider a different approach (making the caller pass in the network and fs namespaces?)
         nginx_containers = self.client.containers.list(
-            filters={"label": f"name=nginx"}
+            filters={"label": "name=nginx"}
         )
 
         if len(nginx_containers) != 1:
             self.logger.error(
-                f"start_new_banjax_container() expected to find a single "
-                f"running nginx container (whose namespaces we can join)"
+                "start_new_banjax_container() expected to find a single "
+                "running nginx container (whose namespaces we can join)"
             )
             raise Exception
 
@@ -83,5 +83,3 @@ class Banjax(Container):
             # XXX should we specify container id instead?
             network_mode=f"container:{nginx_container.name}"
         )
-
-

@@ -87,7 +87,6 @@ class Certbot(Container):
         with tarfile.open(etc_ssl_sites_tarfile_name + ".gz.tar", "w") as tar_file:
             tar_file.add(etc_ssl_sites_tarfile_name + ".gz")
 
-
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
             image_id,
@@ -100,5 +99,3 @@ class Certbot(Container):
             # XXX should we specify container id instead?
             network_mode="container:bind"
         )
-
-

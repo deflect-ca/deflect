@@ -3,6 +3,7 @@ from datetime import datetime
 from orchestration.run_container.base_class import Container
 from util.helpers import FILENAMES_TO_TAIL, path_to_output
 
+
 class Nginx(Container):
     def update(self, config_timestamp):
         self.container.exec_run("rm -rf /etc/nginx")
@@ -103,5 +104,3 @@ class Nginx(Container):
             name=f"nginx-{build_timestamp}",
             restart_policy=Container.DEFAULT_RESTART_POLICY
         )
-
-

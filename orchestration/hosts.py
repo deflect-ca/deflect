@@ -6,13 +6,8 @@
 
 
 import subprocess
-import yaml
 import json
 import docker
-
-from pyaml_env import parse_config
-
-from util.helpers import get_config_yml_path
 
 USER = "root"
 
@@ -54,11 +49,14 @@ controller_and_edge_commands = [
     "sudo apt-get -yq install docker-ce",
     "sudo timedatectl set-timezone UTC",
     "sudo useradd --create-home deflect",
-    "sudo usermod --append --groups docker deflect", # installing docker above added the 'docker' group
+    # installing docker above added the 'docker' group
+    "sudo usermod --append --groups docker deflect",
 ]
 
 # TODO: the base_url needs to be in a config. This is not flexible for debugging
 # TODO: or testing/ staging env
+
+
 def docker_client_for_host(host):
     if host['ip'] == "127.0.0.1":
         return docker.DockerClient()
@@ -67,7 +65,8 @@ def docker_client_for_host(host):
 
 
 def run_local_or_remote_noraise(config, host, command, logger):
-    logger.debug(f"===== running \"{command}\" on {host['hostname']} ({host['ip']}) =====")
+    logger.debug(
+        f"===== running \"{command}\" on {host['hostname']} ({host['ip']}) =====")
 
     shell_prefix = []
     if host['ip'] != "127.0.0.1":
@@ -77,8 +76,8 @@ def run_local_or_remote_noraise(config, host, command, logger):
         shell_prefix = ["bash", "-c"]
 
     proc = subprocess.run(
-            shell_prefix + [command],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        shell_prefix + [command],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
     for line in proc.stdout.splitlines():
         logger.debug(f"    {line.decode()}")
@@ -89,8 +88,10 @@ def run_local_or_remote_noraise(config, host, command, logger):
 def run_local_or_remote_raise(config, host, command, logger):
     proc = run_local_or_remote_noraise(config, host, command, logger)
     if proc.returncode != 0:
-        logger.debug(f"command '{command}' returned non-zero code: {proc.returncode}")
-        raise Exception(f"command '{command}' returned non-zero code: {proc.returncode}")
+        logger.debug(
+            f"command '{command}' returned non-zero code: {proc.returncode}")
+        raise Exception(
+            f"command '{command}' returned non-zero code: {proc.returncode}")
     return proc
 
 
@@ -100,27 +101,32 @@ def get_docker_engine_version(config, host, logger):
     if proc.returncode == 127:  # this means command not found
         return None
     if proc.returncode != 0:    # let's raise on unexpected return code to be safe
-        raise Exception(f"ran command `{command}` on host `{host}` and got unexpected return code")
+        raise Exception(
+            f"ran command `{command}` on host `{host}` and got unexpected return code")
 
     lines = proc.stdout.splitlines()
     if len(lines) != 1:
-        raise Exception(f"ran command `{command}` on host `{host}` and got unexpected output")
+        raise Exception(
+            f"ran command `{command}` on host `{host}` and got unexpected output")
     d = json.loads(lines[0])
     s = d.get("Server")
     if not s:
-        raise Exception(f"ran command `{command}` on host `{host}` and got unexpected output")
+        raise Exception(
+            f"ran command `{command}` on host `{host}` and got unexpected output")
     for c in s.get("Components"):
         if c.get("Name"):
             version = c.get("Version")
             if not version:
-                raise Exception(f"ran command `{command}` on host `{host}` and got unexpected output")
+                raise Exception(
+                    f"ran command `{command}` on host `{host}` and got unexpected output")
             return version
-    
+
 
 def ensure_generic_requirements(config, host, logger):
     version = get_docker_engine_version(config, host, logger)
     if version:
-        logger.debug(f"docker found, skipping the rest of install for {host['ip']}")
+        logger.debug(
+            f"docker found, skipping the rest of install for {host['ip']}")
         return True
 
     logger.debug(f"installing requirements on {host['ip']}...")
@@ -131,7 +137,7 @@ def ensure_generic_requirements(config, host, logger):
     ]
 
     for command in commands:
-        proc = run_local_or_remote_raise(config, host, command, logger)
+        run_local_or_remote_raise(config, host, command, logger)
 
     return True
 
@@ -146,11 +152,12 @@ def host_to_role(config, host):
 
 
 def ensure_all_requirements(config, host, logger):
-    res = ensure_generic_requirements(config, host, logger)
+    ensure_generic_requirements(config, host, logger)
 
     if host['ip'] == "127.0.0.1":
-        logger.error(f"Refusing to install base requirements on local host: {host}.")
-        logger.error(f"All you need on your workstation is Docker.")
+        logger.error(
+            f"Refusing to install base requirements on local host: {host}.")
+        logger.error("All you need on your workstation is Docker.")
         return False
 
     role = host_to_role(config, host)
@@ -158,7 +165,8 @@ def ensure_all_requirements(config, host, logger):
         logger.debug(f"installing edge requirements on {host['hostname']}...")
         return ensure_edge_requirements(config, host, logger)
     elif role == "controller":
-        logger.debug(f"installing controller requirements on {host['hostname']}...")
+        logger.debug(
+            f"installing controller requirements on {host['hostname']}...")
         return ensure_controller_requirements(config, host, logger)
     else:
         raise RuntimeError(f"unknown role ({role}) for hose ({host})")
@@ -171,13 +179,13 @@ def ensure_controller_requirements(config, controller, logger):
         # "sudo ufw --force enable",
         # XXX i'm not sure how to generally bootstrap the controller having creds for everywhere else
         # f"ssh-keygen -t rsa -f {config['ssh_key_file']} -N {config['ssh_key_pass']} -q -C edgeKey -b 4096",
-        "sudo systemctl disable systemd-resolved", # we run our own dns server
+        "sudo systemctl disable systemd-resolved",  # we run our own dns server
         "sudo systemctl stop systemd-resolved",
         "rm /etc/resolv.conf",
         "echo 'nameserver 1.1.1.1' > /etc/resolv.conf",
     ]
     for command in controller_commands:
-        proc = run_local_or_remote_raise(config, controller, command, logger)
+        run_local_or_remote_raise(config, controller, command, logger)
 
     return True
 
@@ -189,8 +197,6 @@ def ensure_edge_requirements(config, edge, logger):
         # "sudo ufw --force enable",
     ]
     for command in edge_commands:
-        proc = run_local_or_remote_raise(config, edge, command, logger)
+        run_local_or_remote_raise(config, edge, command, logger)
 
     return True
-
-

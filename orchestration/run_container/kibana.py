@@ -2,10 +2,12 @@ from orchestration.run_container.base_class import Container
 from orchestration.run_container.base_class import get_persisted_config
 from util.helpers import path_to_input
 
+
 class Kibana(Container):
     def _upload_saved_objects(self):
         import aiohttp
         import asyncio
+
         # XXX might have to wait for kibana to start accepting connections.
         # XXX don't want to re-upload this every time
         # XXX maybe requests is nicer?...
@@ -27,7 +29,6 @@ class Kibana(Container):
     def update(self, config_timestamp):
         pass
         # self._upload_saved_objects()
-
 
     def start_new_container(self, config, image_id):
         # XXX
@@ -64,4 +65,3 @@ class Kibana(Container):
             name="kibana",
             restart_policy=Container.DEFAULT_RESTART_POLICY,
         )
-

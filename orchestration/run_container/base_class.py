@@ -3,6 +3,7 @@ from util.helpers import path_to_containers, get_persisted_config_yml_path
 
 import yaml
 
+
 # XXX this is weird and should be cleaned up
 def get_persisted_config():
     p_conf = {}
@@ -12,9 +13,11 @@ def get_persisted_config():
         p_conf = yaml.load(f)
     return p_conf
 
+
 def save_persisted_config(p_conf):
     with open(get_persisted_config_yml_path(), "w") as f:
         yaml.dump(p_conf, f)
+
 
 def kill_containers_with_label(client, label, logger):
     logger.info(f"killing containers with label or name {label}")
@@ -34,12 +37,12 @@ def kill_containers_with_label(client, label, logger):
         # XXX ugh all of this
         try:
             container.kill()
-        except:
+        except Exception:
             logger.error('Could not kill container')
             pass
         try:
             container.remove()  # XXX just so i can use a name later... re-think
-        except:
+        except Exception:
             logger.error('Could not remove container')
             pass
 
@@ -53,7 +56,6 @@ def find_existing_container(client, name, extra_label, config, logger):
         filters = {"label": [f"name={name}", extra_label]}
     else:
         filters = {"label": f"name={name}"}
-
 
     containers = client.containers.list(filters=filters)
 
@@ -106,7 +108,6 @@ class Container:
             raise RuntimeError("Container() constructor requires either `find_existing` or `kill_existing`")
         Container.known_containers.append(self.container)
 
-
     def update(self):
         raise RuntimeError("need to implement update() in the concrete class")
 
@@ -136,7 +137,6 @@ class Container:
         (image, image_logs) = self.build_image(config, registry='')
         return self.start_new_container(config, image.id)
 
-
     def set_hostname_and_dnet(self, config):
         hostname = f"{self.client.info().get('Name')}"
         self.logger.debug(f"found hostname to be: {hostname}")
@@ -158,4 +158,3 @@ class Container:
                 break
         else:
             raise Exception("didn't find this host in config!")
-
