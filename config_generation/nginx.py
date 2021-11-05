@@ -64,7 +64,7 @@ def proxy_pass_to_origin_server_block(
     else:
         server.add(nginx.Key('listen', '80'))
 
-    for password_protected_path in site['password_protected_paths']:
+    for password_protected_path in sorted(site['password_protected_paths']):
         server.add(proxy_pass_password_protected_path(
             password_protected_path, origin_https, site))
     # XXX how to check these exceptions are valid and in the right order?
@@ -338,6 +338,8 @@ def top_level_conf(timestamp):
             nginx.Server(
                 nginx.Key('listen', "80"),
                 nginx.Key('server_name', "banjax"),
+                nginx.Key('allow', "127.0.0.1"),
+                nginx.Key('deny', "all"),
                 nginx.Key('access_log', "off"),  # XXX?
                 # XXX do this differently?
                 nginx.Location('/info',
@@ -418,7 +420,7 @@ def fail_closed_location_block(site, global_config, edge_https, origin_https):
 
 # XXX ugh this needs redoing
 def generate_nginx_config(all_sites, config, formatted_time):
-    for dnet in config['dnets']:
+    for dnet in sorted(config['dnets']):
         output_dir = f"./output/{formatted_time}/etc-nginx-{dnet}"
         if os.path.isdir(output_dir):
             logger.debug(f"removing {output_dir}")
@@ -435,7 +437,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
 
         os.mkdir(output_dir + "/sites.d")
 
-        for name, site in all_sites['client'].items():
+        for site in sorted(all_sites['client'].values(), key=lambda s: s['public_domain']):
             if dnet != site['dnet']:
                 continue
             public_domain = site['public_domain']
