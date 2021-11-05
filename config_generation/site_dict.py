@@ -65,10 +65,10 @@ def old_to_new_site_dict(old_dict):
     if banjax_path in [None, "", [], [""]]:
         new_dict["password_protected_paths"] = []
     elif isinstance(banjax_path, str):
-        new_dict["password_protected_paths"] = [banjax_path.strip()]
+        new_dict["password_protected_paths"] = [banjax_path.strip(" /")]
     elif isinstance(banjax_path, list):
         new_dict["password_protected_paths"] = list(
-            set([p.strip() for p in banjax_path]))
+            set([p.strip(" /") for p in banjax_path]))
     new_dict["password_protected_paths_password"] = old_dict.get(
         "banjax_password", None)
     new_dict["rate_limited_regexes"] = old_to_new_rate_limited_regexes(

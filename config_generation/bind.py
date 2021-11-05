@@ -108,7 +108,7 @@ def generate_bind_config(config, all_sites, timestamp):
             named_conf_string += zone_block_root(
                 site['public_domain'], zone_filename_2)
             # todo: function
-            for server_name in set(site['server_names']):
+            for server_name in sorted(set(site['server_names'])):
                 logger.debug(f'Processing server_name: {server_name}')
                 named_conf_string += zone_block_acme_challenge(server_name)
 
@@ -121,38 +121,38 @@ def generate_bind_config(config, all_sites, timestamp):
             origin_node = zone.find_node("@", create=True)
 
             logger.debug(f'find_rdataset: dns.rdataclass.IN')
-            soa_rdataset = origin_node.find_rdataset(
-                dns.rdataclass.IN,
-                rdtype=dns.rdatatype.SOA,
-                create=True
-            )
-            # XXX gosh, i dunno if it's worth using this complicated library for
-            # something so simple. i guess it catches some mistakes, though?
-            rd = dns.rdtypes.ANY.SOA.SOA(
-                dns.rdataclass.IN,
-                dns.rdatatype.SOA,
-                mname=dns.name.from_text(nameserver_hostname),
-                rname=dns.name.from_text(nameserver_admin),
-                serial=0,
-                refresh=300,
-                retry=300,
-                expire=1209600,
-                minimum=300
-            )
-            soa_rdataset.add(rd, 300)
+            #     soa_rdataset = origin_node.find_rdataset(
+            #         dns.rdataclass.IN,
+            #         rdtype=dns.rdatatype.SOA,
+            #         create=True
+            #     )
+            #     # XXX gosh, i dunno if it's worth using this complicated library for
+            #     # something so simple. i guess it catches some mistakes, though?
+            #     rd = dns.rdtypes.ANY.SOA.SOA(
+            #         dns.rdataclass.IN,
+            #         dns.rdatatype.SOA,
+            #         mname=dns.name.from_text(nameserver_hostname),
+            #         rname=dns.name.from_text(nameserver_admin),
+            #         serial=0,
+            #         refresh=300,
+            #         retry=300,
+            #         expire=1209600,
+            #         minimum=300
+            #     )
+            #     soa_rdataset.add(rd, 300)
 
             logger.debug(f'find_rdataset: @ NS')
-            ns_rdataset = zone.find_rdataset(
-                "@",
-                rdtype=dns.rdatatype.NS,
-                create=True
-            )
-            rd = dns.rdtypes.ANY.NS.NS(
-                dns.rdataclass.IN,
-                dns.rdatatype.NS,
-                dns.name.from_text(nameserver_hostname)
-            )
-            ns_rdataset.add(rd, 300)
+            #     ns_rdataset = zone.find_rdataset(
+            #         "@",
+            #         rdtype=dns.rdatatype.NS,
+            #         create=True
+            #     )
+            #     rd = dns.rdtypes.ANY.NS.NS(
+            #         dns.rdataclass.IN,
+            #         dns.rdatatype.NS,
+            #         dns.name.from_text(nameserver_hostname)
+            #     )
+            #     ns_rdataset.add(rd, 300)
 
             logger.debug(f'find_rdataset: _acme-challenge NS')
             ns_rdataset = zone.find_rdataset(
@@ -183,7 +183,7 @@ def generate_bind_config(config, all_sites, timestamp):
                     a_rdataset.add(rd, 300)
 
             # XXX TODO: improve
-            for server_name in set(site["server_names"]) - set([site_name]):
+            for server_name in sorted(set(site["server_names"]) - set([site_name])):
                 sub_zone = server_name.replace("." + site_name, "")
                 logger.debug(f'find_rdataset: sub_zone {sub_zone}, A')
                 a_rdataset = zone.find_rdataset(
@@ -215,6 +215,8 @@ def generate_bind_config(config, all_sites, timestamp):
             for name, type_and_values in site['dns_records'].items():
                 for type_and_value in type_and_values:
                     type_name = type_and_value['type']
+                    print(type_name)
+                    print(type_and_value['value'])
 
                     rdtype = None
                     rdatatype = None
@@ -225,7 +227,11 @@ def generate_bind_config(config, all_sites, timestamp):
                         rdtype = dns.rdtypes.ANY.TXT.TXT
                         rdatatype = dns.rdatatype.TXT
                         value = ast.literal_eval(type_and_value['value']).encode()
-                        rdata = rdtype(dns.rdataclass.IN, rdatatype, strings=[value])
+                        # XXX quick hack for splitting too-large values
+                        if len(value) > 250:
+                            rdata = rdtype(dns.rdataclass.IN, rdatatype, strings=(value[:250], value[250:]))
+                        else:
+                            rdata = rdtype(dns.rdataclass.IN, rdatatype, strings=(value,))
 
                     elif type_name == "A":
                         rdtype = dns.rdtypes.IN.A.A
@@ -285,7 +291,7 @@ def generate_bind_config(config, all_sites, timestamp):
 
             zone_filename = output_dir + "/" + zone_filename
             logger.debug(f'Writing zone_filename {zone_filename}')
-            zone.to_file(zone_filename, relativize=True)
+            zone.to_file(zone_filename, relativize=True, sorted=True)
 
         except AttributeError:
             traceback.print_exc()

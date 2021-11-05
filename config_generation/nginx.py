@@ -95,6 +95,7 @@ def proxy_pass_to_banjax_keys(origin_https, site):
         nginx.Key('proxy_set_header', "X-Requested-Host $host"),
         nginx.Key('proxy_set_header', "X-Client-IP $remote_addr"),
         nginx.Key('proxy_set_header', "X-Requested-Path $request_uri"),
+        nginx.Key('proxy_pass_request_body', "off"),
         # XXX i just want to discard the path
         # TODO: use config for port, ip
         nginx.Key('proxy_pass', "http://127.0.0.1:8081/auth_request?")
@@ -106,7 +107,12 @@ def proxy_pass_to_banjax_keys(origin_https, site):
 def proxy_pass_password_protected_path(
         password_protected_path, origin_https, site
 ):
-    location = nginx.Location(f"/{password_protected_path}/")
+    # XXX triage and review all my location matching patterns at some point.
+    # XXX i don't think we're ensuring there aren't overlapping patterns?
+    if "." in password_protected_path:
+        location = nginx.Location(f"= /{password_protected_path}")
+    else:
+        location = nginx.Location(f"/{password_protected_path}/")
     location.add(nginx.Key('set', "$loc_in \"pass_protected\""))
     # XXX force no-cache here
     location.add(nginx.Key('proxy_cache_valid', '0'))
@@ -184,7 +190,9 @@ def _access_granted_fail_open_location_contents(
     location_contents.append(nginx.Key('add_header', "X-Deflect-upstream_response_time $upstream_response_time"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
     location_contents.append(nginx.Key('proxy_set_header', "Host $host"))
+    location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
     location_contents.append(nginx.Key('proxy_ssl_name', '$host'))
+    location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
 
     if origin_https:
         location_contents.append(nginx.Key(
@@ -294,6 +302,7 @@ def top_level_conf(timestamp):
                       "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"),
             nginx.Key('proxy_cache_path',
                       "/data/nginx/site_content_cache keys_zone=site_content_cache:10m max_size=50g"),
+            nginx.Key('client_max_body_size', "2G"),  # XXX think about this
 
             # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
             nginx.Map('"" $empty', nginx.Key("default", '""')),
