@@ -72,6 +72,8 @@ def main(formatted_time):
                 continue
 
             in_chain = in_cert.replace(".cert.crt", ".chain.crt")
+            if not os.path.isfile(in_chain):
+                continue
 
             cert = ""
             chain = ""

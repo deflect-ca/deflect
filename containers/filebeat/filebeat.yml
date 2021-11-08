@@ -1,6 +1,7 @@
 filebeat.inputs:
 - type: docker
   combine_partial: true
+  tail_files: true  # XXX think about this
   containers:
     path: "/var/lib/docker/containers"
     stream: "stdout"
@@ -8,6 +9,7 @@ filebeat.inputs:
       - "*"
   fields:
     dnet: "${DEFLECT_DNET}"
+    edge_name: "${DEFLECT_EDGE_NAME}"
   processors:
     - add_docker_metadata:
         host: "unix:///var/run/docker.sock"
@@ -17,13 +19,13 @@ filebeat.inputs:
         add_error_key: true
     - convert:
         fields:
-          - {from: "decoded_message.ngx_request_time", to: "ngx_request_time", type: "float"}
+          - {from: "decoded_message.ngx_request_time", to: "decoded_message.ngx_request_time", type: "float"}
         ignore_missing: true
         fail_on_error: false
 
 # XXX
-setup.kibana.host: "http://kibana:5601"
-setup.kibana.ssl.enabled: true
+# setup.kibana.host: "http://kibana:5601"
+# setup.kibana.ssl.enabled: true
 ssl.certificate_authorities:
   - /usr/share/filebeat/ca.crt
 
@@ -34,3 +36,13 @@ output.elasticsearch:
   ssl.verification_mode: certificate
   username: elastic  # T0DO: XXX make less-priveleged user for this
   password: '${ELASTICSEARCH_PASSWORD}'
+  indices:
+    - index: "filebeat-nginx-system-log-tailer-%{[agent.version]}"
+      when.equals:
+        container.labels.ngx_log_file: "system_sites-log"
+    - index: "filebeat-nginx-access-log-tailer-%{[agent.version]}"
+      when.equals:
+        container.labels.ngx_log_file: "access-log"
+    - index: "filebeat-banjax-next-log-tailer-%{[agent.version]}"
+      when.equals:
+        container.labels.name: "banjax-next-log-tailer"
