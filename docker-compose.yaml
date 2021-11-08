@@ -16,9 +16,9 @@ services:
         - "80:80"
         - "443:443"
 
-    banjax-next:
+    banjax:
       build:
-        context: ./containers/edge/banjax-next
+        context: ./containers/edge/banjax
         dockerfile: Dockerfile
       network_mode: "service:nginx"  # nginx connects to this at localhost:8081
       cap_add:

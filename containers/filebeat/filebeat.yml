@@ -43,6 +43,6 @@ output.elasticsearch:
     - index: "filebeat-nginx-access-log-tailer-%{[agent.version]}"
       when.equals:
         container.labels.ngx_log_file: "access-log"
-    - index: "filebeat-banjax-next-log-tailer-%{[agent.version]}"
+    - index: "filebeat-banjax-log-tailer-%{[agent.version]}"
       when.equals:
-        container.labels.name: "banjax-next-log-tailer"
+        container.labels.name: "banjax-log-tailer"

@@ -92,7 +92,7 @@ class Nginx(Container):
                 'name': "nginx",
                 'version': build_timestamp
             },
-            # XXX making a volume for access logs, and a bind mount for the banjax-next stuff...
+            # XXX making a volume for access logs, and a bind mount for the banjax stuff...
             # think about this.
             volumes={
                 logs_volume.name:

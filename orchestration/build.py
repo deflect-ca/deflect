@@ -22,7 +22,7 @@ def build_all_images(client, registry=None):
         "nginx": RoleEnum.edge,
         "bind-server": RoleEnum.controller,
         "certbot": RoleEnum.controller,
-        "banjax-next": RoleEnum.edge,
+        "banjax": RoleEnum.edge,
         "origin-server": RoleEnum.none,
         "doh-proxy": RoleEnum.testing,
         "filebeat": RoleEnum.none,
