@@ -75,6 +75,11 @@ class Banjax(Container):
                 {
                     'bind': '/var/log/nginx/',
                     'mode': 'rw'
+                },
+                banjax_logs_volume.name:  # XXX
+                {
+                    'bind': '/var/log/banjax/',
+                    'mode': 'rw'
                 }
             },
             name="banjax",
