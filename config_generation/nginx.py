@@ -491,16 +491,18 @@ def generate_nginx_config(all_sites, config, formatted_time):
 
     # write out the system sites
     for name, site in all_sites['system'].items():
-        output_dir = get_output_dir(formatted_time, dnet)
-        with open(f"{path_to_input()}/templates/system_site_nginx.conf.j2", "r") as tf:
-            template = Template(tf.read())
-            with open(f"{output_dir}/sites.d/{name}.conf", "w") as f:
-                f.write(template.render(
-                    server_name=name,
-                    cert_name=name,
-                    ssl_ciphers=config['ssl_ciphers'],
-                    proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
-                ))
+        # make these live on every dnet?
+        for dnet in config['dnets']:
+            output_dir = get_output_dir(formatted_time, dnet)
+            with open(f"{path_to_input()}/templates/system_site_nginx.conf.j2", "r") as tf:
+                template = Template(tf.read())
+                with open(f"{output_dir}/sites.d/{name}.conf", "w") as f:
+                    f.write(template.render(
+                        server_name=name,
+                        cert_name=name,
+                        ssl_ciphers=config['ssl_ciphers'],
+                        proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
+                    ))
 
     # create tarfiles
     for dnet in config['dnets']:
