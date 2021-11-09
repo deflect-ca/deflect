@@ -186,8 +186,8 @@ def add_soa(zone, mname, rname, serial, refresh, retry, expire, minimum):
 def site_to_zone(config, site_name, site):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
-    ns_host = f"ns1.{config['controller']['hostname']}"
-    ns_admin = f"root.{config['controller']['hostname']}"  # XXX what's this actually called?
+    ns_host = f"ns1.{config['system_root_zone']}"
+    ns_admin = f"root.{config['system_root_zone']}"  # XXX what's this actually called?
 
     add_soa(
         zone,
@@ -231,7 +231,7 @@ def get_etc_bind_filename(name):
 def template_named_conf(config, client_and_system_sites):
     named_conf_string = ""
     named_conf_string += zone_block_root(
-            config['controller']['hostname'],
+            config['system_root_zone'],
     )
     for site in sorted(client_and_system_sites.values(), key=lambda s: s['public_domain']):
         named_conf_string += zone_block_root(site['public_domain'])
@@ -246,7 +246,7 @@ def template_controller_zone(in_filename, out_filename, config):
         template = Template(tf.read())
         with open(out_filename, "w") as zf:
             zf.write(template.render(
-                name=config['controller']['hostname'],
+                name=config['system_root_zone'],
                 ip=config['controller']['ip'],
             ))
 
@@ -314,7 +314,7 @@ def generate_bind_config(config, all_sites, timestamp):
 
     # XXX using a jinja template here, but using dnspython for everything else
     in_filename = f"{path_to_input()}/templates/controller.zone.j2"
-    out_filename = get_output_filename(sites_dir, config['controller']['hostname'])
+    out_filename = get_output_filename(sites_dir, config['system_root_zone'])
     template_controller_zone(in_filename, out_filename, config)
 
     # write out a zone file for each site
