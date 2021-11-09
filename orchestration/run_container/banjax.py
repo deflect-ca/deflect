@@ -51,7 +51,7 @@ class Banjax(Container):
                 detach=True,
                 labels={
                         'name': "banjax-log-tailer",
-                        'banjax_next_log_file': base_name
+                        'banjax_log_file': base_name
                 },
                 volumes={  # XXX check out volumes_from?
                     banjax_logs_volume.name:  # XXX
