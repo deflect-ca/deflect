@@ -476,7 +476,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
         os.mkdir(output_dir + "/sites.d")
 
     # write out the client sites
-    for site in sorted(all_sites['client'].values(), key=lambda s: s['public_domain']):
+    for name, site in all_sites['client'].items():
         public_domain = site['public_domain']
         output_dir = get_output_dir(formatted_time, site['dnet'])
         # XXX check for cert existence properly
@@ -490,21 +490,17 @@ def generate_nginx_config(all_sites, config, formatted_time):
             nginx.dump(per_site_include_conf(site, config), f)
 
     # write out the system sites
-    for dnet in ["controller"]:
+    for name, site in all_sites['system'].items():
         output_dir = get_output_dir(formatted_time, dnet)
-        with open(f"{path_to_input()}/templates/kibana_doh_nginx.conf.j2", "r") as tf:
+        with open(f"{path_to_input()}/templates/system_site_nginx.conf.j2", "r") as tf:
             template = Template(tf.read())
-            with open(output_dir + "/nginx.conf", "w") as f:
-                nginx.dump(top_level_conf(config, formatted_time), f)
-
-            for name, site in all_sites['system'].items():
-                with open(f"{output_dir}/sites.d/{name}.conf", "w") as f:
-                    f.write(template.render(
-                        server_name=name,
-                        cert_name=name,
-                        ssl_ciphers=config['ssl_ciphers'],
-                        proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
-                    ))
+            with open(f"{output_dir}/sites.d/{name}.conf", "w") as f:
+                f.write(template.render(
+                    server_name=name,
+                    cert_name=name,
+                    ssl_ciphers=config['ssl_ciphers'],
+                    proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
+                ))
 
     # create tarfiles
     for dnet in config['dnets']:
