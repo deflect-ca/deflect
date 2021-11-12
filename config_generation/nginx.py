@@ -319,6 +319,14 @@ def info_and_stub_status_server(timestamp):
     )
 
 
+def edgemanage_health_check_server():
+    return nginx.Server(
+        nginx.Key('listen', "80"),
+        nginx.Key('server_name', "edgemanage_health_check"),
+        nginx.Location('/', nginx.Key('return', "200 hello")),
+    )
+
+
 def banjax_server():
     return nginx.Server(
         nginx.Key('listen', "80"),
@@ -404,6 +412,9 @@ def http_block(dconf, timestamp):
 
     # /info and /stub_status
     http.add(info_and_stub_status_server(timestamp))
+
+    # /edgemanage_health_check
+    http.add(edgemanage_health_check_server())
 
     # exposing a few banjax endpoints
     http.add(banjax_server())

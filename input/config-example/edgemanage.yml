@@ -1,0 +1,55 @@
+testobject:
+  # http Host: header value
+  host: edgemanage_health_check
+  port: 80
+  proto: http
+  # Path to the object to be retrieved
+  uri: /edgemanage_test_object.bin
+  # Local copy of the object that we'll be fetching.
+  local: ./input/edgemanage_test_object.bin
+  # Verify SSL certificates?
+  verify: False
+
+# XXX these names shouldn't be here.
+dns:
+  ns_records:
+    - dns1.example.com.
+  soa_nameserver: dns0.example.com.
+  soa_mailbox: zone.example.com.
+  # A list of labels to generate A records for with the balanced edge
+  # lists. This list automatically includes @ by default.
+  rotate_zones:
+    - www
+
+# XXX the persisted path shouldn't be hardcoded here
+# edgemanage input
+zonetemplate_dir: ./persisted/edgemanage/unfinished-zones/
+
+# edgemanage output
+named_dir: ./persisted/edgemanage/finished-zones/
+
+healthdata_store: ./persisted/edgemanage/
+
+# This setting defines the maximum number of substitutions that can be
+# performed in a 10 minute period
+dnschange_maxfreq: 10
+
+# Number of connections to make in parallel to the edges and canaries
+workers: 10
+
+# Number of retries when fetching the object from an edge
+retry: 3
+
+# A value, in seconds, that is used to determine edge health - one of
+# the core elements of edgemanage. If the fetch time, the fetch time
+# slice average, or the overall average is under this value, there is
+# a chance that an edge will be used. See the README for more
+# explanation of how this value is used.
+goodenough: 0.700
+
+# XXX bug that you need this even when it's overridden by dnet_edge_count below
+edge_count: 1
+
+# Number of edges to keep as @ per-dnet
+dnet_edge_count:
+  dnet_a: 1

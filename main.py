@@ -31,7 +31,13 @@ from orchestration.run_container.banjax import Banjax
 from orchestration.hosts import docker_client_for_host, run_local_or_remote_noraise, host_to_role
 
 import logging
-from util.helpers import get_logger, get_config_yml_path, path_to_output
+from util.helpers import (
+        get_logger,
+        get_config_yml_path,
+        get_edgemanage_config_yml_path,
+        path_to_output,
+)
+
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 
@@ -96,6 +102,7 @@ if __name__ == '__main__':
             "get-banjax-rate-limit-states",
             "get-nginx-and-banjax-config-versions",
             "check-cert-expiry",
+            "edgemanage",
         ],
         help="what to do to the hosts"
     )
@@ -233,3 +240,50 @@ if __name__ == '__main__':
                 cert_bytes = f.read()
             cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
             logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
+
+    # XXX this is just a sketch, not integrated with the rest of the config-gen code.
+    # it would require changes to edgemanage to make it work
+    # (and substantial changes to make it work well), but a better approach might
+    # be rewriting edgemanage from scratch (it should not be nearly as complicated
+    # or involved as the existing code suggests) or taking a fundamentally different
+    # approach (eg., non-rotating IPs with scalable resources behind them).
+    elif args.action == "edgemanage":
+        import edgemanage
+        import json
+
+        em_config = parse_config(get_edgemanage_config_yml_path())
+        logger = logging.getLogger("root")
+        logger.setLevel(logging.DEBUG)
+
+        # XXX
+        for dnet in ["dnet_a"]:
+            statefile_name = f"persisted/edgemanage/state_{dnet}.json"
+            statefile = None
+            if os.path.isfile(statefile_name):
+                with open(statefile_name, "r") as f:
+                    d = json.loads(f.read())
+                    statefile = edgemanage.StateFile(d)
+            else:
+                statefile = edgemanage.StateFile()
+
+            em = edgemanage.EdgeManage(dnet, em_config, statefile)
+
+            for edge in config['edges']:
+                if edge['dnet'] != dnet:
+                    continue
+                # edgemanage expects the FQDN, but our hostnames are not always FQDNs.
+                # so I'm passing the IP instead.
+                em.add_edge_state(edge['ip'], em_config["healthdata_store"])
+
+            statefile.verification_failures = em.do_edge_tests()
+            em.make_edges_live(True)  # XXX force update doesn't actually work
+
+            live_edges = em.edgelist_obj.get_live_edges()
+            if set(live_edges) != set(statefile.last_live):
+                statefile.add_rotation(100)  # keep up to 100
+
+            statefile.last_live = live_edges
+
+            statefile.set_last_run()
+            with open(statefile_name, "w") as f:
+                f.write(statefile.to_json())
