@@ -42,6 +42,15 @@ other_packages = " ".join([
     "ufw",
     "iptables",
     "iproute2",
+    "python3-aiohttp",
+    "python3-openssl",
+    "python3-pem",
+    "python3-dnspython",
+    "python3-gnupg",
+    "python3-docker",
+    "python3-paramiko",
+    "python3-jinja2",
+    "python3-yaml",
 ])
 
 # XXX sudo not needed here if we're running as root
