@@ -3,6 +3,7 @@ from util.helpers import path_to_containers, get_persisted_config_yml_path
 
 import yaml
 
+
 # XXX this is weird and should be cleaned up
 def get_persisted_config():
     p_conf = {}
@@ -12,9 +13,11 @@ def get_persisted_config():
         p_conf = yaml.load(f)
     return p_conf
 
+
 def save_persisted_config(p_conf):
     with open(get_persisted_config_yml_path(), "w") as f:
         yaml.dump(p_conf, f)
+
 
 def kill_containers_with_label(client, label, logger):
     logger.info(f"killing containers with label or name {label}")
@@ -34,12 +37,12 @@ def kill_containers_with_label(client, label, logger):
         # XXX ugh all of this
         try:
             container.kill()
-        except:
+        except Exception:
             logger.error('Could not kill container')
             pass
         try:
             container.remove()  # XXX just so i can use a name later... re-think
-        except:
+        except Exception:
             logger.error('Could not remove container')
             pass
 
@@ -53,7 +56,6 @@ def find_existing_container(client, name, extra_label, config, logger):
         filters = {"label": [f"name={name}", extra_label]}
     else:
         filters = {"label": f"name={name}"}
-
 
     containers = client.containers.list(filters=filters)
 
@@ -106,7 +108,6 @@ class Container:
             raise RuntimeError("Container() constructor requires either `find_existing` or `kill_existing`")
         Container.known_containers.append(self.container)
 
-
     def update(self):
         raise RuntimeError("need to implement update() in the concrete class")
 
@@ -136,16 +137,24 @@ class Container:
         (image, image_logs) = self.build_image(config, registry='')
         return self.start_new_container(config, image.id)
 
-
     def set_hostname_and_dnet(self, config):
         hostname = f"{self.client.info().get('Name')}"
         self.logger.debug(f"found hostname to be: {hostname}")
         self.hostname = hostname
-        for host in [config['controller']] + config['edges']:
+        search_hosts = []
+        if hostname == "docker-desktop":
+            # XXX this is very non-obvious. if we're putting all the containers on a single
+            # workstation host, we skip the controller's usual Nginx, Filebeat, and Metricbeat
+            # because we can't have two Nginx instances on the same ports and because the edge
+            # instance is more useful. This little kludge makes it so the right Nginx config
+            # gets installed. Maybe it can be fixed in a cleaner way.
+            search_hosts = config['edges']
+        else:
+            search_hosts = [config['controller']] + config['edges']
+        for host in search_hosts:
             if host['hostname'] == hostname:
                 self.dnet = host['dnet']
                 self.ip = host['ip']
                 break
         else:
             raise Exception("didn't find this host in config!")
-

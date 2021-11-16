@@ -2,10 +2,12 @@ from orchestration.run_container.base_class import Container
 from orchestration.run_container.base_class import get_persisted_config
 from util.helpers import path_to_input
 
+
 class Kibana(Container):
     def _upload_saved_objects(self):
         import aiohttp
         import asyncio
+
         # XXX might have to wait for kibana to start accepting connections.
         # XXX don't want to re-upload this every time
         # XXX maybe requests is nicer?...
@@ -28,8 +30,15 @@ class Kibana(Container):
         pass
         # self._upload_saved_objects()
 
-
     def start_new_container(self, config, image_id):
+        # XXX
+        controller_host = None
+        if config['controller']['ip'] == "127.0.0.1":
+            controller_host = "gateway.docker.internal"
+        else:
+            controller_host = config['controller']['ip']
+
+        self.logger.error(f"controller host: {controller_host}")
         return self.client.containers.run(
             image_id,
             detach=True,
@@ -40,7 +49,7 @@ class Kibana(Container):
                 'name': "kibana",
             },
             environment={
-                "ELASTICSEARCH_HOSTS": f"https://{config['controller']['ip']}:9200",
+                "ELASTICSEARCH_HOSTS": f"https://{controller_host}:9200",
                 "ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES": "/etc/kibana/ca.crt",
                 "ELASTICSEARCH_SSL_VERIFICATIONMODE": "none",
                 "ELASTICSEARCH_USERNAME": "elastic",
@@ -56,4 +65,3 @@ class Kibana(Container):
             name="kibana",
             restart_policy=Container.DEFAULT_RESTART_POLICY,
         )
-

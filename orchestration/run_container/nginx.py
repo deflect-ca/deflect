@@ -3,6 +3,7 @@ from datetime import datetime
 from orchestration.run_container.base_class import Container
 from util.helpers import FILENAMES_TO_TAIL, path_to_output
 
+
 class Nginx(Container):
     def update(self, config_timestamp):
         self.container.exec_run("rm -rf /etc/nginx")
@@ -91,22 +92,15 @@ class Nginx(Container):
                 'name': "nginx",
                 'version': build_timestamp
             },
-            # XXX making a volume for access logs, and a bind mount for the banjax-next stuff...
+            # XXX making a volume for access logs, and a bind mount for the banjax stuff...
             # think about this.
             volumes={
                 logs_volume.name:
                 {
                     'bind': '/var/log/nginx/',
                     'mode': 'rw'
-                },
-                '/root/banjax/':
-                {
-                    'bind': '/var/log/banjax/',
-                    'mode': 'rw'
                 }
             },
             name=f"nginx-{build_timestamp}",
             restart_policy=Container.DEFAULT_RESTART_POLICY
         )
-
-

@@ -7,13 +7,12 @@
 
 import datetime
 import logging
-import os
 import traceback
 
 import docker
 
 from orchestration import shared
-from orchestration.helpers import NAME_TO_ROLE, get_logger, path_to_input
+from orchestration.helpers import NAME_TO_ROLE, get_logger, get_sites_yml_path
 from pyaml_env import parse_config
 
 
@@ -23,7 +22,7 @@ def build_all_images(client, registry=None):
         "nginx": RoleEnum.edge,
         "bind-server": RoleEnum.controller,
         "certbot": RoleEnum.controller,
-        "banjax-next": RoleEnum.edge,
+        "banjax": RoleEnum.edge,
         "origin-server": RoleEnum.none,
         "doh-proxy": RoleEnum.testing,
         "filebeat": RoleEnum.none,
@@ -46,7 +45,7 @@ def build_all_images(client, registry=None):
             )
             images.append(image)
             logger.debug(client.api.history(image.id))
-        except:
+        except Exception:
             traceback.print_exc()
 
     return images
@@ -66,7 +65,7 @@ def push_all_to_registry(images, client, registry, pull=False):
             for line in client.images.push(
                     image.tags[-1], stream=True, decode=True
             ):
-                    logger.debug(line)
+                logger.debug(line)
         if pull:
             # we need a good strategy for managing images in the registry
             # one is timestamp as Joe does
@@ -95,7 +94,7 @@ def push_all_to_registry(images, client, registry, pull=False):
 
 
 if __name__ == '__main__':
-    config = parse_config(get_clients_yaml_path())
+    config = parse_config(get_sites_yml_path())
     logger = get_logger(__name__, logging_level=logging.DEBUG)
     dn_config = parse_config('input/deflect-next_config.yaml')
     docker_conf = dn_config['docker']

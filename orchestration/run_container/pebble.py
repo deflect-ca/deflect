@@ -1,10 +1,9 @@
-import tarfile
 from orchestration.run_container.base_class import Container
 from util.helpers import (
     path_to_persisted,
-    path_to_output,
 )
 import os.path
+
 
 class Pebble(Container):
     # XXX i'm saving the CA to persisted/, but i'm not loading it from there yet
@@ -12,7 +11,7 @@ class Pebble(Container):
         self.logger.debug("getting intermediate cert from pebble...")
         # XXX possible you need to wait for pebble to start accepting connections...
         (exit_code, output) = self.container.exec_run(
-                f"curl --silent -k https://localhost:15000/intermediates/0"
+                "curl --silent -k https://localhost:15000/intermediates/0"
         )
         self.logger.debug(output)
         with open(os.path.join(path_to_persisted(), "pebble_ca.crt"), "wb") as dest:
@@ -23,7 +22,6 @@ class Pebble(Container):
         return self.client.containers.run(
             image_id,
             command="pebble -config /test/config/pebble-config.json -dnsserver 127.0.0.1:53",
-            # command="sleep infinity",
             detach=True,
             labels={
                     'name': "pebble",
@@ -36,6 +34,3 @@ class Pebble(Container):
             # XXX should we specify container id instead?
             network_mode="container:bind"
         )
-
-
-

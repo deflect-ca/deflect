@@ -106,10 +106,10 @@ def nginx_config_versions_are_expected(timestamp):
 
 def banjax_next_config_versions_are_expected(timestamp):
     # XXX confusing how this works. also needs https.
-    with override_dns("banjax-next", edge_ip):
-        res = requests.get("http://banjax-next")
+    with override_dns("banjax", edge_ip):
+        res = requests.get("http://banjax")
         if res.status_code != 200:
-            print(f"expected status code 200 for banjax-next info query")
+            print(f"expected status code 200 for banjax info query")
             return False
 
         res_d = res.json()

@@ -8,7 +8,7 @@
     1. [Controller](#controller)
     1. [Edge](#edge)
     1. [Baskerville](#baskerville)
-    1. [DNETs](#dnets)
+    1. [Dnets](#dnets)
     1. [Edge Rotation/Management](#edge-rotationmanagement)
     1. [Content Caching](#content-caching)
     1. [ELK Stack](#elk-stack)
@@ -89,6 +89,8 @@ Not yet included in this repository is a service of ours called [edgemanage](htt
 
 Single-node Elasticsearch clusters are easy to set up, and multi-node ones have a reputation as being a bit tough. We include a single-node ES cluster, a Kibana frontend, and a dashboard of handy queries, histograms, and plots.
 
+[Screenshot of the Kibana dashboard](docs/big-dash.png)
+
 ## DNS Load Balancing
 
 DNS round robin is a decades-old technique for balancing load across many servers. A widely-implemented IETF proposal called [Happy Eyeballs](https://en.wikipedia.org/wiki/Happy_Eyeballs) makes it even better. Instead of picking an essentially random IP from the set returned by a DNS server, clients will begin connections to many IPs at once, keep the winner, and close the rest. CDNs often use GeoIP databases to get closer to users, but this could be even better.
@@ -110,6 +112,22 @@ Nginx is going to be the resource-hungry one here, and you're going to have to b
 # Installation
 
 You can run the orchestration scripts from anywhere. They can be on the controller, or on your laptop. The following commands install the Python dependencies and make the scripts ready to run.
+
+You can install all of the controller and edge containers locally (under Docker Desktop) on your workstation with the following
+snippet in `global_config.yml`:
+```yaml
+controller:
+  hostname: docker-desktop
+  ip: 127.0.0.1
+  dnet: controller  # XXX fix this
+edges:
+  - hostname: docker-desktop
+    ip: 127.0.0.1
+    dnet: dnet_a
+```
+(More precisely, it won't install the controller's version of Nginx, Filebeat, or Metricbeat,
+but it will install everything else.)
+
 
 ```bash
 git clone https://github.com/deflect-ca/deflect.git --recursive

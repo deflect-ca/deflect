@@ -45,7 +45,7 @@ class TestContainers(unittest.TestCase):
 
     def test_banjax_next_container(self):
         from orchestration.shared import build_new_image
-        image_name = 'banjax-next'
+        image_name = 'banjax'
         image_build_timestamp = 'image_build_timestamp'
         image, logs = build_new_image(
             image_name,

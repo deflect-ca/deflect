@@ -173,20 +173,20 @@ class TestShared(unittest.TestCase):
 
         mock_client.containers.run.assert_called_with(
             image_id,
-            # command=f"tail --retry --follow=name /var/log/banjax-next/gin.log",
+            # command=f"tail --retry --follow=name /var/log/banjax/gin.log",
             detach=True,
             labels={
-                'name': "banjax-next",
+                'name': "banjax",
                 'version': image_build_timestamp
             },
             volumes={  # XXX check out volumes_from?
-                '/root/banjax-next/':  # XXX
+                '/root/banjax/':  # XXX
                     {
-                        'bind': '/var/log/banjax-next/',
+                        'bind': '/var/log/banjaxt/',
                         'mode': 'ro'
                     }
             },
-            name="banjax-next",
+            name="banjax",
             restart_policy=DEFAULT_RESTART_POLICY,
             cap_add=["NET_ADMIN"],
             # XXX should we specify container id instead?

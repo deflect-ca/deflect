@@ -7,7 +7,7 @@ import docker
 import time
 import traceback
 import requests
-import tarfile
+
 
 def attempt_to_authenticate(ip, logger):
     p_conf = get_persisted_config()
@@ -44,10 +44,10 @@ class Elasticsearch(Container):
                 self.logger.debug(f"ES didn't find persisted/{f}, so re-generating all certs")
                 break
         else:
-            self.logger.debug(f"ES found all required certs under persisted/, not re-generating")
+            self.logger.debug("ES found all required certs under persisted/, not re-generating")
             return super().build_image()
         generate_new_elastic_certs(config, self.logger)
-        
+
         return super().build_image(config, registry)
 
     # Changed password for user elastic
@@ -64,31 +64,6 @@ class Elasticsearch(Container):
                 return password
         else:
             raise Exception("!!! did not find elastic password")
-
-
-    # def _generate_certs(self):
-    #     bin_certutil = "/usr/share/elasticsearch/bin/elasticsearch-certutil"
-    #     certs_dir = "/usr/share/elasticsearch/certs"
-    #     commands = [
-    #         f"mkdir -p {certs_dir}",
-    #         f"{bin_certutil} ca --out certs/ca.zip --pass ''",
-    #         f"cd {certs_dir} && unzip ca.zip",
-    #         f"{bin_certutil} cert"
-    #             f"--ca-cert certs/ca/ca.crt --ca-key certs/ca/ca.key"
-    #             f"--ca-pass '' --out certs/cert.zip --pem --name {self.hostname}",
-    #         f"cd {certs_dir} && unzip certs.zip",
-    #     ]
-    #     for command in commands:
-    #         (exit_code, output) = self.container.exec_run(command)
-    #         self.logger.debug(f"command: '{command}', exit_code: '{exit_code}', output: '{output}'")
-
-    #     with open(f"{path_to_persisted()}/es_certs.tar", "wb") as tar_file:
-    #         (chunks, stat) = self.container.get_archive("/usr/share/elasticsearch/certs")
-    #         for chunk in chunks:
-    #             tar_file.write(chunk)
-    #     with tarfile.open(f"{path_to_persisted()}/es_certs.tar", "r") as tar_file:
-    #         tar_file.extractall(path=path_to_persisted())
-
 
     def _generate_creds(self):
         for _ in range(0, 5):
@@ -144,11 +119,11 @@ class Elasticsearch(Container):
                 "ES_JAVA_OPTS": "-Xms512m -Xmx512m",
                 "xpack.security.enabled": "true",
                 "xpack.security.transport.ssl.enabled": "true",
-                "xpack.security.transport.ssl.key": f"/usr/share/elasticsearch/config/instance.key",
-                "xpack.security.transport.ssl.certificate": f"/usr/share/elasticsearch/config/instance.crt",
+                "xpack.security.transport.ssl.key": "/usr/share/elasticsearch/config/instance.key",
+                "xpack.security.transport.ssl.certificate": "/usr/share/elasticsearch/config/instance.crt",
                 "xpack.security.http.ssl.enabled": "true",
-                "xpack.security.http.ssl.key": f"/usr/share/elasticsearch/config/instance.key",
-                "xpack.security.http.ssl.certificate": f"/usr/share/elasticsearch/config/instance.crt",
+                "xpack.security.http.ssl.key": "/usr/share/elasticsearch/config/instance.key",
+                "xpack.security.http.ssl.certificate": "/usr/share/elasticsearch/config/instance.crt",
             },
             ulimits=[
                 docker.types.Ulimit(name='memlock', soft=-1, hard=-1),
@@ -156,4 +131,3 @@ class Elasticsearch(Container):
             name="elasticsearch",
             restart_policy=Container.DEFAULT_RESTART_POLICY,
         )
-

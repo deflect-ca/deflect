@@ -6,17 +6,10 @@
 
 from pyaml_env import parse_config
 
-from util.helpers import get_config_yml_path
-from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert_bundles
 from config_generation.site_dict import get_all_sites
 
 import argparse
 import os
-import os.path
-
-import logging
-from util.helpers import get_logger, get_config_yml_path, path_to_output
-logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 from config_generation import (
     generate_bind_config,
@@ -37,6 +30,11 @@ from orchestration.run_container.elasticsearch import Elasticsearch, attempt_to_
 from orchestration.run_container.banjax import Banjax
 from orchestration.hosts import docker_client_for_host, run_local_or_remote_noraise, host_to_role
 
+import logging
+from util.helpers import get_logger, get_config_yml_path, path_to_output
+logger = get_logger(__name__, logging_level=logging.DEBUG)
+
+
 def get_host_by_name(config, name):
     for host in [config['controller']] + config['edges']:
         if host['hostname'] == name:
@@ -46,6 +44,7 @@ def get_host_by_name(config, name):
 def comma_separated_names_to_hosts(config, names):
     names = names.split(",")
     return [get_host_by_name(n) for n in names]
+
 
 def hosts_arg_to_hosts(config, hosts_arg):
     if hosts_arg == "all":
@@ -57,11 +56,8 @@ def hosts_arg_to_hosts(config, hosts_arg):
     else:
         return comma_separated_names_to_hosts(config, hosts_arg)
 
-def gen_config(config, all_sites, timestamp):
-    ### begin temporary kludge ###
-    import os.path
-    import yaml
 
+def gen_config(config, all_sites, timestamp):
     logger.info('>>> Generating bind config...')
     generate_bind_config(config, all_sites, timestamp)
 
@@ -70,6 +66,7 @@ def gen_config(config, all_sites, timestamp):
 
     logger.info('>>> Generating banjax-next config...')
     generate_banjax_config(config, all_sites, timestamp)
+
 
 if __name__ == '__main__':
     # todo: many things to be fleshed out to deflect-next config
@@ -162,24 +159,13 @@ if __name__ == '__main__':
         p_conf = get_persisted_config()
         elastic_password = p_conf.get('elastic_password', "<doesn't exist yet>")
 
-        commands = [
-            "",
-            "# test the ES certs + creds:",
-            f"curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']}"
-                f" --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200"
-                f" --user 'elastic:{elastic_password}'",
-            "",
-            # XXX would be nice to grab the pebble CA so we don't need the -k here
-            "# test a site through a specific edge:",
-            f"curl --resolve"
-                f" test-origin.{config['system_root_zone']}:443:{config['edges'][0]['ip']}"
-                f" --cacert persisted/pebble_ca.crt"
-                f" https://test-origin.{config['system_root_zone']}",
+        print(f"""
+            # test the ES certs + creds:
+            curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']} --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200 --user 'elastic:{elastic_password}'
 
-        ]
-        for command in commands:
-            # use print() because these are made for copy/pasting?
-            print(command)
+            # test a site through a specific edge:
+            curl --resolve test-origin.{config['system_root_zone']}:443:{config['edges'][0]['ip']} --cacert persisted/pebble_ca.crt https://test-origin.{config['system_root_zone']}
+            """)
 
     # XXX duplication
     elif args.action == "get-banjax-decision-lists":
@@ -187,7 +173,7 @@ if __name__ == '__main__':
         command = "curl --silent --header 'Host: banjax' 127.0.0.1/decision_lists"
         for host in hosts:
             if host_to_role(config, host) == "controller":
-                continue # controller doesn't have banjax
+                continue  # controller doesn't have banjax
 
             proc = run_local_or_remote_noraise(config, host, command, logger)
 
@@ -201,7 +187,7 @@ if __name__ == '__main__':
         command = "curl --silent --header 'Host: banjax' 127.0.0.1/rate_limit_states"
         for host in hosts:
             if host_to_role(config, host) == "controller":
-                continue # controller doesn't have banjax
+                continue  # controller doesn't have banjax
 
             proc = run_local_or_remote_noraise(config, host, command, logger)
 
@@ -227,7 +213,6 @@ if __name__ == '__main__':
             if banjax_proc:
                 for line in banjax_proc.stdout.decode().splitlines():
                     print(f"\t banjax: {line}")
-
 
     elif args.action == "check-cert-expiry":
         from cryptography import x509

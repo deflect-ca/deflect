@@ -96,7 +96,7 @@ NAME_TO_ROLE = {
         "nginx": RoleEnum.edge,
         "bind-server": RoleEnum.controller,
         "certbot": RoleEnum.controller,
-        "banjax-next": RoleEnum.edge,
+        "banjax": RoleEnum.edge,
         "origin-server": RoleEnum.none,
         "doh-proxy": RoleEnum.testing,
         "filebeat": RoleEnum.none,

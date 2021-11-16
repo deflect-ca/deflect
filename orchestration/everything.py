@@ -7,11 +7,11 @@ import logging
 
 from concurrent.futures.thread import ThreadPoolExecutor
 
-import docker
-import yaml
 from pyaml_env import parse_config
+import traceback
+import sys
 
-from util.helpers import get_logger, get_config_yml_path, get_persisted_config_yml_path
+from util.helpers import get_config_yml_path, get_logger
 
 from orchestration.run_container import (
         Bind,
@@ -32,20 +32,14 @@ from orchestration.hosts import (
         ensure_all_requirements,
 )
 
-from datetime import datetime
-import time
-import tarfile
-import io
-import subprocess
 import random
 import string
 
 from functools import partial
+from io import StringIO
 
 # todo: use configuration for the logger
 logger = get_logger(__name__, logging_level=logging.DEBUG)
-
-from io import StringIO
 
 
 # XXX probably a better way
@@ -59,9 +53,29 @@ def new_logger_and_stream():
     return logger, log_stream
 
 
+# copied from https://stackoverflow.com/a/24457608
+class ThreadPoolExecutorStackTraced(ThreadPoolExecutor):
+    def submit(self, fn, *args, **kwargs):
+        """Submits the wrapped function instead of `fn`"""
+
+        return super(ThreadPoolExecutorStackTraced, self).submit(self._function_wrapper, fn, *args, **kwargs)
+
+    def _function_wrapper(self, fn, *args, **kwargs):
+        """Wraps `fn` in order to preserve the traceback of any kind of
+        raised exception
+
+        """
+        try:
+            return fn(*args, **kwargs)
+        except Exception:
+            # Creates an exception of the same type with the traceback as message
+            raise sys.exc_info()[0](traceback.format_exc())
+
+
+# XXX using functools.partial *and* a wrapper class feels complicated?...
 def run_on_threadpool(h_to_fs):
     futures = {}
-    with ThreadPoolExecutor(max_workers=16) as executor:
+    with ThreadPoolExecutorStackTraced(max_workers=16) as executor:
         for hostname, func in h_to_fs.items():
             logger, log_stream = new_logger_and_stream()
             futures[hostname] = {
@@ -107,7 +121,6 @@ def install_base(config, hosts, logger):
             logger.info(f"\t {line}")
 
 
-
 def install_edge_components(edge, config, all_sites, timestamp, logger):
     logger.debug(f"$$$ starting install_all_edge_components for {edge['hostname']}")
     # XXX very annoyingly you can't specify a specific ssh key here... has to be in a (the?) default
@@ -135,6 +148,9 @@ def install_controller_components(config, all_sites, timestamp, logger):
     TestOrigin(    client, config, find_existing=True, logger=logger).update(timestamp)
     Elasticsearch( client, config, find_existing=True, logger=logger).update(timestamp)
     Kibana(        client, config, find_existing=True, logger=logger).update(timestamp)
+    if client.info()["Name"] == "docker-desktop":
+        logger.debug("detected Docker Desktop, not installing controller's Nginx, Filebeat, or Metricbeat")
+        return
     Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
     Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
     Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
@@ -142,7 +158,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
 
 def install_everything(config, all_sites, timestamp):
     # need to install controller before we install any edges. (ES creds)
-    logger.info(f"running install_controller_components()...")
+    logger.info("running install_controller_components()...")
     temp_logger, log_stream = new_logger_and_stream()
     res = install_controller_components(config, all_sites, timestamp, temp_logger)
 
@@ -151,7 +167,7 @@ def install_everything(config, all_sites, timestamp):
         logger.info(f"\t {line}")
 
     # now we can install all the edges in parallel
-    logger.info(f"running install_edge_components()...")
+    logger.info("running install_edge_components()...")
     results = run_on_threadpool({
             edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
             for edge in config['edges']

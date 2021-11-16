@@ -23,12 +23,12 @@ metricbeat.modules:
     - "memory"
     - "network"
   hosts: ["unix:///var/run/docker.sock"]
-  period: 10s
+  period: 19s
   enabled: true
 - module: nginx
   metricsets: ["stubstatus"]
   enabled: true
-  period: 10s
+  period: 21s
   hosts: ["http://127.0.0.1"]  # XXX we have to be in nginx's network namespace, is that a good idea?
   # headers:
   #   Host: nginx  # XXX this does not work! https://github.com/elastic/beats/issues/14907
@@ -54,4 +54,19 @@ output.elasticsearch:
   ssl.verification_mode: certificate
   username: elastic
   password: '${ELASTICSEARCH_PASSWORD:}'
-
+  indices:
+    - index: "metricbeat-stubstatus-%{[agent.version]}"
+      when.equals:
+        metricset.name: "stubstatus"
+    - index: "metricbeat-network-%{[agent.version]}"
+      when.equals:
+        metricset.name: "network"
+    - index: "metricbeat-cpu-%{[agent.version]}"
+      when.equals:
+        metricset.name: "cpu"
+    - index: "metricbeat-load-%{[agent.version]}"
+      when.equals:
+        metricset.name: "load"
+    - index: "metricbeat-container-%{[agent.version]}"
+      when.equals:
+        metricset.name: "container"

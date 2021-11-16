@@ -18,6 +18,13 @@ class Metricbeat(Container):
 
         nginx_container = nginx_containers[0]
 
+        # XXX
+        controller_host = None
+        if config['controller']['ip'] == "127.0.0.1":
+            controller_host = "gateway.docker.internal"
+        else:
+            controller_host = config['controller']['ip']
+
         return self.client.containers.run(
             image_id,
             detach=True,
@@ -26,24 +33,24 @@ class Metricbeat(Container):
                 'name': "metricbeat",
             },
             environment={
-                "ELASTICSEARCH_HOST": f"https://{config['controller']['ip']}:9200",
-                "KIBANA_HOST": f"https://{config['controller']['ip']}:5601",
+                "ELASTICSEARCH_HOST": f"https://{controller_host}:9200",
+                "KIBANA_HOST": f"https://{controller_host}:5601",
                 "ELASTICSEARCH_PASSWORD": get_persisted_config()['elastic_password'],
                 "DEFLECT_EDGE_NAME": self.hostname,
                 "DEFLECT_DNET": self.dnet,
             },
             volumes={
-                '/var/run/':  # XXX
+                '/var/run/':
                     {
                         'bind': '/var/run/',
                                 'mode': 'ro'
                     },
-                '/sys/fs/cgroup':  # XXX
+                '/sys/fs/cgroup':
                     {
                         'bind': '/hostfs/sys/fs/cgroup',
                                 'mode': 'ro'
                     },
-                '/proc':  # XXX
+                '/proc':
                     {
                         'bind': '/hostfs/proc',
                                 'mode': 'ro'
@@ -54,5 +61,3 @@ class Metricbeat(Container):
             # extra_hosts={"nginx": "127.0.0.1"}, # XXX can't set Host header in metricbeat
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},
         )
-
-

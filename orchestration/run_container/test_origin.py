@@ -18,5 +18,3 @@ class TestOrigin(Container):
             name="test-origin",
             restart_policy=Container.DEFAULT_RESTART_POLICY
         )
-
-
