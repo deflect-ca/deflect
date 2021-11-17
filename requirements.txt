@@ -1,6 +1,6 @@
 python-nginx==1.5.3
 pyaml-env==1.1.1
-pyyaml
+PyYAML==5.4.1
 dnspython
 python-gnupg
 docker
