@@ -18,3 +18,6 @@ build/
 dist/
 *.pyc
 *.log
+
+# config
+input/config/global_config.yml

@@ -80,7 +80,7 @@ def run_local_or_remote_noraise(config, host, command, logger):
     shell_prefix = []
     if host['ip'] != "127.0.0.1":
         # XXX not allowing the key file to be configured because docker-py doesn't, atm
-        shell_prefix = ["ssh", "-i", "~/.ssh/id_rsa", f"root@{host['ip']}"]
+        shell_prefix = ["ssh", "-i", "~/.ssh/id_rsa", f"{config['login_user']}@{host['ip']}"]
     else:
         shell_prefix = ["bash", "-c"]
 

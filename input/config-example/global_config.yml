@@ -1,4 +1,5 @@
 system_root_zone: example.com
+login_user: deflect
 dnets:
   - dnet_a
   - controller  # XXX fix this
@@ -6,10 +7,12 @@ controller:
   hostname: controller.example.com
   ip: 1.2.3.4
   dnet: controller  # XXX fix this
+  user: deflect
 edges:
   - hostname: edge-1.example.comp
     ip: 2.3.4.5
     dnet: dnet_a
+    user: deflect
 staging_certbot_options: "--email some@email.com --server https://127.0.0.1:14000/dir --no-verify-ssl"
 production_certbot_options: "--email prod@email.com --server https://acme-v02.api.letsencrypt.org/directory"
 doh_private_port: 8085
