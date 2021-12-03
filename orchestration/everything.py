@@ -125,7 +125,7 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
     logger.debug(f"$$$ starting install_all_edge_components for {edge['hostname']}")
     # XXX very annoyingly you can't specify a specific ssh key here... has to be in a (the?) default
     # location OR the socket / ssh-agent thing.
-    client = docker_client_for_host(edge)
+    client = docker_client_for_host(edge, config=config)
     hostname = f"{client.info().get('Name')}"
     logger.debug(f"docker things this host is called {hostname}")
 
@@ -139,7 +139,7 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
 
 def install_controller_components(config, all_sites, timestamp, logger):
     logger.debug('Getting a Docker client...')
-    client = docker_client_for_host(config['controller'])
+    client = docker_client_for_host(config['controller'], config=config)
 
     Bind(          client, config, find_existing=True, logger=logger).update(timestamp)
     DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)

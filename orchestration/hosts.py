@@ -66,11 +66,14 @@ controller_and_edge_commands = [
 # TODO: or testing/ staging env
 
 
-def docker_client_for_host(host):
+def docker_client_for_host(host, config=None):
     if host['ip'] == "127.0.0.1":
         return docker.DockerClient()
     else:
-        return docker.DockerClient(base_url=f"ssh://root@{host['ip']}")
+        if config:
+            return docker.DockerClient(base_url=f"ssh://{config['login_user']}@{host['ip']}")
+        else:
+            return docker.DockerClient(base_url=f"ssh://root@{host['ip']}")
 
 
 def run_local_or_remote_noraise(config, host, command, logger):
