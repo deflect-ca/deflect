@@ -120,14 +120,14 @@ if __name__ == '__main__':
 
     elif args.action == "install-es":
         all_sites, timestamp = get_all_sites(config)
-        client = docker_client_for_host(config['controller'])
+        client = docker_client_for_host(config['controller'], config=config)
         es = Elasticsearch(client, config, find_existing=True, logger=logger)
         es.update(timestamp)
 
     elif args.action == "install-banjax":
         all_sites, timestamp = get_all_sites(config)
         for host in hosts:
-            client = docker_client_for_host(host)
+            client = docker_client_for_host(host, config=config)
             banjax = Banjax(client, config, kill_existing=True, logger=logger)
             banjax.update(timestamp)
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     elif args.action == "get-nginx-errors":
         for host in hosts:
-            client = docker_client_for_host(host)
+            client = docker_client_for_host(host, config=config)
             extra_label = "ngx_log_file=error-log"
             container = find_existing_container(client, "nginx-log-tailer", extra_label, config, logger)
             if not container:
