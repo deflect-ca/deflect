@@ -21,4 +21,6 @@ __pycache__/
 *.log
 
 # config
-input/config/global_config.yml
+input/config/*.yml
+output/**/*
+persisted/*.crt

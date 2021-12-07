@@ -6,6 +6,7 @@ dnets:
 controller:
   hostname: controller.example.com
   ip: 1.2.3.4
+  docker_ip: 127.0.0.1  # connect to local docker without SSH
   dnet: controller  # XXX fix this
   user: deflect
 edges:

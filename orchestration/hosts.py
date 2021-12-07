@@ -70,10 +70,12 @@ def docker_client_for_host(host, config=None):
     if host['ip'] == "127.0.0.1":
         return docker.DockerClient()
     else:
-        if config:
+        if 'docker_ip' not in host:
             return docker.DockerClient(base_url=f"ssh://{config['login_user']}@{host['ip']}")
+        elif host['docker_ip'] == '127.0.0.1':
+            return docker.DockerClient()
         else:
-            return docker.DockerClient(base_url=f"ssh://root@{host['ip']}")
+            return docker.DockerClient(base_url=f"ssh://{config['login_user']}@{host['docker_ip']}")
 
 
 def run_local_or_remote_noraise(config, host, command, logger):
