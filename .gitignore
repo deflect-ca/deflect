@@ -24,3 +24,4 @@ __pycache__/
 input/config/*.yml
 output/**/*
 persisted/*.crt
+persisted/*.yml
