@@ -109,6 +109,7 @@ class Elasticsearch(Container):
             detach=True,
             ports={
                 '9200/tcp': ('0.0.0.0', '9200'),
+                '5601/tcp': ('0.0.0.0', '5601'), # for kibana joining network
             },
             labels={
                 'name': "elasticsearch",

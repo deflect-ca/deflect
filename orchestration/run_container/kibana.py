@@ -31,20 +31,11 @@ class Kibana(Container):
         # self._upload_saved_objects()
 
     def start_new_container(self, config, image_id):
-        # XXX
-        controller_host = None
-        if config['controller']['ip'] == "127.0.0.1":
-            controller_host = "gateway.docker.internal"
-        else:
-            controller_host = config['controller']['ip']
-
+        controller_host = '127.0.0.1'  # XXX: network_mode es
         self.logger.error(f"controller host: {controller_host}")
         return self.client.containers.run(
             image_id,
             detach=True,
-            ports={
-                '5601/tcp': ('0.0.0.0', '5601'),
-            },
             labels={
                 'name': "kibana",
             },
@@ -64,4 +55,5 @@ class Kibana(Container):
             },
             name="kibana",
             restart_policy=Container.DEFAULT_RESTART_POLICY,
+            network_mode="container:elasticsearch",  # join es netowkr to connect via loclahost
         )
