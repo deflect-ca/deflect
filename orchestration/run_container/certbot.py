@@ -50,9 +50,10 @@ class Certbot(Container):
             self.logger.debug(f"trying to get a cert for {site['server_names']}")
             domains_args = "-d " + " -d ".join(site['server_names'])
             self.logger.debug(domains_args)
+            certbot_options = config['production_certbot_options'] if config['server_env'] == 'production' else config['staging_certbot_options']
+            self.logger.debug(f"Using certbot options: {certbot_options}")
             (exit_code, output) = self.container.exec_run(
-                f"certbot certonly {config['staging_certbot_options']} --non-interactive --agree-tos"
-                # f"certbot certonly {config['production_certbot_options']} --non-interactive --agree-tos"
+                f"certbot certonly {certbot_options} --non-interactive --agree-tos"
                 f" --preferred-challenges dns --cert-name {domain}"
                 " --authenticator certbot-dns-standalone:dns-standalone"
                 " --certbot-dns-standalone:dns-standalone-address=127.0.0.1"

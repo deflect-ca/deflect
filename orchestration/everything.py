@@ -142,15 +142,26 @@ def install_controller_components(config, all_sites, timestamp, logger):
     client = docker_client_for_host(config['controller'], config=config)
 
     Bind(          client, config, find_existing=True, logger=logger).update(timestamp)
-    DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)
-    Pebble(        client, config, find_existing=True, logger=logger).update(timestamp)
+
+    if config['server_env'] == 'staging':
+        DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)
+        Pebble(        client, config, find_existing=True, logger=logger).update(timestamp)
+    else:
+        logger.debug('skipping DohProxy and Pebble in production')
+
     Certbot(       client, config, find_existing=True, logger=logger).update(all_sites, config, timestamp)
     TestOrigin(    client, config, find_existing=True, logger=logger).update(timestamp)
-    Elasticsearch( client, config, find_existing=True, logger=logger).update(timestamp)
-    Kibana(        client, config, find_existing=True, logger=logger).update(timestamp)
+
+    if config['logging']['built_in_elk']:
+        Elasticsearch( client, config, find_existing=True, logger=logger).update(timestamp)
+        Kibana(        client, config, find_existing=True, logger=logger).update(timestamp)
+    else:
+        logger.debug('skipping Elasticsearch and Kibana for not using built_in_elk')
+
     if client.info()["Name"] == "docker-desktop":
         logger.debug("detected Docker Desktop, not installing controller's Nginx, Filebeat, or Metricbeat")
         return
+
     Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
     Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
     Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)

@@ -1,19 +1,24 @@
 system_root_zone: example.com
 login_user: deflect
+server_env: staging  # or production
 dnets:
   - dnet_a
-  - controller  # XXX fix this
+  - controller
 controller:
   hostname: controller.example.com
   ip: 1.2.3.4
   docker_ip: 127.0.0.1  # connect to local docker without SSH
-  dnet: controller  # XXX fix this
-  user: deflect
+  dnet: controller
 edges:
   - hostname: edge-1.example.comp
     ip: 2.3.4.5
     dnet: dnet_a
     user: deflect
+logging:  # used for filebeat and metricbeat in production
+  built_in_elk: True
+  elasticsearch_host: https://127.0.0.1:9200
+  kibana_host: https://127.0.0.1:5601
+  elasticsearch_password: password
 staging_certbot_options: "--email some@email.com --server https://127.0.0.1:14000/dir --no-verify-ssl"
 production_certbot_options: "--email prod@email.com --server https://acme-v02.api.letsencrypt.org/directory"
 doh_private_port: 8085

@@ -31,8 +31,13 @@ class Kibana(Container):
         # self._upload_saved_objects()
 
     def start_new_container(self, config, image_id):
-        controller_host = '127.0.0.1'  # XXX: network_mode es
-        self.logger.error(f"controller host: {controller_host}")
+        ELASTICSEARCH_HOST = config['logging']['elasticsearch_host']
+        ELASTICSEARCH_PASSWORD = config['logging']['elasticsearch_password']
+
+        if config['server_env'] != 'production':
+            ELASTICSEARCH_HOST = "https://127.0.0.1:9200"  # joined ES network
+            ELASTICSEARCH_PASSWORD = get_persisted_config()['elastic_password']
+
         return self.client.containers.run(
             image_id,
             detach=True,
@@ -40,11 +45,11 @@ class Kibana(Container):
                 'name': "kibana",
             },
             environment={
-                "ELASTICSEARCH_HOSTS": f"https://{controller_host}:9200",
+                "ELASTICSEARCH_HOSTS": ELASTICSEARCH_HOST,
                 "ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES": "/etc/kibana/ca.crt",
                 "ELASTICSEARCH_SSL_VERIFICATIONMODE": "none",
                 "ELASTICSEARCH_USERNAME": "elastic",
-                "ELASTICSEARCH_PASSWORD": get_persisted_config()['elastic_password'],
+                "ELASTICSEARCH_PASSWORD": ELASTICSEARCH_PASSWORD,
             },
             volumes={
                 '/var/run/':  # XXX
