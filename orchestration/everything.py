@@ -168,11 +168,17 @@ def install_controller_components(config, all_sites, timestamp, logger):
 
 
 def install_everything(config, all_sites, timestamp):
-    # need to install controller before we install any edges. (ES creds)
+    install_controller(config, all_sites, timestamp)
+    install_edges(config, all_sites, timestamp)
+
+
+def install_controller(config, all_sites, timestamp):
     logger.info("running install_controller_components()...")
     res = install_controller_components(config, all_sites, timestamp, logger)
-    logger.info(f"install_everything host: {config['controller']}, result: {res}")
+    logger.info(f"install_controller host: {config['controller']}, result: {res}")
 
+
+def install_edges(config, all_sites, timestamp):
     # now we can install all the edges in parallel
     logger.info("running install_edge_components()...")
     results = run_on_threadpool({

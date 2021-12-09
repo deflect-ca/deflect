@@ -20,6 +20,8 @@ from config_generation.generate_elastic_keys import generate_new_elastic_certs
 
 from orchestration.everything import (
         install_everything,
+        install_controller,
+        install_edges,
         gather_info,
         install_base,
 )
@@ -79,12 +81,14 @@ if __name__ == '__main__':
         help="comma-separated hostnames OR 'controller' OR 'edges' OR 'all'"
     )
     argparser.add_argument(
-        "--action", dest="action", required=True,
+        "-a", "--action", dest="action", required=True,
         choices=[
             "info",
             "install-base",
             "gen-config",
             "install-config",
+            "install-controller",
+            "install-edges",
             "test-es-auth",
             "install-es",
             "install-banjax",
@@ -117,6 +121,14 @@ if __name__ == '__main__':
     elif args.action == "install-config":
         all_sites, timestamp = get_all_sites(config)
         install_everything(config, all_sites, timestamp)
+
+    elif args.action == "install-controller":
+        all_sites, timestamp = get_all_sites(config)
+        install_controller(config, all_sites, timestamp)
+
+    elif args.action == "install-edges":
+        all_sites, timestamp = get_all_sites(config)
+        install_edges(config, all_sites, timestamp)
 
     elif args.action == "install-es":
         all_sites, timestamp = get_all_sites(config)
@@ -162,7 +174,7 @@ if __name__ == '__main__':
         print("# test the ES certs + creds:\n"
               f"curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']} --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200 --user 'elastic:{elastic_password}'")
 
-        print("# test a site through a specific edge:\n")
+        print("\n# test a site through a specific edge:")
         for edge in config['edges']:
             print(f"curl --resolve test-origin.{config['system_root_zone']}:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://test-origin.{config['system_root_zone']}")
         for edge in config['edges']:
