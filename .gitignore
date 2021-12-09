@@ -25,3 +25,25 @@ input/config/*.yml
 output/**/*
 persisted/*.crt
 persisted/*.yml
+
+# generated certs
+containers/elasticsearch/ca.crt
+containers/elasticsearch/ca.key
+containers/elasticsearch/instance.crt
+containers/elasticsearch/instance.key
+containers/filebeat/ca.crt
+containers/filebeat/ca.key
+containers/filebeat/instance.crt
+containers/filebeat/instance.key
+containers/kibana/ca.crt
+containers/kibana/ca.key
+containers/kibana/instance.crt
+containers/kibana/instance.key
+containers/metricbeat/ca.crt
+containers/metricbeat/ca.key
+containers/metricbeat/instance.crt
+containers/metricbeat/instance.key
+persisted/elastic_certs/ca.crt
+persisted/elastic_certs/ca.key
+persisted/elastic_certs/instance.crt
+persisted/elastic_certs/instance.key
