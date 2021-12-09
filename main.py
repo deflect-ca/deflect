@@ -159,13 +159,14 @@ if __name__ == '__main__':
         p_conf = get_persisted_config()
         elastic_password = p_conf.get('elastic_password', "<doesn't exist yet>")
 
-        print(f"""
-            # test the ES certs + creds:
-            curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']} --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200 --user 'elastic:{elastic_password}'
+        print("# test the ES certs + creds:\n"
+              f"curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']} --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200 --user 'elastic:{elastic_password}'")
 
-            # test a site through a specific edge:
-            curl --resolve test-origin.{config['system_root_zone']}:443:{config['edges'][0]['ip']} --cacert persisted/pebble_ca.crt https://test-origin.{config['system_root_zone']}
-            """)
+        print("# test a site through a specific edge:\n")
+        for edge in config['edges']:
+            print(f"curl --resolve test-origin.{config['system_root_zone']}:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://test-origin.{config['system_root_zone']}")
+        for edge in config['edges']:
+            print(f"curl -vI --resolve example.com:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://example.com")
 
     # XXX duplication
     elif args.action == "get-banjax-decision-lists":

@@ -10,7 +10,7 @@ def get_persisted_config():
     if not os.path.isfile(get_persisted_config_yml_path()):
         return {}
     with open(get_persisted_config_yml_path(), "r") as f:
-        p_conf = yaml.load(f)
+        p_conf = yaml.load(f, Loader=yaml.FullLoader)
     return p_conf
 
 
