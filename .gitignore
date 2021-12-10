@@ -22,6 +22,7 @@ __pycache__/
 
 # config
 input/config/*.yml
+input/config/**/*
 output/**/*
 persisted/*.crt
 persisted/*.yml

@@ -9,3 +9,4 @@ pyopenssl>=20.0
 pem
 paramiko==2.7.2
 jinja2==3.0.1
+scp==0.14.1

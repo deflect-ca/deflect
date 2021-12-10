@@ -34,6 +34,7 @@ from orchestration.hosts import docker_client_for_host, run_local_or_remote_nora
 
 import logging
 from util.helpers import get_logger, get_config_yml_path, path_to_output
+from util.fetch_site_yml import fetch_site_yml
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 
@@ -100,6 +101,7 @@ if __name__ == '__main__':
             "get-banjax-rate-limit-states",
             "get-nginx-and-banjax-config-versions",
             "check-cert-expiry",
+            "fetch-site-yml",
         ],
         help="what to do to the hosts"
     )
@@ -246,3 +248,6 @@ if __name__ == '__main__':
                 cert_bytes = f.read()
             cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
             logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
+
+    elif args.action == "fetch-site-yml":
+        fetch_site_yml(config['fetch_site_yml'], logger)
