@@ -61,7 +61,7 @@ def fetch_site_yml(config, logger):
 
     # 2. Sym link
     ln_src = f"{config['scp_dst']}/clients.yml-{dashdate}"
-    ln_dst = f"{config['config_root']}/old-sites.yml"
+    ln_dst = f"{config['config_root']}/old_sites.yml"
     logger.debug("ln {} to {}".format(ln_src, ln_dst))
     symlink_force(ln_src, ln_dst)
 
