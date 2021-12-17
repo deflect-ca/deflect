@@ -143,7 +143,7 @@ def load_chain_certs(filename):
     chain_certs = []
     try:
         chain, chain_bytes = load_encrypted_cert(
-            f"input/tls_bundles/{filename}.chain.crt.gpg")
+            f"input/config/tls_bundles/{filename}.chain.crt.gpg")
 
         for pem_cert in pem.parse(chain_bytes):
             try:
@@ -186,10 +186,10 @@ def one_site(site, bundle_name, formatted_time):
     print(f"doing {filename}")
 
     leaf_cert, cert_bytes = load_encrypted_cert(
-        f"input/tls_bundles/{filename}.cert.crt.gpg")
+        f"input/config/tls_bundles/{filename}.cert.crt.gpg")
 
     private_key, private_key_bytes = load_encrypted_key(
-        f"input/tls_bundles/{filename}.key.gpg")
+        f"input/config/tls_bundles/{filename}.key.gpg")
 
     errors += validate_private_key_matches_leaf_cert(private_key, leaf_cert)
 
@@ -252,9 +252,9 @@ def main(all_sites, formatted_time):
 
 
 if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
+    from config_generation.site_dict import get_all_sites
     config = parse_config(get_config_yml_path())
 
-    all_sites, formatted_time = get_all_sites()
+    all_sites, formatted_time = get_all_sites(config)
 
     main(all_sites, formatted_time)

@@ -68,7 +68,7 @@ def fetch_site_yml(config, logger):
     # XXX: only copy the site TLS in client.yml
     # 3. TLS
     logger.debug("Get TLS bundles")
-    scp.get(config['tls_src'], f"{config['config_root']}/{config['tls_dst']}", recursive=True)
+    scp.get(config['tls_src'], f"{config['config_root']}", recursive=True)
 
     logger.debug("Closing SCP and SSH client")
     scp.close()

@@ -35,6 +35,7 @@ from orchestration.hosts import docker_client_for_host, run_local_or_remote_nora
 import logging
 from util.helpers import get_logger, get_config_yml_path, path_to_output
 from util.fetch_site_yml import fetch_site_yml
+from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert_bundles
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
 
@@ -102,6 +103,7 @@ if __name__ == '__main__':
             "get-nginx-and-banjax-config-versions",
             "check-cert-expiry",
             "fetch-site-yml",
+            "decrypt_and_verify_cert_bundles"
         ],
         help="what to do to the hosts"
     )
@@ -251,3 +253,7 @@ if __name__ == '__main__':
 
     elif args.action == "fetch-site-yml":
         fetch_site_yml(config['fetch_site_yml'], logger)
+
+    elif args.action == "decrypt_and_verify_cert_bundles":
+        all_sites, timestamp = get_all_sites(config)
+        decrypt_and_verify_cert_bundles(all_sites, timestamp)

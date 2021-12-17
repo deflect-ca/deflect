@@ -48,3 +48,5 @@ persisted/elastic_certs/ca.crt
 persisted/elastic_certs/ca.key
 persisted/elastic_certs/instance.crt
 persisted/elastic_certs/instance.key
+.gnupg
+.gnupg-*
