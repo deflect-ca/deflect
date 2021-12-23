@@ -50,3 +50,6 @@ persisted/elastic_certs/instance.crt
 persisted/elastic_certs/instance.key
 .gnupg
 .gnupg-*
+
+# bind
+containers/bind/named.conf.options-private
