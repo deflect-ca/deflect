@@ -23,6 +23,8 @@ __pycache__/
 # config
 input/config/*.yml
 input/config/**/*
+# kafka certs
+input/config/banjax
 output/**/*
 persisted/*.crt
 persisted/*.yml

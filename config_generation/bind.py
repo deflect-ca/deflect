@@ -286,6 +286,7 @@ zone "_acme-challenge.{{domain}}" {
     type forward;
     forward only;
     forwarders { 127.0.0.1 port 5053; };
+    allow-query { 127.0.0.1; };
 };
 
 """)

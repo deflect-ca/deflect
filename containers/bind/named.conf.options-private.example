@@ -38,9 +38,9 @@ options {
         //========================================================================
 
         version "really";
-        dnssec-enable yes;
+        //dnssec-enable yes;
         dnssec-validation yes;
-        dnssec-lookaside auto;
+        //dnssec-lookaside auto;
 
         auth-nxdomain no;    # conform to RFC1035
         listen-on {
