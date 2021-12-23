@@ -31,9 +31,6 @@ EXPOSE 53/udp 53/tcp 953/tcp
 
 COPY named.conf.options /etc/bind/
 COPY named.conf.options-private /etc/bind/
-# XXX these are for debugging and should normally not be here
-COPY rndc.conf /etc/bind/
-COPY rndc.key /etc/bind/
 
 # CMD ["/usr/sbin/named", "-f", "-d", "2"]
 CMD ["/usr/sbin/named", "-g", "-c", "/etc/bind/named.conf", "-u", "root"]
