@@ -28,6 +28,10 @@ fetch_site_yml:
   scp_dst: input/config/clients.yml-revisions
   tls_src: /path/to/tls_bundles
   tls_dst: input/config/tls_bundles
+dns:
+  also-notify: 8.8.8.8; 8.8.4.4;
+  allow-query: 127.0.0.1; 8.8.8.8; 8.8.4.4;
+  allow-transfer: 8.8.8.8; 8.8.4.4;
 staging_certbot_options: "--email some@email.com --server https://127.0.0.1:14000/dir --no-verify-ssl"
 production_certbot_options: "--email prod@email.com --server https://acme-v02.api.letsencrypt.org/directory"
 doh_private_port: 8085

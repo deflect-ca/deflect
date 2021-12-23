@@ -232,9 +232,10 @@ def template_named_conf(config, client_and_system_sites):
     named_conf_string = ""
     named_conf_string += zone_block_root(
             config['system_root_zone'],
+            config=config
     )
     for site in sorted(client_and_system_sites.values(), key=lambda s: s['public_domain']):
-        named_conf_string += zone_block_root(site['public_domain'])
+        named_conf_string += zone_block_root(site['public_domain'], config=config)
         for server_name in sorted(set(site['server_names'])):
             named_conf_string += zone_block_acme_challenge(server_name)
 
@@ -260,15 +261,23 @@ def relativize_name(canonical_name, alt_name):
         return alt_name.replace("." + canonical_name, "")
 
 
-def zone_block_root(domain):
+def zone_block_root(domain, config=None):
     filename = get_etc_bind_filename(domain)
     template = Template("""
 zone "{{domain}}" {
     type master;
     file "{{filename}}";
+    also-notify { {{also_notify}} };
+    allow-query { {{allow_query}} };
+    allow-transfer { {{allow_transfer}} };
 };
-    """)
-    return template.render(domain=domain, filename=filename)
+
+""")
+    return template.render(domain=domain,
+                           filename=filename,
+                           also_notify=config['dns']['also-notify'],
+                           allow_query=config['dns']['allow-query'],
+                           allow_transfer=config['dns']['allow-transfer'])
 
 
 def zone_block_acme_challenge(domain):
@@ -278,7 +287,8 @@ zone "_acme-challenge.{{domain}}" {
     forward only;
     forwarders { 127.0.0.1 port 5053; };
 };
-    """)
+
+""")
     return template.render(domain=domain)
 
 
