@@ -45,6 +45,7 @@ options {
         auth-nxdomain no;    # conform to RFC1035
         listen-on {
                 127.0.0.1;
+                172.17.0.1;  # docker host XXX FIXME
         };
         listen-on-v6 { any; };
         recursion yes;

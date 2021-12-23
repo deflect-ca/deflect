@@ -115,6 +115,7 @@ You can run the orchestration scripts from anywhere. They can be on the controll
 
 You can install all of the controller and edge containers locally (under Docker Desktop) on your workstation with the following
 snippet in `global_config.yml`:
+
 ```yaml
 controller:
   hostname: docker-desktop
@@ -136,6 +137,10 @@ pip install -e .  # -e to make the scripts editable in place
 cp -r input/config{-example/,}
 
 # edit input/config/global_config.yml to have real IP addresses
+
+cp containers/bind/named.conf.options-private.example containers/bind/named.conf.options-private
+
+# edit named.conf.options-private to secure your bind server
 
 python3 main.py --action info  # see that docker isn't installed on the controller or edges
 python3 main.py --action install-base
@@ -171,6 +176,12 @@ python3 main.py --action get-nginx-and-banjax-config-versions
 
 # loop through all our certs and print the expiration time
 python3 main.py --action check-cert-expiry
+
+# fetch site.yml from some remote server
+# must config ssh section in global_config.yml
+mkdir -p input/config/clients.yml-revisions
+mkdir -p input/config/tld_bundles
+python3 main.py --action fetch-site-yml
 ```
 
 
@@ -201,11 +212,11 @@ docker exec -it <container name> /bin/bash
 
 The main configuration files are:
 
-- orchestration/input/config.yml
-- orchestration/input/old-sites.yml
-- orchestration/system-sites.yml
-- orchestration/deflect-next\_config.yml
-- local\_certs\_dir = f&quot;input/certs/{formatted\_time}/&quot; # XXX formatted\_time comes from inside the old-sites.yml file
+- input/config/global_config.yml
+- input/config/old-sites.yml
+- input/config/system-sites.yml
+- input/config/banjax_config.yml
+- containers/bind/named.conf.options-private
 
 ---
 
