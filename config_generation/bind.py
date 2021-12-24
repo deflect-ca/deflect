@@ -246,10 +246,26 @@ def template_controller_zone(in_filename, out_filename, config):
     with open(in_filename, "r") as tf:
         template = Template(tf.read())
         with open(out_filename, "w") as zf:
-            zf.write(template.render(
+            base_zone = template.render(
                 name=config['system_root_zone'],
                 ip=config['controller']['ip'],
-            ))
+            )
+            # add some extra stuff to the root zone
+            # like edges in config, and other neceseary stuff
+            for record in config['root_zone_extra']:
+                for rr in config['root_zone_extra'][record]:
+                    base_zone += zone_block_root_zone_record(
+                        record,
+                        rr['type'],
+                        rr['value'])
+            zf.write(base_zone)
+
+
+def zone_block_root_zone_record(host, type, ip):
+    template = Template("""
+{{ host }}     IN      {{ type }}       {{ ip }}
+""")
+    return template.render(host=host, type=type, ip=ip)
 
 
 # "example.com" -> "@"
