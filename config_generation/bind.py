@@ -193,7 +193,7 @@ def site_to_zone(config, site_name, site):
         zone,
         mname=ns_host,
         rname=ns_admin,
-        serial=0,
+        serial=0,  # XXX: SHOULD BE TIMESTAMP
         refresh=300,
         retry=300,
         expire=1209600,
@@ -201,6 +201,7 @@ def site_to_zone(config, site_name, site):
     )
 
     # the @ NS record (XXX could/should be more than one)
+    # XXX: SHOULD BE DNS PROVIDER NOT OUR CONTROLLER
     add_record_rel(zone, site_name, site_name, "NS", ns_host)
 
     for alt_name in sorted(set(site["server_names"])):
