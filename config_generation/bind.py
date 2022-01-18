@@ -7,6 +7,7 @@ import logging
 import shutil
 import tarfile
 import os
+import time
 
 from jinja2 import Template
 import ast
@@ -183,6 +184,10 @@ def add_soa(zone, mname, rname, serial, refresh, retry, expire, minimum):
     soa_rdataset.add(rdata, 300)
 
 
+def get_serial():
+    return int(time.time())
+
+
 def site_to_zone(config, site_name, site):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
@@ -193,7 +198,7 @@ def site_to_zone(config, site_name, site):
         zone,
         mname=ns_host,
         rname=ns_admin,
-        serial=0,  # XXX: SHOULD BE TIMESTAMP
+        serial=get_serial(),  # this forces AXFR transfer
         refresh=300,
         retry=300,
         expire=1209600,
@@ -248,6 +253,7 @@ def template_controller_zone(in_filename, out_filename, config):
         template = Template(tf.read())
         with open(out_filename, "w") as zf:
             base_zone = template.render(
+                serial=get_serial(),  # this forces AXFR transfer
                 name=config['system_root_zone'],
                 ip=config['controller']['ip'],
             )
@@ -259,7 +265,7 @@ def template_controller_zone(in_filename, out_filename, config):
                         record,
                         rr['type'],
                         rr['value'])
-            zf.write(base_zone)
+            zf.write(base_zone + "\n")  # trailing newline at end of file
 
 
 def zone_block_root_zone_record(host, type, ip):
