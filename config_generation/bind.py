@@ -205,9 +205,8 @@ def site_to_zone(config, site_name, site):
         minimum=300
     )
 
-    # the @ NS record (XXX could/should be more than one)
-    # XXX: SHOULD BE DNS PROVIDER NOT OUR CONTROLLER
-    add_record_rel(zone, site_name, site_name, "NS", ns_host)
+    for default_ns in config['dns']['default-ns']:
+        add_record_rel(zone, site_name, site_name, "NS", default_ns)
 
     for alt_name in sorted(set(site["server_names"])):
         # this somehow lets bind9 forward these requests to certbot's dns-helper

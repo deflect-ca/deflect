@@ -32,6 +32,9 @@ dns:
   also-notify: 8.8.8.8; 8.8.4.4;
   allow-query: 127.0.0.1; 172.17.0.1; 8.8.8.8; 8.8.4.4;
   allow-transfer: 8.8.8.8; 8.8.4.4;
+  default-ns:  # the default NS record for each domain
+    - ns1.example.com
+    - ns2.example.com
 root_zone_extra:  # extra records for system root zone
   'test-origin':
     - type: A
