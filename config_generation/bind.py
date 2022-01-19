@@ -191,8 +191,7 @@ def get_serial():
 def site_to_zone(config, site_name, site):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
-    ns_host = f"ns1.{config['system_root_zone']}"
-    ns_admin = f"root.{config['system_root_zone']}"  # XXX what's this actually called?
+    acme_ns = f"acme.{config['system_root_zone']}"
 
     add_soa(
         zone,
@@ -210,7 +209,7 @@ def site_to_zone(config, site_name, site):
 
     for alt_name in sorted(set(site["server_names"])):
         # this somehow lets bind9 forward these requests to certbot's dns-helper
-        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", ns_host)
+        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", acme_ns)
 
         # it's a bit kludgy, but we say the controller is part of dnet "controller"
         # so we can specify that kibana, elasticsearch, and doh-proxy live there.
