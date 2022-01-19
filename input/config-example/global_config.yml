@@ -32,9 +32,11 @@ dns:
   also-notify: 8.8.8.8; 8.8.4.4;
   allow-query: any;
   allow-transfer: 8.8.8.8; 8.8.4.4;
-  default-ns:  # the default NS record for each domain
+  default_ns:  # the default NS record for each domain
     - ns1.example.com
     - ns2.example.com
+  soa_nameserver: dns0.example.com.  # The nameserver to write to SOA records
+  soa_mailbox: zone.example.com.
 root_zone_extra:  # extra records for system root zone
   'test-origin':
     - type: A

@@ -196,8 +196,8 @@ def site_to_zone(config, site_name, site):
 
     add_soa(
         zone,
-        mname=ns_host,
-        rname=ns_admin,
+        mname=config['dns']['soa_nameserver'],
+        rname=config['dns']['soa_mailbox'],
         serial=get_serial(),  # this forces AXFR transfer
         refresh=300,
         retry=300,
@@ -205,7 +205,7 @@ def site_to_zone(config, site_name, site):
         minimum=300
     )
 
-    for default_ns in config['dns']['default-ns']:
+    for default_ns in config['dns']['default_ns']:
         add_record_rel(zone, site_name, site_name, "NS", default_ns)
 
     for alt_name in sorted(set(site["server_names"])):
@@ -253,8 +253,10 @@ def template_controller_zone(in_filename, out_filename, config):
         with open(out_filename, "w") as zf:
             base_zone = template.render(
                 serial=get_serial(),  # this forces AXFR transfer
-                name=config['system_root_zone'],
                 ip=config['controller']['ip'],
+                soa_mailbox=config['dns']['soa_mailbox'],
+                soa_nameserver=config['dns']['soa_nameserver'],
+                default_ns=config['dns']['default_ns'],
             )
             # add some extra stuff to the root zone
             # like edges in config, and other neceseary stuff
