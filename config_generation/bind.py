@@ -7,6 +7,7 @@ import logging
 import shutil
 import tarfile
 import os
+import time
 
 from jinja2 import Template
 import ast
@@ -183,30 +184,32 @@ def add_soa(zone, mname, rname, serial, refresh, retry, expire, minimum):
     soa_rdataset.add(rdata, 300)
 
 
+def get_serial():
+    return int(time.time())
+
+
 def site_to_zone(config, site_name, site):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
-    ns_host = f"ns1.{config['system_root_zone']}"
-    ns_admin = f"root.{config['system_root_zone']}"  # XXX what's this actually called?
+    acme_ns = f"acme.{config['system_root_zone']}"
 
     add_soa(
         zone,
-        mname=ns_host,
-        rname=ns_admin,
-        serial=0,  # XXX: SHOULD BE TIMESTAMP
+        mname=config['dns']['soa_nameserver'],
+        rname=config['dns']['soa_mailbox'],
+        serial=get_serial(),  # this forces AXFR transfer
         refresh=300,
         retry=300,
         expire=1209600,
         minimum=300
     )
 
-    # the @ NS record (XXX could/should be more than one)
-    # XXX: SHOULD BE DNS PROVIDER NOT OUR CONTROLLER
-    add_record_rel(zone, site_name, site_name, "NS", ns_host)
+    for default_ns in config['dns']['default_ns']:
+        add_record_rel(zone, site_name, site_name, "NS", default_ns)
 
     for alt_name in sorted(set(site["server_names"])):
         # this somehow lets bind9 forward these requests to certbot's dns-helper
-        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", ns_host)
+        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", acme_ns)
 
         # it's a bit kludgy, but we say the controller is part of dnet "controller"
         # so we can specify that kibana, elasticsearch, and doh-proxy live there.
@@ -248,8 +251,11 @@ def template_controller_zone(in_filename, out_filename, config):
         template = Template(tf.read())
         with open(out_filename, "w") as zf:
             base_zone = template.render(
-                name=config['system_root_zone'],
+                serial=get_serial(),  # this forces AXFR transfer
                 ip=config['controller']['ip'],
+                soa_mailbox=config['dns']['soa_mailbox'],
+                soa_nameserver=config['dns']['soa_nameserver'],
+                default_ns=config['dns']['default_ns'],
             )
             # add some extra stuff to the root zone
             # like edges in config, and other neceseary stuff
@@ -259,7 +265,7 @@ def template_controller_zone(in_filename, out_filename, config):
                         record,
                         rr['type'],
                         rr['value'])
-            zf.write(base_zone)
+            zf.write(base_zone + "\n")  # trailing newline at end of file
 
 
 def zone_block_root_zone_record(host, type, ip):

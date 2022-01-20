@@ -10,7 +10,7 @@ controller:
   docker_ip: 127.0.0.1  # connect to local docker without SSH
   dnet: controller
 edges:
-  - hostname: edge-1.example.comp
+  - hostname: edge-1.example.com
     ip: 2.3.4.5
     dnet: dnet_a
     user: deflect
@@ -30,8 +30,13 @@ fetch_site_yml:
   tls_dst: input/config/tls_bundles
 dns:
   also-notify: 8.8.8.8; 8.8.4.4;
-  allow-query: 127.0.0.1; 172.17.0.1; 8.8.8.8; 8.8.4.4;
+  allow-query: any;
   allow-transfer: 8.8.8.8; 8.8.4.4;
+  default_ns:  # the default NS record for each domain
+    - ns1.example.com
+    - ns2.example.com
+  soa_nameserver: dns0.example.com.  # The nameserver to write to SOA records
+  soa_mailbox: zone.example.com.
 root_zone_extra:  # extra records for system root zone
   'test-origin':
     - type: A
