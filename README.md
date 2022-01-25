@@ -139,6 +139,8 @@ cp -r input/config{-example/,}
 # edit input/config/global_config.yml to have real IP addresses
 
 cp containers/bind/named.conf.options-private.example containers/bind/named.conf.options-private
+cp containers/bind/rndc.conf.example containers/bind/rndc.conf
+cp containers/bind/rndc.key.example containers/bind/rndc.key
 
 # edit named.conf.options-private to secure your bind server
 

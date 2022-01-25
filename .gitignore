@@ -55,5 +55,7 @@ persisted/elastic_certs/instance.key
 
 # bind
 containers/bind/named.conf.options-private
+containers/bind/rndc.key
+containers/bind/rndc.conf
 input/banjax/
 input/certs/
