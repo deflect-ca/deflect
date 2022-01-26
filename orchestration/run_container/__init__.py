@@ -9,3 +9,4 @@ from orchestration.run_container.test_origin import TestOrigin
 from orchestration.run_container.elasticsearch import Elasticsearch
 from orchestration.run_container.kibana import Kibana
 from orchestration.run_container.pebble import Pebble
+from orchestration.run_container.edgemanage import EdgeManage
