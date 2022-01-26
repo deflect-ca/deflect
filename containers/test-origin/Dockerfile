@@ -11,8 +11,9 @@ RUN go get -u github.com/gin-gonic/gin
 # RUN go get -u github.com/githubnemo/CompileDaemon
 
 RUN mkdir -p /opt/hello-world
+RUN mkdir -p /opt/hello-world/static
 COPY ./hello-world.go /opt/hello-world/
-COPY ./static /opt/hello-world/
+COPY ./static/deflectlogo_RED.png /opt/hello-world/static/
 
 EXPOSE 8080
 
