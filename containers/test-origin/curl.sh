@@ -25,5 +25,5 @@ curl -X DELETE http://localhost:8080/DELETE?param=hello
 
 echo "\n\nUPLOAD"
 curl -X POST http://localhost:8080/upload?param=hello \
-  -F "file=@./deflect.png" \
+  -F "file=@./static/deflectlogo_RED.png" \
   -H "Content-Type: multipart/form-data"

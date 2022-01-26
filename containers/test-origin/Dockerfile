@@ -12,6 +12,7 @@ RUN go get -u github.com/gin-gonic/gin
 
 RUN mkdir -p /opt/hello-world
 COPY ./hello-world.go /opt/hello-world/
+COPY ./static /opt/hello-world/
 
 EXPOSE 8080
 
