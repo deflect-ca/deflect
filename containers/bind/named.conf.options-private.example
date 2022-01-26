@@ -25,11 +25,8 @@ options {
 };
 
 controls {
-        inet 127.0.0.1 allow { localhost; }
-        keys { test-key; };
+        inet 127.0.0.1 port 953
+                allow { 127.0.0.1; } keys { "rndc-key"; };
 };
 
-key test-key {
-        algorithm hmac-md5;
-        secret "secret";
-};
+include "/etc/bind/rndc.key";
