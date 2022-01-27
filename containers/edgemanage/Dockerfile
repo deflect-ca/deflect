@@ -12,6 +12,7 @@ RUN set -x \
     python3 \
     python3-pip \
     supervisor \
+    bind9utils \
     git # TODO: Remove when edgemanage is installed from pypi
 
 RUN mkdir -p /etc/edgemanage/edges
