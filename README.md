@@ -144,6 +144,10 @@ cp containers/bind/rndc.key.example containers/bind/rndc.key
 
 # edit named.conf.options-private to secure your bind server
 
+# create a config file for edgemanage and adjust it to your needs (dns, dnet, edge_count, etc)
+cp containers/edgemanage/edgemanage.yaml.example containers/edgemanage/edgemanage.yaml
+cp containers/edgemanage/dnext1.example containers/edgemanage/dnext1
+
 python3 main.py --action info  # see that docker isn't installed on the controller or edges
 python3 main.py --action install-base
 python3 main.py --action info  # now we see the the docker versions installed
