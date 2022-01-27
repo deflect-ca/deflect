@@ -59,3 +59,7 @@ containers/bind/rndc.key
 containers/bind/rndc.conf
 input/banjax/
 input/certs/
+
+# edgemanage
+containers/edgemanage/edgemanage.yaml
+containers/edgemanage/dnext1
