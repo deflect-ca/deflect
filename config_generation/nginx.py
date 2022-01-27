@@ -35,7 +35,7 @@ def redirect_to_https_server(site: dict):
             nginx.Key('listen', '80'),
             nginx.Key(
                 # note that we always redirect to the non-www hostname
-                'return', "301 https://$server_name$request_uri/")
+                'return', "301 https://$server_name$request_uri")
         )
     )
 
