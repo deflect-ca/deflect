@@ -19,4 +19,7 @@ class EdgeManage(Container):
             restart_policy=Container.DEFAULT_RESTART_POLICY,
             # XXX should we specify container id instead?
             network_mode="container:bind",
+            volumes={
+                "bind-data": {"bind": "/etc/bind", "mode": "rw"},
+            },
         )
