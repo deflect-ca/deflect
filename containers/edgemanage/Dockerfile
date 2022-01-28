@@ -26,7 +26,7 @@ COPY dnext1 /etc/edgemanage/edges/dnext1
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # TODO: Install from pypi
-RUN pip3 install git+https://github.com/deflect-ca/edgemanage@main
+RUN pip3 install git+https://github.com/deflect-ca/edgemanage@feature/override-dns
 
 # TODO: run supervisor with a non-root user
 CMD ["/usr/bin/supervisord"]
