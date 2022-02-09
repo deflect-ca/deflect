@@ -79,7 +79,7 @@ lockfile: /var/lock/edgemanage.lock
 # deflect.ca.zone, nosmo.me.zone and so on. Used for insertion into
 # completed zone files after edges have been decided upon. Stick your
 # MX, CNAME and non-@ A records into these files.
-zonetemplate_dir: /etc/edgemanage/zones
+zonetemplate_dir: /etc/bind/deflect_zones
 
 # Number of edges to keep as the @ record in DNS - if not specific in
 # dnet_edge_count, this value will be used.
@@ -87,12 +87,12 @@ edge_count: 4
 
 # Number of edges to keep as @ per-dnet
 dnet_edge_count:
-  my_dnet: 6
+  dnext1: 6
 
 # Directory to write completed, full DNS zone files to. If you're
 # using Edgemanage in a live capacity, this should be the directory
 # that your bind instance reads zone files from
-named_dir: /var/cache/bind/
+named_dir: /etc/bind/deflect/
 
 # File to output list of live edges to - the path may (and should!)
 # contain {dnet}

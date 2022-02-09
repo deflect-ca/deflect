@@ -20,14 +20,10 @@ RUN mkdir -p /etc/edgemanage/edges
 RUN mkdir -p /var/lib/edgemanage/health
 RUN mkdir -p /var/lock/edgemanage
 RUN mkdir -p /var/tmp/edgemanage
-RUN mkdir -p /etc/edgemanage/zones
-RUN mkdir -p /etc/edgemanage/zones/dnext1
-RUN mkdir -p /var/cache/bind
 RUN mkdir -p /etc/edgemanage/canaries
 
 COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
-RUN touch /etc/edgemanage/zones/dnext1/example.com.zone
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # TODO: Install from pypi
