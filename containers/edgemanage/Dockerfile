@@ -27,7 +27,6 @@ RUN mkdir -p /etc/edgemanage/canaries
 
 COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
-COPY dnext1 /etc/edgemanage/edges/dnext1
 RUN touch /etc/edgemanage/zones/dnext1/example.com.zone
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 

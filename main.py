@@ -15,6 +15,7 @@ from config_generation import (
     generate_bind_config,
     generate_nginx_config,
     generate_banjax_config,
+    generate_edgemanage_config,
 )
 from config_generation.generate_elastic_keys import generate_new_elastic_certs
 
@@ -70,6 +71,9 @@ def gen_config(config, all_sites, timestamp):
 
     logger.info('>>> Generating banjax-next config...')
     generate_banjax_config(config, all_sites, timestamp)
+
+    logger.info('>>> Generating edgemanage config...')
+    generate_edgemanage_config(config, all_sites, timestamp)
 
 
 if __name__ == '__main__':
