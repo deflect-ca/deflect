@@ -24,7 +24,7 @@ COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
 
 # TODO: Install from pypi
-RUN pip3 install git+https://github.com/deflect-ca/edgemanage@feature/override-dns
+RUN pip3 install git+https://github.com/deflect-ca/edgemanage
 
 CMD /usr/local/bin/edge_manage \
       --daemonise \
