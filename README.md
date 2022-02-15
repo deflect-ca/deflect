@@ -83,7 +83,7 @@ In our experience protecting hundreds of websites with dozens of edges, we've fo
 
 ## Edge Rotation/Management
 
-Not yet included in this repository is a service of ours called [edgemanage](https://github.com/deflect-ca/edgemanage). Edgemanage performs end-to-end health checks against edge servers and fills in Bind9 zone file templates with the healthiest ones. At the time of writing, it's still being extracted from our production systems and will soon be included here.
+It's a service of ours called [edgemanage](https://github.com/deflect-ca/edgemanage). Edgemanage performs end-to-end health checks against edge servers and fills in Bind9 zone file templates with the healthiest ones.
 
 ## ELK Stack
 
@@ -97,7 +97,7 @@ DNS round robin is a decades-old technique for balancing load across many server
 
 # DNS
 
-If you want to protext example.com with Deflect, you just need to point the NS record at the Bind9 server included here (or if you're like us, you point it at at a third-party DNS host which in turn points at this one). That makes this Bind9 server authoritative, and our configuration generation here will serve A records pointing at the edge servers. At the time of writing, Edgemanage isn't included in this repo. We use it in production to direct traffic at our healthiest edge servers. It's currently being extracted from our production systems and will be integrated here shortly.
+If you want to protect example.com with Deflect, you just need to point the NS record at the Bind9 server included here (or if you're like us, you point it at at a third-party DNS host which in turn points at this one). That makes this Bind9 server authoritative, and our configuration generation here will serve A records pointing at the edge servers. Edgemanage, that's now included in this repo, is the component we use in production to direct traffic at our healthiest edge servers.
 
 # Hardware Considerations
 
@@ -146,7 +146,6 @@ cp containers/bind/rndc.key.example containers/bind/rndc.key
 
 # create a config file for edgemanage and adjust it to your needs (dns, dnet, edge_count, etc)
 cp containers/edgemanage/edgemanage.yaml.example containers/edgemanage/edgemanage.yaml
-cp containers/edgemanage/dnext1.example containers/edgemanage/dnext1
 
 python3 main.py --action info  # see that docker isn't installed on the controller or edges
 python3 main.py --action install-base
