@@ -62,4 +62,3 @@ input/certs/
 
 # edgemanage
 containers/edgemanage/edgemanage.yaml
-containers/edgemanage/dnext1
