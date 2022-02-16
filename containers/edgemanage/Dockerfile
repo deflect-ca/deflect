@@ -26,7 +26,11 @@ COPY myobject.edgemanage /etc/edgemanage/
 # TODO: Install from pypi
 RUN pip3 install git+https://github.com/deflect-ca/edgemanage
 
-CMD /usr/local/bin/edge_manage \
-      --daemonise \
-      --dnet dnext1 \
+CMD \
+    for dnet in $(ls /etc/edgemanage/edges); \
+    do \
+        /usr/local/bin/edge_manage \
+            --daemonise \
+            --dnet $dnet; \
+    done \
     && tail -f /var/log/edgemanage.log
