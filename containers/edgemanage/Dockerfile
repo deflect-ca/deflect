@@ -22,15 +22,9 @@ RUN mkdir -p /etc/edgemanage/canaries
 
 COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
+COPY init.sh init.sh
 
 # TODO: Install from pypi
 RUN pip3 install git+https://github.com/deflect-ca/edgemanage
 
-CMD \
-    for dnet in $(ls /etc/edgemanage/edges); \
-    do \
-        /usr/local/bin/edge_manage \
-            --daemonise \
-            --dnet $dnet; \
-    done \
-    && tail -f /var/log/edgemanage.log
+CMD ./init.sh && tail -f /var/log/edgemanage.log
