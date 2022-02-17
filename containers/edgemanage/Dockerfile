@@ -23,8 +23,10 @@ RUN mkdir -p /etc/edgemanage/canaries
 COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
 COPY init.sh init.sh
+COPY check.sh check.sh
 
 # TODO: Install from pypi
 RUN pip3 install git+https://github.com/deflect-ca/edgemanage
 
+HEALTHCHECK CMD ./check.sh
 CMD ./init.sh && tail -f /var/log/edgemanage.log
