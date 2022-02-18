@@ -64,7 +64,7 @@ goodenough: 0.700
 # edge tests have failed. All canaries for a dnet are typically run on
 # the same server. If many are down, then the whole server is probably
 # unavailable.
-canary_killer: 6
+#canary_killer: 6
 
 # A file used to maintain state, details about last rotation and the
 # previously in-use edges. This path can and should contain {dnet}
@@ -101,7 +101,7 @@ live_list: /var/tmp/edges.{dnet}.live
 # Canary interfaces - see the README for an explanation of how canary
 # interfaces work. The path can contain per-dnet files, mapping domain
 # names to IP addresses.
-canary_files: /etc/edgemanage/canaries/{dnet}
+#canary_files: /etc/edgemanage/canaries/{dnet}
 
 # Run commands before or after execution, or after a rotation/new zone
 # file being written out. A good example of a run_after_changes is
