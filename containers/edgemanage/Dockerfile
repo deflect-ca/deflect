@@ -18,6 +18,8 @@ RUN mkdir -p /etc/edgemanage/edges
 RUN mkdir -p /var/lib/edgemanage/health
 RUN mkdir -p /var/lock/edgemanage
 RUN mkdir -p /var/tmp/edgemanage
+RUN mkdir -p /var/log/prom
+RUN touch /var/log/edgemanage.log
 
 COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
@@ -25,7 +27,7 @@ COPY init.sh init.sh
 COPY check.sh check.sh
 
 # TODO: Install from pypi
-RUN pip3 install git+https://github.com/deflect-ca/edgemanage
+RUN pip3 install git+https://github.com/deflect-ca/edgemanage@develop
 
 HEALTHCHECK CMD ./check.sh
 CMD ./init.sh && tail -f /var/log/edgemanage.log

@@ -103,6 +103,9 @@ live_list: /var/tmp/edges.{dnet}.live
 # names to IP addresses.
 #canary_files: /etc/edgemanage/canaries/{dnet}
 
+# prometheus_client log file path (with trailing /)
+prometheus_logs: /var/log/prom/
+
 # Run commands before or after execution, or after a rotation/new zone
 # file being written out. A good example of a run_after_changes is
 # reloading your named, but in theory this could be anything!
