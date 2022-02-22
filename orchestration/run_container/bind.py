@@ -20,5 +20,8 @@ class Bind(Container):
                 'name': "bind",
             },
             name="bind",
-            restart_policy=Container.DEFAULT_RESTART_POLICY
+            restart_policy=Container.DEFAULT_RESTART_POLICY,
+            volumes={
+                "bind-data": {"bind": "/etc/bind", "mode": "rw"},
+            }
         )

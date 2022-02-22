@@ -25,6 +25,7 @@ from orchestration.run_container import (
         Elasticsearch,
         Kibana,
         Pebble,
+        EdgeManage,
 )
 from orchestration.hosts import (
         get_docker_engine_version,
@@ -142,6 +143,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
     client = docker_client_for_host(config['controller'], config=config)
 
     Bind(          client, config, find_existing=True, logger=logger).update(timestamp)
+    EdgeManage(    client, config, find_existing=True, logger=logger).update(timestamp)
 
     if config['server_env'] == 'staging':
         DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)
@@ -165,7 +167,6 @@ def install_controller_components(config, all_sites, timestamp, logger):
     Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
     Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
     Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
-
 
 def install_everything(config, all_sites, timestamp):
     install_controller(config, all_sites, timestamp)

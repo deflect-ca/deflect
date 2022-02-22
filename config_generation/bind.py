@@ -355,13 +355,47 @@ def generate_bind_config(config, all_sites, timestamp):
         zone = site_to_zone(config, site_name, site)
         zone.to_file(get_output_filename(sites_dir, site_name), relativize=True, sorted=True)
 
+    # template for edgemanage
+    from distutils.dir_util import copy_tree
+    zone_template_dir = os.path.join(output_dir, "deflect_zones")
+    # We do copy here because we still want a working zone file
+    # in /etc/bind/deflect initially for the bind server to work
+    # later edgemanage will take over and overwrite it
+    copy_tree(sites_dir, zone_template_dir)
+    logger.info(f"Copy zone files to {zone_template_dir}")
+
+    # move zone into dnet sub-folder
+    for hostname, site in all_sites['client'] .items():
+        dnet = site['dnet']
+        if not os.path.isdir(os.path.join(zone_template_dir, dnet)):
+            os.mkdir(os.path.join(zone_template_dir, dnet))
+
+        remove_soa_ns_a_record(
+            os.path.join(zone_template_dir, f"{hostname}.zone"),
+            os.path.join(zone_template_dir, dnet, f"{hostname}.zone"),
+            hostname, dnet)
+
+        os.unlink(os.path.join(zone_template_dir, f"{hostname}.zone"))
+
     if os.path.isfile(output_dir_tar):
-        logger.debug(output_dir_tar)
+        logger.debug("Removing old output file: %s", output_dir_tar)
         os.remove(output_dir_tar)
 
     logger.debug(f'Writing {output_dir_tar}')
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
+
+
+def remove_soa_ns_a_record(old_path, new_path, hostname, dnet):
+    """
+    Remove SOA/NS/A record so edgemanage could manage those record
+    """
+    zone = dns.zone.from_file(old_path, origin=f"{hostname}.")
+    zone.delete_rdataset('@', dns.rdatatype.A)
+    zone.delete_rdataset('@', dns.rdatatype.NS)
+    zone.delete_rdataset('@', dns.rdatatype.SOA)
+    zone.to_file(new_path, relativize=True, sorted=True)
+    logger.debug(f"Removed SOA/NS/A record for {dnet}/{hostname}.zone")
 
 
 if __name__ == "__main__":
