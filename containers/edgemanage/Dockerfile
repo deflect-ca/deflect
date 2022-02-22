@@ -19,7 +19,6 @@ RUN mkdir -p /var/lib/edgemanage/health
 RUN mkdir -p /var/lock/edgemanage
 RUN mkdir -p /var/tmp/edgemanage
 RUN mkdir -p /var/log/prom
-RUN touch /var/log/edgemanage.log
 
 COPY edgemanage.yaml /etc/edgemanage/
 COPY myobject.edgemanage /etc/edgemanage/
