@@ -6,6 +6,3 @@ do \
         --daemonise \
         --dnet $dnet; \
 done
-
-# XXX: Check if there's a good reason to manually create the log or not
-sleep 0.5 && touch /var/log/edgemanage.log &
