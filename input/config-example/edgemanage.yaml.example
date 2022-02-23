@@ -10,7 +10,8 @@ testobject:
   # Path to the object to be retrieved
   uri: /static/deflectlogo_RED.png
   # Local copy of the object that we'll be fetching.
-  local: /etc/edgemanage/myobject.edgemanage
+  # Commented out as testobject.local is now automatically set by Deflect
+  #local: /etc/edgemanage/myobject.edgemanage
   # Verify SSL certificates? Will cause spammy logging on some
   # platforms.
   verify: False
@@ -104,7 +105,8 @@ live_list: /var/tmp/edges.{dnet}.live
 #canary_files: /etc/edgemanage/canaries/{dnet}
 
 # prometheus_client log file path (with trailing /)
-prometheus_logs: /var/log/prom/
+# Commented out as prometheus_logs is now automatically set by Deflect
+# prometheus_logs: /var/log/prom/
 
 # Run commands before or after execution, or after a rotation/new zone
 # file being written out. A good example of a run_after_changes is
