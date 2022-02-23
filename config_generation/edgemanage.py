@@ -66,6 +66,13 @@ def generate_edgemanage_config(config, all_sites, timestamp):
     with open(f"{output_dir}/edgemanage.yaml", "w") as f:
         f.write(yaml.dump(edgemanage_config, default_flow_style=False))
 
+    # Copy the test object to the container
+    testobject_name = "myobject.edgemanage"
+    shutil.copyfile(
+            f"{path_to_input()}/config/{testobject_name}",
+            f"{output_dir}/{testobject_name}")
+    edgemanage_config["testobject"]["local"] = "/etc/edgemanage/{testobject_name}"
+
     # Output files, compress and clean
     if os.path.isfile(output_dir_tar):
         logger.debug(f"Removing {output_dir_tar}")

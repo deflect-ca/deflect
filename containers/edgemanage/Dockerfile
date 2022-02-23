@@ -19,7 +19,6 @@ RUN mkdir -p /var/lib/edgemanage/health
 RUN mkdir -p /var/lock/edgemanage
 RUN mkdir -p /var/tmp/edgemanage
 
-COPY myobject.edgemanage /etc/edgemanage/
 COPY init.sh init.sh
 COPY check.sh check.sh
 
