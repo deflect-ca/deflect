@@ -34,6 +34,11 @@ def generate_edgemanage_config(config, all_sites, timestamp):
     # Process config file
     edgemanage_config = parse_config(get_edgemanage_yaml_path())
 
+    # Enforce the path where prometheus data will be stored so it aligns with
+    # the structure of the rest of the services
+    edgemanage_config['prometheus_logs'] = os.path.join(config['prometheus_data']['container_path'], '')
+
+    # Generate edges list
     edges_dir = os.path.join(output_dir, "edges")
     os.mkdir(edges_dir)
 
