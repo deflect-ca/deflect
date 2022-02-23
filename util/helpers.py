@@ -82,6 +82,9 @@ def get_persisted_config_yml_path():
 def get_banjax_config_yml_path():
     return os.path.join(path_to_input(), 'config/banjax_config.yml')
 
+def get_edgemanage_yaml_path():
+    return os.path.join(path_to_input(), 'config/edgemanage.yaml')
+
 def get_kibana_saved_objects_path():
     return os.path.join(path_to_input(), 'kibana-saved-objects.ndjson')
 
