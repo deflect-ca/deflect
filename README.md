@@ -137,12 +137,8 @@ pip install -e .  # -e to make the scripts editable in place
 cp -r input/config{-example/,}
 
 # edit input/config/global_config.yml to have real IP addresses
-
-cp containers/bind/named.conf.options-private.example containers/bind/named.conf.options-private
-cp containers/bind/rndc.conf.example containers/bind/rndc.conf
-cp containers/bind/rndc.key.example containers/bind/rndc.key
-
 # edit named.conf.options-private to secure your bind server
+# generate rndc.key and rndc.conf under input/config
 
 # Adjust edgemanage's config file to your needs (dns, dnet, edge_count, etc)
 cat input/config/edgemanage.yaml
@@ -221,8 +217,6 @@ The main configuration files are:
 - input/config/old-sites.yml
 - input/config/system-sites.yml
 - input/config/banjax_config.yml
-- input/config/edgemanage.yaml
-- containers/bind/named.conf.options-private
 
 ---
 
