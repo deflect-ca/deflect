@@ -11,7 +11,13 @@ import tarfile
 import yaml
 
 from pyaml_env import parse_config
-from util.helpers import get_logger, get_config_yml_path, path_to_input, path_to_output, get_edgemanage_yaml_path
+from util.helpers import (
+    get_logger,
+    get_config_yml_path,
+    path_to_input,
+    path_to_output,
+    get_edgemanage_yaml_path,
+)
 
 # todo: use configuration for the logger
 logger = get_logger(__name__, logging_level=logging.DEBUG)
@@ -26,7 +32,7 @@ def generate_edgemanage_config(config, all_sites, timestamp):
         raise Exception("output_dir cannot be empty")
 
     if os.path.isdir(output_dir):
-        logger.debug(f'Removing output dir: {output_dir}')
+        logger.debug(f"Removing output dir: {output_dir}")
         shutil.rmtree(f"{output_dir}")
 
     os.mkdir(output_dir)
@@ -36,7 +42,9 @@ def generate_edgemanage_config(config, all_sites, timestamp):
 
     # Enforce the path where prometheus data will be stored so it aligns with
     # the structure of the rest of the services
-    edgemanage_config['prometheus_logs'] = os.path.join(config['prometheus_data']['container_path'], '')
+    edgemanage_config["prometheus_logs"] = os.path.join(
+        config["prometheus_data"]["container_path"], ""
+    )
 
     # Generate edges list
     edges_dir = os.path.join(output_dir, "edges")
@@ -44,11 +52,11 @@ def generate_edgemanage_config(config, all_sites, timestamp):
 
     # Generate edges in dnet files
     dnet_to_edges = {}
-    for edge in config['edges']:
-        if edge['dnet'] in dnet_to_edges:
-            dnet_to_edges[edge['dnet']].append(edge['hostname'])
+    for edge in config["edges"]:
+        if edge["dnet"] in dnet_to_edges:
+            dnet_to_edges[edge["dnet"]].append(edge["hostname"])
         else:
-            dnet_to_edges[edge['dnet']] = [edge['hostname']]
+            dnet_to_edges[edge["dnet"]] = [edge["hostname"]]
 
     for dnet in dnet_to_edges:
         with open(os.path.join(edges_dir, dnet), "w") as f:
@@ -60,10 +68,10 @@ def generate_edgemanage_config(config, all_sites, timestamp):
 
     # Output files, compress and clean
     if os.path.isfile(output_dir_tar):
-        logger.debug(f'Removing {output_dir_tar}')
+        logger.debug(f"Removing {output_dir_tar}")
         os.remove(output_dir_tar)
 
-    logger.debug(f'Writing {output_dir_tar}')
+    logger.debug(f"Writing {output_dir_tar}")
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
 
