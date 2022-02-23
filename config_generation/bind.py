@@ -265,7 +265,27 @@ def template_controller_zone(in_filename, out_filename, config):
                         record,
                         rr['type'],
                         rr['value'])
+
+            base_zone += "\n\n; auto populate controller and edges records"
+            if 'controller' not in config['root_zone_extra']:
+                base_zone += zone_block_root_zone_record(
+                    extract_subdomain(config['controller']['hostname']),
+                    'A',
+                    config['controller']['ip'])
+
+            for edge in config['edges']:
+                edge_name = extract_subdomain(edge['hostname'])
+                if edge_name not in config['root_zone_extra']:
+                    base_zone += zone_block_root_zone_record(
+                        extract_subdomain(edge['hostname']),
+                        'A',
+                        edge['ip'])
+
             zf.write(base_zone + "\n")  # trailing newline at end of file
+
+
+def extract_subdomain(hostname):
+    return hostname.split('.')[0]
 
 
 def zone_block_root_zone_record(host, type, ip):
