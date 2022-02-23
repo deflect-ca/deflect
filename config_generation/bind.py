@@ -397,6 +397,18 @@ def generate_bind_config(config, all_sites, timestamp):
 
         os.unlink(os.path.join(zone_template_dir, f"{hostname}.zone"))
 
+    # copy dns config files to output dir
+    dns_configs = [
+        'named.conf.options-private',
+        'rndc.key',
+        'rndc.conf'
+    ]
+    for dns_config in dns_configs:
+        logger.debug(f"Copy {dns_config} to output dir")
+        shutil.copyfile(
+            f"{path_to_input()}/config/{dns_config}",
+            f"{output_dir}/{dns_config}")
+
     if os.path.isfile(output_dir_tar):
         logger.debug("Removing old output file: %s", output_dir_tar)
         os.remove(output_dir_tar)
