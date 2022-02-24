@@ -11,12 +11,12 @@ import tarfile
 import yaml
 
 from pyaml_env import parse_config
+from util.config_parser import parse_with_defaults
 from util.helpers import (
     get_logger,
     get_config_yml_path,
     path_to_input,
     path_to_output,
-    get_edgemanage_yaml_path,
 )
 
 # todo: use configuration for the logger
@@ -38,7 +38,7 @@ def generate_edgemanage_config(config, all_sites, timestamp):
     os.mkdir(output_dir)
 
     # Process config file
-    edgemanage_config = parse_config(get_edgemanage_yaml_path())
+    edgemanage_config = parse_with_defaults("edgemanage", "edgemanage.yaml")
 
     # Enforce the path where prometheus data will be stored so it aligns with
     # the structure of the rest of the services
