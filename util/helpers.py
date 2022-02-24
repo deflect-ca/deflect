@@ -67,6 +67,16 @@ def path_to_containers():
         module_root_path(), 'containers'
     )
 
+def get_container_path(container_name):
+    return os.path.join(path_to_containers(), container_name)
+
+def get_container_default_config_path(container_name, config_file):
+    return os.path.join(get_container_path(container_name),
+                        f"default-{config_file}")
+
+def get_config_file_path(config_file):
+    return os.path.join(path_to_input(), f'config/{config_file}')
+
 def get_sites_yml_path():
     return os.path.join(path_to_input(), 'config/old_sites.yml')
 
@@ -81,9 +91,6 @@ def get_persisted_config_yml_path():
 
 def get_banjax_config_yml_path():
     return os.path.join(path_to_input(), 'config/banjax_config.yml')
-
-def get_edgemanage_yaml_path():
-    return os.path.join(path_to_input(), 'config/edgemanage.yaml')
 
 def get_kibana_saved_objects_path():
     return os.path.join(path_to_input(), 'kibana-saved-objects.ndjson')
