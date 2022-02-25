@@ -1,0 +1,10 @@
+---
+testobject:
+  # Port
+  port: 443
+  # Path to the object to be retrieved
+  uri: /static/deflectlogo_RED.png
+
+# prometheus_client log file path (with trailing /)
+# Commented out as prometheus_logs is now automatically set by Deflect
+prometheus_logs: /var/log/prometheus/
