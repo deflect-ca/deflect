@@ -1,0 +1,11 @@
+image: python
+
+stages:
+  - test
+
+unit tests:
+  stage: test
+  before_script:
+    - pip install pytest
+  script:
+    - py.test tests/util
