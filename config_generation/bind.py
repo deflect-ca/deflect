@@ -253,10 +253,11 @@ def template_named_conf(config, client_and_system_sites):
         for server_name in sorted(set(site['server_names'])):
             named_conf_acme += zone_block_acme_challenge(server_name, indent=" "*4)
 
-    named_conf_string += "};\n\n"
-    named_conf_acme += "};\n"
+    named_conf_string += "};\n"
+    named_conf_acme += "};\n\n"
 
-    return named_conf_string + named_conf_acme
+    # ACME goes first
+    return named_conf_acme + named_conf_string
 
 
 def template_controller_zone(in_filename, out_filename, config):
