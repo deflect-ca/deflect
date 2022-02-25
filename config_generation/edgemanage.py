@@ -11,7 +11,7 @@ import tarfile
 import yaml
 
 from pyaml_env import parse_config
-from util.config_parser import parse_with_defaults
+from util.config_parser import parse_container_config_with_defaults
 from util.helpers import (
     get_logger,
     get_config_yml_path,
@@ -38,7 +38,9 @@ def generate_edgemanage_config(config, all_sites, timestamp):
     os.mkdir(output_dir)
 
     # Process config file
-    edgemanage_config = parse_with_defaults("edgemanage", "edgemanage.yaml")
+    edgemanage_config = parse_container_config_with_defaults(
+        "edgemanage", "edgemanage.yaml"
+    )
 
     # Enforce the path where prometheus data will be stored so it aligns with
     # the structure of the rest of the services
@@ -69,8 +71,8 @@ def generate_edgemanage_config(config, all_sites, timestamp):
     # Copy the test object to the container
     testobject_name = "myobject.edgemanage"
     shutil.copyfile(
-            f"{path_to_input()}/config/{testobject_name}",
-            f"{output_dir}/{testobject_name}")
+        f"{path_to_input()}/config/{testobject_name}", f"{output_dir}/{testobject_name}"
+    )
     edgemanage_config["testobject"]["local"] = "/etc/edgemanage/{testobject_name}"
 
     # Output files, compress and clean

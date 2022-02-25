@@ -5,7 +5,7 @@ from pyaml_env import parse_config
 from util.helpers import get_config_file_path, get_container_default_config_path
 
 
-def parse_with_defaults(container_name, config_name):
+def parse_container_config_with_defaults(container_name, config_name):
     config_path = get_config_file_path(config_name)
     defaults_path = get_container_default_config_path(container_name, config_name)
     config = parse_config(config_path)
