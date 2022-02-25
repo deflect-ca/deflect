@@ -144,8 +144,8 @@ cp containers/bind/rndc.key.example containers/bind/rndc.key
 
 # edit named.conf.options-private to secure your bind server
 
-# create a config file for edgemanage and adjust it to your needs (dns, dnet, edge_count, etc)
-cp containers/edgemanage/edgemanage.yaml.example containers/edgemanage/edgemanage.yaml
+# Adjust edgemanage's config file to your needs (dns, dnet, edge_count, etc)
+cat input/config/edgemanage.yaml
 
 python3 main.py --action info  # see that docker isn't installed on the controller or edges
 python3 main.py --action install-base
@@ -221,6 +221,7 @@ The main configuration files are:
 - input/config/old-sites.yml
 - input/config/system-sites.yml
 - input/config/banjax_config.yml
+- input/config/edgemanage.yaml
 - containers/bind/named.conf.options-private
 
 ---
