@@ -235,12 +235,14 @@ def get_etc_bind_filename(name):
 def template_named_conf(config, client_and_system_sites):
     named_conf_string = """view "primary" {
 
-    // Global option apply in this view (no recursion)
+    recursion no;
 """
     named_conf_acme = """view "acme" {
 
     // Allow recursive lookup in this view so the forwarding can work
+    recursion yes;
     allow-recursion { any; };
+    match-recursive-only yes;
 """
 
     named_conf_string += zone_block_root(

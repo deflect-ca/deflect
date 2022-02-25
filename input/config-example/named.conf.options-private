@@ -17,11 +17,6 @@ options {
         listen-on { any; };
         listen-on-v6 { any; };
         allow-query { any; };
-        recursion yes;  # allow for forwards for acme challenge
-        allow-recursion {
-                127.0.0.1;
-                172.17.0.0/24;  # docker network
-        };
 };
 
 controls {
