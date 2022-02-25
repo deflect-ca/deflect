@@ -235,14 +235,8 @@ def get_etc_bind_filename(name):
 def template_named_conf(config, client_and_system_sites):
     named_conf_string = """view "primary" {
 
+    // Default no, but will toggle it during certbot challenge
     recursion no;
-"""
-    named_conf_acme = """view "acme" {
-
-    // Allow recursive lookup in this view so the forwarding can work
-    recursion yes;
-    allow-recursion { any; };
-    match-recursive-only yes;
 """
 
     named_conf_string += zone_block_root(
@@ -250,16 +244,16 @@ def template_named_conf(config, client_and_system_sites):
             indent=" "*4,
             config=config
     )
+
+    named_conf_acme = ''
     for site in sorted(client_and_system_sites.values(), key=lambda s: s['public_domain']):
         named_conf_string += zone_block_root(site['public_domain'], indent=" "*4, config=config)
         for server_name in sorted(set(site['server_names'])):
             named_conf_acme += zone_block_acme_challenge(server_name, indent=" "*4)
 
-    named_conf_string += "};\n"
-    named_conf_acme += "};\n\n"
+    named_conf_string += named_conf_acme + "};\n"
 
-    # ACME goes first
-    return named_conf_acme + named_conf_string
+    return named_conf_string
 
 
 def template_controller_zone(in_filename, out_filename, config):

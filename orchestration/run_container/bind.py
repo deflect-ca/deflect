@@ -7,6 +7,27 @@ class Bind(Container):
             self.container.put_archive("/etc/bind", f.read())
         self.container.kill(signal="SIGHUP")
 
+    def toggle_recursion(self, recursion):
+        """
+        Toggle recursion on or off for certbot challenge
+        """
+        sed_cmd = ""
+        if recursion:
+            self.logger.info("enabling bind recursion")
+            sed_cmd = "sed 's/recursion no/recursion yes/g' /etc/bind/named.conf.local"
+        else:
+            self.logger.info("disableing bind recursion")
+            sed_cmd = "sed 's/recursion yes/recursion no/g' /etc/bind/named.conf.local"
+
+        # print the output for logging
+        (exit_code, output) = self.container.exec_run(sed_cmd)
+        self.logger.debug(output.decode())
+
+        # actually run the command
+        sed_cmd = sed_cmd.replace('sed', 'sed -i')
+        self.container.exec_run(sed_cmd)
+        self.container.kill(signal="SIGHUP")
+
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
             image_id,
