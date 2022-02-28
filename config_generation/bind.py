@@ -233,15 +233,25 @@ def get_etc_bind_filename(name):
 
 
 def template_named_conf(config, client_and_system_sites):
-    named_conf_string = ""
+    named_conf_string = """view "primary" {
+
+    // Default no, but will toggle it during certbot challenge
+    recursion no;
+"""
+
     named_conf_string += zone_block_root(
             config['system_root_zone'],
+            indent=" "*4,
             config=config
     )
+
+    named_conf_acme = ''
     for site in sorted(client_and_system_sites.values(), key=lambda s: s['public_domain']):
-        named_conf_string += zone_block_root(site['public_domain'], config=config)
+        named_conf_string += zone_block_root(site['public_domain'], indent=" "*4, config=config)
         for server_name in sorted(set(site['server_names'])):
-            named_conf_string += zone_block_acme_challenge(server_name)
+            named_conf_acme += zone_block_acme_challenge(server_name, indent=" "*4)
+
+    named_conf_string += named_conf_acme + "};\n"
 
     return named_conf_string
 
@@ -265,7 +275,27 @@ def template_controller_zone(in_filename, out_filename, config):
                         record,
                         rr['type'],
                         rr['value'])
+
+            base_zone += "\n\n; auto populate controller and edges records"
+            if 'controller' not in config['root_zone_extra']:
+                base_zone += zone_block_root_zone_record(
+                    extract_subdomain(config['controller']['hostname']),
+                    'A',
+                    config['controller']['ip'])
+
+            for edge in config['edges']:
+                edge_name = extract_subdomain(edge['hostname'])
+                if edge_name not in config['root_zone_extra']:
+                    base_zone += zone_block_root_zone_record(
+                        extract_subdomain(edge['hostname']),
+                        'A',
+                        edge['ip'])
+
             zf.write(base_zone + "\n")  # trailing newline at end of file
+
+
+def extract_subdomain(hostname):
+    return hostname.split('.')[0]
 
 
 def zone_block_root_zone_record(host, type, ip):
@@ -284,35 +314,36 @@ def relativize_name(canonical_name, alt_name):
         return alt_name.replace("." + canonical_name, "")
 
 
-def zone_block_root(domain, config=None):
+def zone_block_root(domain, indent="", config=None):
     filename = get_etc_bind_filename(domain)
     template = Template("""
-zone "{{domain}}" {
-    type master;
-    file "{{filename}}";
-    also-notify { {{also_notify}} };
-    allow-query { {{allow_query}} };
-    allow-transfer { {{allow_transfer}} };
-};
+{{indent}}zone "{{domain}}" {
+{{indent}}    type master;
+{{indent}}    file "{{filename}}";
+{{indent}}    also-notify { {{also_notify}} };
+{{indent}}    allow-query { {{allow_query}} };
+{{indent}}    allow-transfer { {{allow_transfer}} };
+{{indent}}};
 
 """)
     return template.render(domain=domain,
                            filename=filename,
                            also_notify=config['dns']['also-notify'],
                            allow_query=config['dns']['allow-query'],
-                           allow_transfer=config['dns']['allow-transfer'])
+                           allow_transfer=config['dns']['allow-transfer'],
+                           indent=indent)
 
 
-def zone_block_acme_challenge(domain):
+def zone_block_acme_challenge(domain, indent=""):
     template = Template("""
-zone "_acme-challenge.{{domain}}" {
-    type forward;
-    forward only;
-    forwarders { 127.0.0.1 port 5053; };
-};
+{{indent}}zone "_acme-challenge.{{domain}}" {
+{{indent}}    type forward;
+{{indent}}    forward only;
+{{indent}}    forwarders { 127.0.0.1 port 5053; };
+{{indent}}};
 
 """)
-    return template.render(domain=domain)
+    return template.render(domain=domain, indent=indent)
 
 
 def generate_bind_config(config, all_sites, timestamp):
@@ -376,6 +407,18 @@ def generate_bind_config(config, all_sites, timestamp):
             hostname, dnet)
 
         os.unlink(os.path.join(zone_template_dir, f"{hostname}.zone"))
+
+    # copy dns config files to output dir
+    dns_configs = [
+        'named.conf.options-private',
+        'rndc.key',
+        'rndc.conf'
+    ]
+    for dns_config in dns_configs:
+        logger.debug(f"Copy {dns_config} to output dir")
+        shutil.copyfile(
+            f"{path_to_input()}/config/{dns_config}",
+            f"{output_dir}/{dns_config}")
 
     if os.path.isfile(output_dir_tar):
         logger.debug("Removing old output file: %s", output_dir_tar)

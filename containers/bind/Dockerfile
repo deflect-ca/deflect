@@ -30,10 +30,7 @@ RUN mkdir -p /run/named         && chmod 755 /run/named
 EXPOSE 53/udp 53/tcp 953/tcp
 
 COPY named.conf.options /etc/bind/
-COPY named.conf.options-private /etc/bind/
-
-COPY rndc.conf /etc/bind/
-COPY rndc.key /etc/bind/
+COPY named.conf.default-zones /etc/bind/
 
 # CMD ["/usr/sbin/named", "-f", "-d", "2"]
 CMD ["/usr/sbin/named", "-g", "-c", "/etc/bind/named.conf", "-u", "root"]
