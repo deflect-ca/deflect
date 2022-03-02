@@ -23,6 +23,7 @@ class EdgeManage(Container):
             network_mode="container:bind",
             volumes={
                 "bind-data": {"bind": "/etc/bind", "mode": "rw"},
+                "bind-cache": {"bind": "/var/cache/bind", "mode": "rw"},
                 config["prometheus_data"]["host_path"]: {
                     "bind": config["prometheus_data"]["container_path"],
                     "mode": "rw",

@@ -52,5 +52,6 @@ class Bind(Container):
             restart_policy=Container.DEFAULT_RESTART_POLICY,
             volumes={
                 "bind-data": {"bind": "/etc/bind", "mode": "rw"},
+                "bind-cache": {"bind": "/var/cache/bind", "mode": "rw"},
             }
         )
