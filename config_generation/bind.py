@@ -27,7 +27,9 @@ import dns.rdtypes.IN.SRV
 # todo: use configuration for the logger
 from pyaml_env import parse_config
 
-from util.helpers import get_logger, get_config_yml_path, path_to_input, path_to_output
+from util.helpers import (get_logger, get_config_yml_path,
+                          path_to_input, path_to_output,
+                          path_to_containers)
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -419,6 +421,11 @@ def generate_bind_config(config, all_sites, timestamp):
         shutil.copyfile(
             f"{path_to_input()}/config/{dns_config}",
             f"{output_dir}/{dns_config}")
+
+    # copy named-checks.sh
+    shutil.copyfile(
+        f"{path_to_containers}/bind/named-checks.sh",
+        f"{output_dir}/named-checks.sh")
 
     if os.path.isfile(output_dir_tar):
         logger.debug("Removing old output file: %s", output_dir_tar)

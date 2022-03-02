@@ -7,7 +7,8 @@ class Bind(Container):
             self.container.put_archive("/etc/bind", f.read())
 
         # call named checks
-        (exit_code, output) = self.container.exec_run('/etc/bind/named-checks.sh')
+        (exit_code, output) = self.container.exec_run(
+            'chmod +x /etc/bind/named-checks.sh && /etc/bind/named-checks.sh')
         self.logger.info(output.decode())
         if exit_code != 0:
             raise Exception("named-check.sh failed")
