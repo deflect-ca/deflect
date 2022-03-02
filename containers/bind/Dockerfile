@@ -31,6 +31,8 @@ EXPOSE 53/udp 53/tcp 953/tcp
 
 COPY named.conf.options /etc/bind/
 COPY named.conf.default-zones /etc/bind/
+COPY named-checks.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/named-checks.sh
 
 # CMD ["/usr/sbin/named", "-f", "-d", "2"]
 CMD ["/usr/sbin/named", "-g", "-c", "/etc/bind/named.conf", "-u", "root"]
