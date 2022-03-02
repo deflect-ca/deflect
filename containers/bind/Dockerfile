@@ -29,10 +29,10 @@ RUN mkdir -p /run/named         && chmod 755 /run/named
 
 EXPOSE 53/udp 53/tcp 953/tcp
 
-COPY named.conf.options /etc/bind/
-COPY named.conf.default-zones /etc/bind/
+COPY ./named.conf.options /etc/bind/named.conf.options
+COPY ./named.conf.default-zones /etc/bind/named.conf.default-zones
 # place the check script here for volumn sharing
-COPY named-checks.sh /etc/bind/
+COPY ./named-checks.sh /etc/bind/named-checks.sh
 RUN chmod +x /etc/bind/named-checks.sh
 
 # CMD ["/usr/sbin/named", "-f", "-d", "2"]
