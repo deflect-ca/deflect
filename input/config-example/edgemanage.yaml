@@ -115,6 +115,6 @@ live_list: /var/tmp/edges.{dnet}.live
 # screws up is all on you.
 commands:
   run_after_changes:
-    - /usr/sbin/rndc reload
+    - /etc/bind/named-check.sh && /usr/sbin/rndc reload
   run_after:
   run_before:
