@@ -424,7 +424,7 @@ def generate_bind_config(config, all_sites, timestamp):
 
     # copy named-checks.sh
     shutil.copyfile(
-        f"{path_to_containers}/bind/named-checks.sh",
+        f"{path_to_containers()}/bind/named-checks.sh",
         f"{output_dir}/named-checks.sh")
 
     if os.path.isfile(output_dir_tar):
