@@ -422,9 +422,18 @@ def generate_bind_config(config, all_sites, timestamp):
             f"{output_dir}/{dns_config}")
 
     # copy named-checks.sh
-    shutil.copyfile(
-        f"{path_to_containers()}/bind/named-checks.sh",
-        f"{output_dir}/named-checks.sh")
+    # copy these file since /etc/bind is a volume, as COPY in dockerfile won't work
+    dns_configs_in_container = [
+        'named-checks.sh',
+        'named.conf',
+        'named.conf.default-zones',
+        'named.conf.options',
+    ]
+    for dns_config in dns_configs_in_container:
+        logger.debug(f"Copy {dns_config} to output dir")
+        shutil.copyfile(
+            f"{path_to_containers()}/bind/{dns_config}",
+            f"{output_dir}/{dns_config}")
 
     if os.path.isfile(output_dir_tar):
         logger.debug("Removing old output file: %s", output_dir_tar)
