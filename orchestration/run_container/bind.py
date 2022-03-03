@@ -5,6 +5,14 @@ class Bind(Container):
     def update(self, config_timestamp):
         with open(f"output/{config_timestamp}/etc-bind.tar", "rb") as f:
             self.container.put_archive("/etc/bind", f.read())
+
+        # call named checks
+        self.container.exec_run("chmod +x /etc/bind/named-checks.sh")
+        (exit_code, output) = self.container.exec_run('/etc/bind/named-checks.sh')
+        self.logger.info(output.decode())
+        if exit_code != 0:
+            raise Exception("named-check.sh failed")
+
         self.container.kill(signal="SIGHUP")
 
     def toggle_recursion(self, recursion):
@@ -44,5 +52,6 @@ class Bind(Container):
             restart_policy=Container.DEFAULT_RESTART_POLICY,
             volumes={
                 "bind-data": {"bind": "/etc/bind", "mode": "rw"},
+                "bind-cache": {"bind": "/var/cache/bind", "mode": "rw"},
             }
         )
