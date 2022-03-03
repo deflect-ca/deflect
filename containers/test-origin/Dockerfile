@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-FROM golang:1.14-alpine
+FROM golang:1.17.7-alpine
 
 RUN apk update && apk upgrade && apk add git
 RUN go get -u github.com/gin-gonic/gin
