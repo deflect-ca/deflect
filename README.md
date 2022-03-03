@@ -137,7 +137,6 @@ pip install -e .  # -e to make the scripts editable in place
 cp -r input/config{-example/,}
 
 # edit input/config/global_config.yml to have real IP addresses
-# edit named.conf.options-private to secure your bind server
 # generate rndc.key and rndc.conf under input/config
 
 # Adjust edgemanage's config file to your needs (dns, dnet, edge_count, etc)

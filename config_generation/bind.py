@@ -412,7 +412,6 @@ def generate_bind_config(config, all_sites, timestamp):
 
     # copy dns config files to output dir
     dns_configs = [
-        'named.conf.options-private',
         'rndc.key',
         'rndc.conf'
     ]
