@@ -54,6 +54,8 @@ persisted/elastic_certs/instance.key
 .gnupg-*
 
 # bind
-containers/bind/named.conf.options-private
 input/banjax/
 input/certs/
+
+# edgemanage
+containers/edgemanage/edgemanage.yaml

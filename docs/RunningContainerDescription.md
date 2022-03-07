@@ -15,6 +15,7 @@ d971124f0acc        bb5a4102b369         "/docker-entrypoint.…"   3 weeks ago 
 37d56e3ac2c0        debian:buster-slim   "tail --retry --foll…"   3 weeks ago         Up 3 weeks                                                                                                   nginx-error-log-tailer-2021-09-20_12-50-45
 aea296888dde        debian:buster-slim   "tail --retry --foll…"   3 weeks ago         Up 3 weeks                                                                                                   nginx-access-log-tailer-2021-09-20_12-50-45
 dc01aeca793a        ecc6661e980a         "/bin/sh -c 'doh-htt…"   3 weeks ago         Up 3 weeks                                                                                                   doh-proxy
+5d4a204710a3        16632b32bd1e         "/bin/sh -c '/usr/lo…"   3 hours ago         Up 3 hours        edgemanage
 ```
 * origin-server
     * this is just some little Go http server with some endpoints that facilitate e2e
@@ -78,6 +79,15 @@ dc01aeca793a        ecc6661e980a         "/bin/sh -c 'doh-htt…"   3 weeks ago 
       part. we should probably investigate using something simpler *or* (since we're
       using a third party dns host anyway) a third party host that we post records to over
       http.
+
+* edgemanage
+    * this is a container to run the latest version of the edgemanage package stored in
+      github: deflect-ca/edgemanage.
+    * edgemanage is running as a daemon and tailing its logs from /var/log
+    * the config generators are automatically creating /etc/edgemanage/edges/dnext1 based on
+      the values set in global_config.yml
+    * this container is sharing a volume with `bind-server` in order to simplify the update of
+      DNS zone files and achieve edge rotation
 
 * pebble
     * certbot is an acme/LetsEncrypt frontend, this is the backend. it's only for

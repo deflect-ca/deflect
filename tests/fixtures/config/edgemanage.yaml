@@ -1,0 +1,18 @@
+---
+testobject:
+  # The domain to query for the object - used to set the Host header
+  # in the GETs
+  host: test-origin.example.com
+  # Port
+  port: 80
+
+dns:
+  # A list of nameservers to write NS records for in generated zone
+  # files
+  ns_records:
+    - dns2.example.com.
+    - dns1.example.com.
+
+# Number of edges to keep as the @ record in DNS - if not specific in
+# dnet_edge_count, this value will be used.
+edge_count: 4

@@ -21,7 +21,7 @@ func main() {
         c.JSON(200, gin.H{
                     "you-requested": c.Request.URL.Path,
                     "message": strings.Repeat("hello world", 3),
-		    "request-headers": c.Request.Header,
+                    "request-headers": c.Request.Header,
         })
     })
 
@@ -129,5 +129,6 @@ func main() {
         })
     })
 
+    r.Static("/static", "./static")
     r.Run() // listen and serve on 0.0.0.0:8080
 }

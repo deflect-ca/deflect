@@ -7,6 +7,7 @@ import logging
 import shutil
 import tarfile
 import os
+import time
 
 from jinja2 import Template
 import ast
@@ -26,7 +27,9 @@ import dns.rdtypes.IN.SRV
 # todo: use configuration for the logger
 from pyaml_env import parse_config
 
-from util.helpers import get_logger, get_config_yml_path, path_to_input, path_to_output
+from util.helpers import (get_logger, get_config_yml_path,
+                          path_to_input, path_to_output,
+                          path_to_containers)
 
 logger = get_logger(__name__, logging_level=logging.DEBUG)
 
@@ -183,30 +186,32 @@ def add_soa(zone, mname, rname, serial, refresh, retry, expire, minimum):
     soa_rdataset.add(rdata, 300)
 
 
+def get_serial():
+    return int(time.time())
+
+
 def site_to_zone(config, site_name, site):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
-    ns_host = f"ns1.{config['system_root_zone']}"
-    ns_admin = f"root.{config['system_root_zone']}"  # XXX what's this actually called?
+    acme_ns = f"acme.{config['system_root_zone']}"
 
     add_soa(
         zone,
-        mname=ns_host,
-        rname=ns_admin,
-        serial=0,  # XXX: SHOULD BE TIMESTAMP
+        mname=config['dns']['soa_nameserver'],
+        rname=config['dns']['soa_mailbox'],
+        serial=get_serial(),  # this forces AXFR transfer
         refresh=300,
         retry=300,
         expire=1209600,
         minimum=300
     )
 
-    # the @ NS record (XXX could/should be more than one)
-    # XXX: SHOULD BE DNS PROVIDER NOT OUR CONTROLLER
-    add_record_rel(zone, site_name, site_name, "NS", ns_host)
+    for default_ns in config['dns']['default_ns']:
+        add_record_rel(zone, site_name, site_name, "NS", default_ns)
 
     for alt_name in sorted(set(site["server_names"])):
         # this somehow lets bind9 forward these requests to certbot's dns-helper
-        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", ns_host)
+        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", acme_ns)
 
         # it's a bit kludgy, but we say the controller is part of dnet "controller"
         # so we can specify that kibana, elasticsearch, and doh-proxy live there.
@@ -230,15 +235,25 @@ def get_etc_bind_filename(name):
 
 
 def template_named_conf(config, client_and_system_sites):
-    named_conf_string = ""
+    named_conf_string = """view "primary" {
+
+    // Default no, but will toggle it during certbot challenge
+    recursion no;
+"""
+
     named_conf_string += zone_block_root(
             config['system_root_zone'],
+            indent=" "*4,
             config=config
     )
+
+    named_conf_acme = ''
     for site in sorted(client_and_system_sites.values(), key=lambda s: s['public_domain']):
-        named_conf_string += zone_block_root(site['public_domain'], config=config)
+        named_conf_string += zone_block_root(site['public_domain'], indent=" "*4, config=config)
         for server_name in sorted(set(site['server_names'])):
-            named_conf_string += zone_block_acme_challenge(server_name)
+            named_conf_acme += zone_block_acme_challenge(server_name, indent=" "*4)
+
+    named_conf_string += named_conf_acme + "};\n"
 
     return named_conf_string
 
@@ -248,8 +263,11 @@ def template_controller_zone(in_filename, out_filename, config):
         template = Template(tf.read())
         with open(out_filename, "w") as zf:
             base_zone = template.render(
-                name=config['system_root_zone'],
+                serial=get_serial(),  # this forces AXFR transfer
                 ip=config['controller']['ip'],
+                soa_mailbox=config['dns']['soa_mailbox'],
+                soa_nameserver=config['dns']['soa_nameserver'],
+                default_ns=config['dns']['default_ns'],
             )
             # add some extra stuff to the root zone
             # like edges in config, and other neceseary stuff
@@ -259,7 +277,27 @@ def template_controller_zone(in_filename, out_filename, config):
                         record,
                         rr['type'],
                         rr['value'])
-            zf.write(base_zone)
+
+            base_zone += "\n\n; auto populate controller and edges records"
+            if 'controller' not in config['root_zone_extra']:
+                base_zone += zone_block_root_zone_record(
+                    extract_subdomain(config['controller']['hostname']),
+                    'A',
+                    config['controller']['ip'])
+
+            for edge in config['edges']:
+                edge_name = extract_subdomain(edge['hostname'])
+                if edge_name not in config['root_zone_extra']:
+                    base_zone += zone_block_root_zone_record(
+                        extract_subdomain(edge['hostname']),
+                        'A',
+                        edge['ip'])
+
+            zf.write(base_zone + "\n")  # trailing newline at end of file
+
+
+def extract_subdomain(hostname):
+    return hostname.split('.')[0]
 
 
 def zone_block_root_zone_record(host, type, ip):
@@ -278,35 +316,36 @@ def relativize_name(canonical_name, alt_name):
         return alt_name.replace("." + canonical_name, "")
 
 
-def zone_block_root(domain, config=None):
+def zone_block_root(domain, indent="", config=None):
     filename = get_etc_bind_filename(domain)
     template = Template("""
-zone "{{domain}}" {
-    type master;
-    file "{{filename}}";
-    also-notify { {{also_notify}} };
-    allow-query { {{allow_query}} };
-    allow-transfer { {{allow_transfer}} };
-};
+{{indent}}zone "{{domain}}" {
+{{indent}}    type master;
+{{indent}}    file "{{filename}}";
+{{indent}}    also-notify { {{also_notify}} };
+{{indent}}    allow-query { {{allow_query}} };
+{{indent}}    allow-transfer { {{allow_transfer}} };
+{{indent}}};
 
 """)
     return template.render(domain=domain,
                            filename=filename,
                            also_notify=config['dns']['also-notify'],
                            allow_query=config['dns']['allow-query'],
-                           allow_transfer=config['dns']['allow-transfer'])
+                           allow_transfer=config['dns']['allow-transfer'],
+                           indent=indent)
 
 
-def zone_block_acme_challenge(domain):
+def zone_block_acme_challenge(domain, indent=""):
     template = Template("""
-zone "_acme-challenge.{{domain}}" {
-    type forward;
-    forward only;
-    forwarders { 127.0.0.1 port 5053; };
-};
+{{indent}}zone "_acme-challenge.{{domain}}" {
+{{indent}}    type forward;
+{{indent}}    forward only;
+{{indent}}    forwarders { 127.0.0.1 port 5053; };
+{{indent}}};
 
 """)
-    return template.render(domain=domain)
+    return template.render(domain=domain, indent=indent)
 
 
 def generate_bind_config(config, all_sites, timestamp):
@@ -349,13 +388,72 @@ def generate_bind_config(config, all_sites, timestamp):
         zone = site_to_zone(config, site_name, site)
         zone.to_file(get_output_filename(sites_dir, site_name), relativize=True, sorted=True)
 
+    # template for edgemanage
+    from distutils.dir_util import copy_tree
+    zone_template_dir = os.path.join(output_dir, "deflect_zones")
+    # We do copy here because we still want a working zone file
+    # in /etc/bind/deflect initially for the bind server to work
+    # later edgemanage will take over and overwrite it
+    copy_tree(sites_dir, zone_template_dir)
+    logger.info(f"Copy zone files to {zone_template_dir}")
+
+    # move zone into dnet sub-folder
+    for hostname, site in all_sites['client'] .items():
+        dnet = site['dnet']
+        if not os.path.isdir(os.path.join(zone_template_dir, dnet)):
+            os.mkdir(os.path.join(zone_template_dir, dnet))
+
+        remove_soa_ns_a_record(
+            os.path.join(zone_template_dir, f"{hostname}.zone"),
+            os.path.join(zone_template_dir, dnet, f"{hostname}.zone"),
+            hostname, dnet)
+
+        os.unlink(os.path.join(zone_template_dir, f"{hostname}.zone"))
+
+    # copy dns config files to output dir
+    dns_configs = [
+        'rndc.key',
+        'rndc.conf'
+    ]
+    for dns_config in dns_configs:
+        logger.debug(f"Copy {dns_config} to output dir")
+        shutil.copyfile(
+            f"{path_to_input()}/config/{dns_config}",
+            f"{output_dir}/{dns_config}")
+
+    # copy named-checks.sh
+    # copy these file since /etc/bind is a volume, as COPY in dockerfile won't work
+    dns_configs_in_container = [
+        'named-checks.sh',
+        'named.conf',
+        'named.conf.default-zones',
+        'named.conf.options',
+    ]
+    for dns_config in dns_configs_in_container:
+        logger.debug(f"Copy {dns_config} to output dir")
+        shutil.copyfile(
+            f"{path_to_containers()}/bind/{dns_config}",
+            f"{output_dir}/{dns_config}")
+
     if os.path.isfile(output_dir_tar):
-        logger.debug(output_dir_tar)
+        logger.debug("Removing old output file: %s", output_dir_tar)
         os.remove(output_dir_tar)
 
     logger.debug(f'Writing {output_dir_tar}')
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
+
+
+def remove_soa_ns_a_record(old_path, new_path, hostname, dnet):
+    """
+    Remove SOA/NS/A record so edgemanage could manage those record
+    """
+    zone = dns.zone.from_file(old_path, origin=f"{hostname}.")
+    zone.delete_rdataset('@', dns.rdatatype.A)
+    zone.delete_rdataset('@', dns.rdatatype.NS)
+    zone.delete_rdataset('@', dns.rdatatype.SOA)
+    zone.to_file(new_path, relativize=True, sorted=True)
+    logger.debug(f"Removed SOA/NS/A record for {dnet}/{hostname}.zone")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 from orchestration.run_container.base_class import Container
+from orchestration.run_container import Bind
 import tarfile
 import subprocess
 
@@ -40,6 +41,9 @@ class Certbot(Container):
         # XXX always get a real non-staging cert for sites in the system list?
         # client_and_system_sites = {**all_sites['system']}
 
+        # allow recursion
+        Bind(self.client, config, find_existing=True, logger=self.logger).toggle_recursion(True)
+
         for domain, site in client_and_system_sites.items():
             # the autodeflect-formatted ones...
             if f"{domain}.le.key" in sites_with_certs:
@@ -62,6 +66,7 @@ class Certbot(Container):
             self.logger.debug(output.decode())
 
         self.logger.debug("ran certbot certonly")
+        Bind(self.client, config, find_existing=True, logger=self.logger).toggle_recursion(False)
 
         with open(f"output/{config_timestamp}/etc-ssl-sites.tar", "wb") as tar_file:
             (chunks, stat) = self.container.get_archive(
