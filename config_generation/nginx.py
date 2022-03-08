@@ -339,12 +339,18 @@ def banjax_server():
     )
 
 
-def cache_purge_server():
-    return nginx.Server(
+def cache_purge_server(dconf):
+    server = nginx.Server(
         nginx.Key('listen', "80"),
         nginx.Key('server_name', '"cache_purge"'),
         nginx.Key('access_log', "off"),
         nginx.Key('allow', "127.0.0.1"),
+    )
+    if 'nginx' in dconf:
+        for item in dconf['nginx']['allow_purge']:
+            server.add(nginx.Comment(item['comment']))
+            server.add(nginx.Key('allow', item['ip']))
+    server.add(
         nginx.Key('deny', "all"),
 
         nginx.Location('~ /auth_requests/(.*)',
@@ -353,6 +359,7 @@ def cache_purge_server():
         nginx.Location('~ /site_content/(.*)',
             nginx.Key('proxy_cache_purge', "site_content_cache $1")),
     )
+    return server
 
 
 def http_block(dconf, timestamp):
@@ -409,7 +416,7 @@ def http_block(dconf, timestamp):
     http.add(banjax_server())
 
     # purge the auth_requests or site_content caches
-    http.add(cache_purge_server())
+    http.add(cache_purge_server(dconf))
 
     # include all the per-site files
     http.add(nginx.Key('include', "/etc/nginx/sites.d/*.conf"))
