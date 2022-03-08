@@ -64,7 +64,7 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
     if edge_https:
         server.add(nginx.Key('listen', '443 ssl http2'))
         server.add(*ssl_certificate_and_key(dconf, site))
-        server.add(nginx.Key('ssl_ciphers', dconf["ssl_ciphers"]))
+        server.add(nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]))
     else:
         server.add(nginx.Key('listen', '80'))
 
@@ -507,7 +507,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
                     f.write(template.render(
                         server_name=name,
                         cert_name=name,
-                        ssl_ciphers=config['ssl_ciphers'],
+                        ssl_ciphers=config['nginx']['ssl_ciphers'],
                         proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
                     ))
 
