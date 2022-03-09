@@ -174,7 +174,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
 
     logger.debug(f"Logging mode is: {config['logging']['mode']}")
     if config['logging']['mode'] == 'logstash_external':
-        LegacyFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
+        pass
     else:
         Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
