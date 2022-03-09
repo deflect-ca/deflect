@@ -304,11 +304,19 @@ def empty_catchall_server():
 
 # the built-in stub_status route shows us the number of active connections.
 # /info is useful for checking what version of config is loaded.
-def info_and_stub_status_server(timestamp):
-    return nginx.Server(
+def info_and_stub_status_server(timestamp, dconf):
+    server = nginx.Server(
         nginx.Key('listen', "80"),
         nginx.Key('server_name', "127.0.0.1"),  # metricbeat doesn't allow setting the Host header
         nginx.Key('allow', "127.0.0.1"),
+    )
+
+    if 'nginx' in dconf:
+        for item in dconf['nginx']['allow_stub_status']:
+            server.add(nginx.Comment(item['comment']))
+            server.add(nginx.Key('allow', item['ip']))
+
+    server.add(
         nginx.Key('deny', "all"),
         nginx.Key('access_log', "off"),
 
@@ -318,13 +326,22 @@ def info_and_stub_status_server(timestamp):
         nginx.Location('/stub_status',
             nginx.Key('stub_status', None))
     )
+    return server
 
 
-def banjax_server():
-    return nginx.Server(
+def banjax_server(dconf):
+    server = nginx.Server(
         nginx.Key('listen', "80"),
         nginx.Key('server_name', "banjax"),
         nginx.Key('allow', "127.0.0.1"),
+    )
+
+    if 'nginx' in dconf:
+        for item in dconf['nginx']['allow_banjax_info']:
+            server.add(nginx.Comment(item['comment']))
+            server.add(nginx.Key('allow', item['ip']))
+
+    server.add(
         nginx.Key('deny', "all"),
         nginx.Key('access_log', "off"),  # XXX?
 
@@ -338,6 +355,7 @@ def banjax_server():
         nginx.Location('/rate_limit_states',
             nginx.Key('proxy_pass', "http://127.0.0.1:8081/rate_limit_states")),
     )
+    return server
 
 
 def cache_purge_server(dconf):
@@ -347,10 +365,12 @@ def cache_purge_server(dconf):
         nginx.Key('access_log', "off"),
         nginx.Key('allow', "127.0.0.1"),
     )
+
     if 'nginx' in dconf:
         for item in dconf['nginx']['allow_purge']:
             server.add(nginx.Comment(item['comment']))
             server.add(nginx.Key('allow', item['ip']))
+
     server.add(
         nginx.Key('deny', "all"),
 
@@ -411,10 +431,10 @@ def http_block(dconf, timestamp):
     http.add(empty_catchall_server())
 
     # /info and /stub_status
-    http.add(info_and_stub_status_server(timestamp))
+    http.add(info_and_stub_status_server(timestamp, dconf))
 
     # exposing a few banjax endpoints
-    http.add(banjax_server())
+    http.add(banjax_server(dconf))
 
     # purge the auth_requests or site_content caches
     http.add(cache_purge_server(dconf))

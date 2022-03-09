@@ -55,6 +55,14 @@ nginx:
   allow_purge:
     - ip: 172.17.0.0/24
       comment: Docker network
+  # IPs to allow info/decision_lists/rate_limit_states
+  allow_banjax_info:
+    - ip: 172.17.0.0/24
+      comment: Docker network
+  # IPs to allow info/stub_status
+  allow_stub_status:
+    - ip: 172.17.0.0/24
+      comment: Docker network
 
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:
