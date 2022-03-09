@@ -3,7 +3,8 @@ from orchestration.run_container.base_class import Container
 
 class LegacyFilebeat(Container):
     def update(self, config_timestamp):
-        pass
+        with open(f"output/{config_timestamp}/etc-legacy-filebeat.tar", "rb") as f:
+            self.container.put_archive("/etc/filebeat", f.read())
 
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
