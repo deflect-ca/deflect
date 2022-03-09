@@ -76,8 +76,9 @@ def gen_config(config, all_sites, timestamp):
     logger.info('>>> Generating edgemanage config...')
     generate_edgemanage_config(config, all_sites, timestamp)
 
-    logger.info('>>> Generating legacy-filebeat config...')
-    generate_legacy_filebeat_config(config, all_sites, timestamp)
+    if config['logging']['mode'] == 'logstash_external':
+        logger.info('>>> Generating legacy-filebeat config...')
+        generate_legacy_filebeat_config(config, all_sites, timestamp)
 
 
 if __name__ == '__main__':
