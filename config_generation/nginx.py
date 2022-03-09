@@ -316,12 +316,16 @@ def info_and_stub_status_server(timestamp, dconf):
             server.add(nginx.Comment(item['comment']))
             server.add(nginx.Key('allow', item['ip']))
 
+    info_json = json.dumps({
+        "config_version": timestamp,
+        "hostname": "$hostname"
+    }).replace('"', '\\"')
     server.add(
         nginx.Key('deny', "all"),
         nginx.Key('access_log', "off"),
 
         nginx.Location('/info',
-            nginx.Key('return', f"200 \"{timestamp}\\n\"")),
+            nginx.Key('return', f"200 \"{info_json}\"")),
 
         nginx.Location('/stub_status',
             nginx.Key('stub_status', None))
