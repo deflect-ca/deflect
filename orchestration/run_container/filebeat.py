@@ -7,17 +7,17 @@ class Filebeat(Container):
         pass
 
     def start_new_container(self, config, image_id):
-        ELASTICSEARCH_HOST = config['logging']['elasticsearch_host']
-        KIBANA_HOST = config['logging']['kibana_host']
-        ELASTICSEARCH_PASSWORD = config['logging']['elasticsearch_password']
-
-        if config['server_env'] != 'production':
+        if config['logging']['mode'] == 'elk_internal':
             controller_host = "gateway.docker.internal"
             if config['controller']['ip'] != "127.0.0.1":
                 controller_host = config['controller']['ip']
             ELASTICSEARCH_HOST = f"https://{controller_host}:9200"
             KIBANA_HOST = f"https://{controller_host}:5601"
             ELASTICSEARCH_PASSWORD = get_persisted_config()['elastic_password']
+        elif config['logging']['mode'] == 'elk_external':
+            ELASTICSEARCH_HOST = config['logging']['elk_external']['elasticsearch_host']
+            KIBANA_HOST = config['logging']['elk_external']['kibana_host']
+            ELASTICSEARCH_PASSWORD = config['logging']['elk_external']['elasticsearch_password']
 
         return self.client.containers.run(
             image_id,

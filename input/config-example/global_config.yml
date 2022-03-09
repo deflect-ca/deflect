@@ -14,11 +14,18 @@ edges:
     ip: 2.3.4.5
     dnet: dnet_a
     user: deflect
-logging:  # used for filebeat and metricbeat in production
-  built_in_elk: True
-  elasticsearch_host: https://127.0.0.1:9200
-  kibana_host: https://127.0.0.1:5601
-  elasticsearch_password: password
+logging:
+  mode: 'elk_internal'
+  elk_internal: ~
+    # stand up built in ELK, no settings required
+  elk_external:
+    # connect to an external ELK via filebeat
+    elasticsearch_host: https://127.0.0.1:9200
+    kibana_host: https://127.0.0.1:5601
+    elasticsearch_password: password
+  logstash_external:
+    # connect to an external ELK via legacy-filebeat
+    logstash_host: logstash.example.com
 fetch_site_yml:
   ssh:
     host: host
