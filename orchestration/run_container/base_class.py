@@ -97,6 +97,7 @@ class Container:
             "Pebble": "pebble",
             "TestOrigin": "test-origin",
             "EdgeManage": "edgemanage",
+            "LegacyFilebeat": "legacy-filebeat",
         }[concrete_class]
         if find_existing:
             self.container = find_existing_container(self.client, self.lowercase_name, None, config, logger)

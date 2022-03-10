@@ -26,6 +26,7 @@ from orchestration.run_container import (
         Kibana,
         Pebble,
         EdgeManage,
+        LegacyFilebeat,
 )
 from orchestration.hosts import (
         get_docker_engine_version,
@@ -130,10 +131,15 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
     hostname = f"{client.info().get('Name')}"
     logger.debug(f"docker things this host is called {hostname}")
 
-    Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
-    Banjax(        client, config, kill_existing=True, logger=logger).update(timestamp)
-    Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
-    Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+    Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
+    Banjax(client, config, kill_existing=True, logger=logger).update(timestamp)
+
+    logger.debug(f"Logging mode is: {config['logging']['mode']}")
+    if config['logging']['mode'] == 'logstash_external':
+        LegacyFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
+    else:
+        Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
+        Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
     logger.debug(f"$$$ finished install_all_edge_components for {edge}")
 
@@ -154,19 +160,24 @@ def install_controller_components(config, all_sites, timestamp, logger):
     Certbot(       client, config, find_existing=True, logger=logger).update(all_sites, config, timestamp)
     TestOrigin(    client, config, find_existing=True, logger=logger).update(timestamp)
 
-    if config['logging']['built_in_elk']:
+    if config['logging']['mode'] == 'elk_internal':
         Elasticsearch( client, config, find_existing=True, logger=logger).update(timestamp)
         Kibana(        client, config, find_existing=True, logger=logger).update(timestamp)
     else:
-        logger.debug('skipping Elasticsearch and Kibana for not using built_in_elk')
+        logger.debug('skipping Elasticsearch and Kibana for not using elk_internal')
 
     if client.info()["Name"] == "docker-desktop":
         logger.debug("detected Docker Desktop, not installing controller's Nginx, Filebeat, or Metricbeat")
         return
 
-    Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
-    Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
-    Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+    Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
+
+    logger.debug(f"Logging mode is: {config['logging']['mode']}")
+    if config['logging']['mode'] == 'logstash_external':
+        pass
+    else:
+        Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
+        Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
 def install_everything(config, all_sites, timestamp):
     install_controller(config, all_sites, timestamp)
