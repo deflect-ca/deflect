@@ -93,7 +93,8 @@ def generate_banjax_config(config, all_sites, formatted_time):
     for _, site in client_sites.items():
         rate_limited_regexes = site.get('rate_limited_regexes', [])
         if len(rate_limited_regexes) > 0:
-            all_per_site_rate_limited_regexes[site['public_domain']] = rate_limited_regexes
+            all_per_site_rate_limited_regexes[site['public_domain']
+                                              ] = rate_limited_regexes
     banjax_next_config["per_site_rate_limited_regexes"] = all_per_site_rate_limited_regexes
 
     # todo: refactor into a writing/ output function - this pattern is repeated with a few variations

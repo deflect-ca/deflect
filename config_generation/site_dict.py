@@ -44,39 +44,6 @@ def old_to_new_rate_limited_regexes(old_regexes, public_domain):
     return new_regexes
 
 
-def escape_for_regex(string):
-    return string.replace(".", "\.").replace("/", "\/")
-
-
-def banjax_path_exceptions_to_rlr(banjax_path_exceptions, public_domain):
-    """
-    Translating banjax_path_exceptions_to_rlr to rate limit regex
-    but set decision: allow
-    """
-    new_regexes = []
-    for old_regex_path in banjax_path_exceptions:
-        new_regex = {}
-        escaped_public_domain = public_domain.replace('.', '\.')
-        old_regex_method = 'GET'
-
-        new_regex["name"] = "banjax_path_exceptions"
-        new_regex["interval"] = 1
-        new_regex["hits_per_interval"] = 0
-        new_regex["decision"] = "allow"
-        # GET http://wp-admin example.com Mozilla
-        temp_regex = f"^{old_regex_method} "
-        temp_regex += f"{escaped_public_domain} "
-        # wp-admin/admin-ajax.php
-        if old_regex_path.startswith('/'):
-            temp_regex += f"{escape_for_regex(old_regex_path)} "
-        else:
-            temp_regex += f"\/{escape_for_regex(old_regex_path)} "
-        new_regex["regex"] = temp_regex
-        new_regexes.append(new_regex)
-
-    return new_regexes
-
-
 def old_to_new_cache_exceptions(old_cache_exceptions):
     new_cache_exceptions = []
     for old_exception in old_cache_exceptions:
@@ -104,13 +71,8 @@ def old_to_new_site_dict(old_dict):
             set([p.strip(" /") for p in banjax_path]))
     new_dict["password_protected_paths_password"] = old_dict.get(
         "banjax_password", None)
-    # we must translate banjax_path_exceptions into per_site_rate_limited_regexes
-    # and append it to rate_limited_regexes
-    new_dict["rate_limited_regexes"] = \
-        old_to_new_rate_limited_regexes(
-            old_dict.get("banjax_regex_banner", []), old_dict["url"]) + \
-        banjax_path_exceptions_to_rlr(
-            old_dict.get("banjax_path_exceptions", []), old_dict["url"])
+    new_dict["rate_limited_regexes"] = old_to_new_rate_limited_regexes(
+        old_dict.get("banjax_regex_banner", []), old_dict["url"])
     new_dict["default_cache_time_minutes"] = old_dict["cache_time"]
     new_dict["cache_exceptions"] = old_to_new_cache_exceptions(
         old_dict.get("cache_exceptions", []))
