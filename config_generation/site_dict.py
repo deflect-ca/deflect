@@ -101,6 +101,7 @@ def old_to_new_site_dict(old_dict):
         server_names.append(prefix + "." + root_name)
     new_dict["server_names"] = server_names
     new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
+    new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", [])
 
     return new_dict
 
