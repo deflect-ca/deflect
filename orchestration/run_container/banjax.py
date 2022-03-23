@@ -9,6 +9,9 @@ class Banjax(Container):
 
         # XXX config reload not implemented yet
         #  banjax_container.kill(signal="SIGHUP")
+        # XXX: test restart
+        self.logger.info('Restarting banjax container')
+        self.container.restart()
 
     def start_new_container(self, config, image_id):
         # XXX consider a different approach (making the caller pass in the network and fs namespaces?)
