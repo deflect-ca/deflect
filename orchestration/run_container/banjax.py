@@ -1,5 +1,5 @@
 from datetime import datetime
-from orchestration.run_container.base_class import Container
+from orchestration.run_container.base_class import Container, find_existing_container
 
 
 class Banjax(Container):
@@ -9,9 +9,18 @@ class Banjax(Container):
 
         # XXX config reload not implemented yet
         #  banjax_container.kill(signal="SIGHUP")
-        # XXX: test restart
+        # XXX: Temp solution to restart banjax and legacy-filebeat (for volumne)
+        #      until we get banjax SIGHUP config reload fixed
         self.logger.info('Restarting banjax container')
         self.container.restart()
+        legacy_filebeat_container = find_existing_container(
+            self.client, "legacy-filebeat",
+            extra_label=None, config=None, logger=self.logger)
+        if legacy_filebeat_container:
+            self.logger.info('Restarting legacy-filebeat container for its volume to banjax')
+            legacy_filebeat_container.restart()
+        else:
+            self.logger.info('Could not find legacy-filebeat container to restart')
 
     def start_new_container(self, config, image_id):
         # XXX consider a different approach (making the caller pass in the network and fs namespaces?)
