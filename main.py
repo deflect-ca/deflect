@@ -44,7 +44,7 @@ from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert
 logger = get_logger(__name__)
 
 
-@click.group()
+@click.group(help="Welcome to deflect-next orchestration script")
 @click.pass_context
 @click.option('--debug/--no-debug', default=False,
               help="This overrides global_config log level to DEBUG")
