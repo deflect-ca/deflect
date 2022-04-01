@@ -203,3 +203,39 @@ LIST_NAME_TO_DECISION = {
    'ip_blocklist': 'block',
    'ip_challengelist': 'challenge',
 }
+
+
+def get_host_by_name(config, name):
+    for host in [config['controller']] + config['edges']:
+        if host['hostname'] == name:
+            return host
+        elif host['hostname'].split('.')[0] == name:
+            return host
+
+
+def comma_separated_names_to_hosts(config, names):
+    names = names.split(",")
+    return [get_host_by_name(config, n) for n in names]
+
+
+def hosts_arg_to_hosts(config, hosts_arg):
+    if hosts_arg == "all":
+        return [config['controller']] + config['edges']
+    elif hosts_arg == "controller":
+        return [config['controller']]
+    elif hosts_arg == "edges":
+        return config['edges']
+    else:
+        return comma_separated_names_to_hosts(config, hosts_arg)
+
+
+def run_remote_commands(config, hosts, command):
+    for host in hosts:
+        if host_to_role(config, host) == "controller":
+            continue  # controller doesn't have banjax
+
+        proc = run_local_or_remote_noraise(config, host, command, logger)
+
+        logger.info(f"===== {host['hostname']}")
+        for line in proc.stdout.decode().splitlines():
+            print(line)
