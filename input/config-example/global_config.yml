@@ -3,6 +3,7 @@ login_user: deflect
 server_env: staging  # or production
 debug:
   log_level: 'INFO'  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  docker_build_log: False  # only for edges
 dnets:
   - dnet_a
   - controller

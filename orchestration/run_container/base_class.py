@@ -35,13 +35,15 @@ def kill_containers_with_label(client, label, logger):
         # XXX ugh all of this
         try:
             container.kill()
-        except Exception:
-            logger.error('Could not kill container')
+        except Exception as ex:
+            logger.warn('Could not kill container')
+            logger.debug(str(ex))
             pass
         try:
             container.remove()  # XXX just so i can use a name later... re-think
-        except Exception:
-            logger.error('Could not remove container')
+        except Exception as ex:
+            logger.warn('Could not remove container')
+            logger.debug(str(ex))
             pass
 
 
@@ -80,6 +82,7 @@ class Container:
     def __init__(self, client, config, find_existing=False, kill_existing=False, logger=None):
         self.client = client
         self.logger = logger
+        self.config = config
         concrete_class = self.__class__.__name__
         self.set_hostname_and_dnet(config)
         self.lowercase_name = {
@@ -128,13 +131,22 @@ class Container:
         (image, image_logs) = self.client.images.build(
             path=f"{path_to_containers()}/{self.lowercase_name}",
             tag=self._get_image_name(self.lowercase_name, registry),
-            rm=True     # remove intermediate containers to avoid system pollution
+            rm=True  # remove intermediate containers to avoid system pollution
         )
         return image, image_logs
+
+    def stream_build_log(self, image_logs):
+        if not self.config.get('debug', {}).get('docker_build_log'):
+            return
+        for chunk in image_logs:
+            if 'stream' in chunk:
+                for line in chunk['stream'].splitlines():
+                    self.logger.debug(line)
 
     def kill_build_and_start_container(self, config):
         kill_containers_with_label(self.client, self.lowercase_name, self.logger)
         (image, image_logs) = self.build_image(config, registry='')
+        self.stream_build_log(image_logs)
         return self.start_new_container(config, image.id)
 
     def set_hostname_and_dnet(self, config):
