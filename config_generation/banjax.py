@@ -85,6 +85,8 @@ def generate_banjax_config(config, all_sites, formatted_time):
             password_bytes = base64.b64decode(password_b64)
             password_hex = password_bytes.hex()
             all_site_password_hashes[site['public_domain']] = password_hex
+    banjax_next_config["password_protected_paths"] = all_site_password_protected_paths
+    banjax_next_config["password_hashes"] = all_site_password_hashes
 
     # todo: same independent iteration, merge it
     all_per_site_rate_limited_regexes = {}
