@@ -107,28 +107,28 @@ def install_base(config, hosts, logger):
 
 
 def install_edge_components(edge, config, all_sites, timestamp, logger):
-    logger.debug(f"$$$ starting install_all_edge_components for {edge['hostname']}")
+    logger.info(f"$$$ starting install_all_edge_components for {edge['hostname']}")
     # XXX very annoyingly you can't specify a specific ssh key here... has to be in a (the?) default
     # location OR the socket / ssh-agent thing.
     client = docker_client_for_host(edge, config=config)
     hostname = f"{client.info().get('Name')}"
-    logger.debug(f"docker things this host is called {hostname}")
+    logger.info(f"docker things this host is called {hostname}")
 
     Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
     Banjax(client, config, kill_existing=True, logger=logger).update(timestamp)
 
-    logger.debug(f"Logging mode is: {config['logging']['mode']}")
+    logger.info(f"Logging mode is: {config['logging']['mode']}")
     if config['logging']['mode'] == 'logstash_external':
         LegacyFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
     else:
         Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
-    logger.debug(f"$$$ finished install_all_edge_components for {edge}")
+    logger.info(f"$$$ finished install_all_edge_components for {edge}")
 
 
 def install_controller_components(config, all_sites, timestamp, logger):
-    logger.debug('Getting a Docker client...')
+    logger.info('Getting a Docker client...')
     client = docker_client_for_host(config['controller'], config=config)
 
     Bind(          client, config, find_existing=True, logger=logger).update(timestamp)
@@ -138,7 +138,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
         DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)
         Pebble(        client, config, find_existing=True, logger=logger).update(timestamp)
     else:
-        logger.debug('skipping DohProxy and Pebble in production')
+        logger.info('skipping DohProxy and Pebble in production')
 
     Certbot(       client, config, find_existing=True, logger=logger).update(all_sites, config, timestamp)
     TestOrigin(    client, config, find_existing=True, logger=logger).update(timestamp)
@@ -147,7 +147,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
         Elasticsearch( client, config, find_existing=True, logger=logger).update(timestamp)
         Kibana(        client, config, find_existing=True, logger=logger).update(timestamp)
     else:
-        logger.debug('skipping Elasticsearch and Kibana for not using elk_internal')
+        logger.info('skipping Elasticsearch and Kibana for not using elk_internal')
 
     if client.info()["Name"] == "docker-desktop":
         logger.debug("detected Docker Desktop, not installing controller's Nginx, Filebeat, or Metricbeat")
@@ -155,7 +155,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
 
     Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
 
-    logger.debug(f"Logging mode is: {config['logging']['mode']}")
+    logger.info(f"Logging mode is: {config['logging']['mode']}")
     if config['logging']['mode'] == 'logstash_external':
         pass
     else:

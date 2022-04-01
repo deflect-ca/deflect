@@ -79,7 +79,7 @@ def docker_client_for_host(host, config=None):
 
 
 def run_local_or_remote_noraise(config, host, command, logger):
-    logger.debug(
+    logger.info(
         f"===== running \"{command}\" on {host['hostname']} ({host['ip']}) =====")
 
     shell_prefix = []
@@ -94,7 +94,7 @@ def run_local_or_remote_noraise(config, host, command, logger):
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
     for line in proc.stdout.splitlines():
-        logger.debug(f"    {line.decode()}")
+        logger.info(f"    {line.decode()}")
 
     return proc
 
@@ -102,7 +102,7 @@ def run_local_or_remote_noraise(config, host, command, logger):
 def run_local_or_remote_raise(config, host, command, logger):
     proc = run_local_or_remote_noraise(config, host, command, logger)
     if proc.returncode != 0:
-        logger.debug(
+        logger.warn(
             f"command '{command}' returned non-zero code: {proc.returncode}")
         raise Exception(
             f"command '{command}' returned non-zero code: {proc.returncode}")
@@ -139,11 +139,11 @@ def get_docker_engine_version(config, host, logger):
 def ensure_generic_requirements(config, host, logger):
     version = get_docker_engine_version(config, host, logger)
     if version:
-        logger.debug(
+        logger.info(
             f"docker found, skipping the rest of install for {host['ip']}")
         return True
 
-    logger.debug(f"installing requirements on {host['ip']}...")
+    logger.info(f"installing requirements on {host['ip']}...")
 
     # these commands need variables from this inner scope
     commands = controller_and_edge_commands + [
@@ -176,10 +176,10 @@ def ensure_all_requirements(config, host, logger):
 
     role = host_to_role(config, host)
     if role == "edge":
-        logger.debug(f"installing edge requirements on {host['hostname']}...")
+        logger.info(f"installing edge requirements on {host['hostname']}...")
         return ensure_edge_requirements(config, host, logger)
     elif role == "controller":
-        logger.debug(
+        logger.info(
             f"installing controller requirements on {host['hostname']}...")
         return ensure_controller_requirements(config, host, logger)
     else:

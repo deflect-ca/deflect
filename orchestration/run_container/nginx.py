@@ -9,7 +9,7 @@ class Nginx(Container):
         self.container.exec_run("rm -rf /etc/nginx")
         self.container.exec_run("mkdir -p /etc/nginx")
 
-        self.logger.debug(f"installing nginx config for host '{self.hostname}', dnet '{self.dnet}'")
+        self.logger.info(f"installing nginx config for host '{self.hostname}', dnet '{self.dnet}'")
         with open(f"{path_to_output()}/{config_timestamp}/etc-nginx-{self.dnet}.tar", "rb") as f:
             self.container.put_archive("/etc/nginx", f.read())
 
@@ -35,7 +35,7 @@ class Nginx(Container):
         # the config might be invalid.
         self.container.kill(signal="SIGHUP")
 
-        self.logger.debug("installed new config + certs on nginx container")
+        self.logger.info("installed new config + certs on nginx container")
 
         # >>> d["NetworkSettings"]["Networks"]["bridge"]["IPAddress"]
         # '172.17.0.5'
@@ -56,7 +56,7 @@ class Nginx(Container):
         # TODO: delete? when?
         for filename_to_tail in FILENAMES_TO_TAIL:
             base_name = filename_to_tail.split("/")[-1].replace(".", "-")  # XXX
-            self.logger.debug(f'Run container for: {base_name}')
+            self.logger.info(f'Run container for: {base_name}')
             self.client.containers.run(
                 "debian:buster-slim",
                 command=f"tail --retry --follow=name {filename_to_tail}",
