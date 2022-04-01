@@ -10,6 +10,7 @@ from config_generation.site_dict import get_all_sites
 
 import argparse
 import os
+import click
 
 from config_generation import (
     generate_bind_config,
@@ -82,7 +83,7 @@ def gen_config(config, all_sites, timestamp):
         generate_legacy_filebeat_config(config, all_sites, timestamp)
 
 
-if __name__ == '__main__':
+def old_entry_point():
     # todo: many things to be fleshed out to deflect-next config
     config = parse_config(get_config_yml_path())
 
@@ -267,3 +268,27 @@ if __name__ == '__main__':
     elif args.action == "decrypt_and_verify_cert_bundles":
         all_sites, timestamp = get_all_sites(config)
         decrypt_and_verify_cert_bundles(all_sites, timestamp)
+
+
+@click.group()
+@click.pass_context
+@click.option('--debug/--no-debug', default=False)
+@click.option('--host', default='all',
+              type=click.Choice(['all', 'controller', 'edges']))
+def cli_base(ctx, debug, host):
+    ctx.ensure_object(dict)
+    ctx.obj['debug'] = debug
+    ctx.obj['config'] = parse_config(get_config_yml_path())
+    ctx.obj['host'] = hosts_arg_to_hosts(ctx.obj['config'], host)
+
+
+@click.command('gather-info')
+@click.pass_context
+def _gather_info(ctx):
+    gather_info(ctx.obj['config'], ctx.obj['host'] )
+
+
+cli_base.add_command(_gather_info)
+
+if __name__ == '__main__':
+    cli_base()
