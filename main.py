@@ -44,7 +44,8 @@ from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert
 logger = get_logger(__name__)
 
 
-@click.group(help="Welcome to deflect-next orchestration script")
+@click.group(help="Welcome to deflect-next orchestration script",
+             invoke_without_command=True)
 @click.pass_context
 @click.option('--debug/--no-debug', default=False,
               help="This overrides global_config log level to DEBUG")
@@ -52,7 +53,8 @@ logger = get_logger(__name__)
               help='"all", "controller", "edges" or comma seperate hostname. '
                    'For example: "edge1,edge2,edge3" (subdomain name) '
                    'or full hostname "edge1.dev.deflect.network"')
-def cli_base(ctx, debug, host):
+@click.option('--action', '-a', default=None, help="DEPRECATED. Forward only")
+def cli_base(ctx, debug, host, action):
     ctx.ensure_object(dict)
     ctx.obj['debug'] = debug
     ctx.obj['config'] = parse_config(get_config_yml_path())
@@ -60,10 +62,22 @@ def cli_base(ctx, debug, host):
     ctx.obj['_hosts'] = hosts_arg_to_hosts(ctx.obj['config'], host)
     click.echo(f"hosts: {ctx.obj['_hosts']}")
 
+    # backward compatibility
+    if action:
+        # convert and get function name from string
+        try:
+            function_name = globals()[f"_{action.replace('-', '_')}"]
+            click.echo(f"DEPRECATED: forwarding {action} to {function_name}...")
+            ctx.invoke(function_name)
+        except KeyError:
+            # not found
+            click.echo(f"Error: Action {action} not found, can't forward to command")
+            raise click.Abort
+
 
 @click.command('info', help='Fetch docker version via SSH for testing')
 @click.pass_context
-def _gather_info(ctx):
+def _info(ctx):
     gather_info(ctx.obj['config'], ctx.obj['_hosts'])
 
 
@@ -263,7 +277,7 @@ def _decrypt_and_verify_cert_bundles(ctx):
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
 
 
-cli_base.add_command(_gather_info)
+cli_base.add_command(_info)
 cli_base.add_command(_install_base)
 cli_base.add_command(_gen_config)
 cli_base.add_command(_install_config)
