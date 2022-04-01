@@ -21,7 +21,6 @@ def save_persisted_config(p_conf):
 
 def kill_containers_with_label(client, label, logger):
     logger.info(f"killing containers with label or name {label}")
-    print(f"killing containers with label or name {label}")
     # XXX this doesn't work TODO: fixme
     containers1 = client.containers.list(
         all=True,
@@ -33,7 +32,6 @@ def kill_containers_with_label(client, label, logger):
     )
     for container in containers1 + containers2:
         logger.info(f"killing {container} with label or name {label}")
-        print(f"killing {container} with label or name {label}")
         # XXX ugh all of this
         try:
             container.kill()

@@ -80,7 +80,7 @@ class Elasticsearch(Container):
                 break
             except Exception:
                 traceback.print_exc()
-                print("waiting for /usr/share/elasticsearch/config/elasticsearch.keystore to appear...")
+                self.logger.info("waiting for /usr/share/elasticsearch/config/elasticsearch.keystore to appear...")
                 time.sleep(5)
                 continue
         else:
