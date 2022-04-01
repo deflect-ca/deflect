@@ -79,7 +79,7 @@ def generate_edgemanage_config(config, all_sites, timestamp):
         logger.debug(f"Removing {output_dir_tar}")
         os.remove(output_dir_tar)
 
-    logger.debug(f"Writing {output_dir_tar}")
+    logger.info(f"Writing {output_dir_tar}")
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
 

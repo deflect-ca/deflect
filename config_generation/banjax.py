@@ -116,6 +116,7 @@ def generate_banjax_config(config, all_sites, formatted_time):
     if os.path.isfile(f"{output_dir}.tar"):
         os.remove(f"{output_dir}.tar")
 
+    logger.info(f"Writing {output_dir}.tar")
     with tarfile.open(f"{output_dir}.tar", "x") as tar:
         tar.add(output_dir, arcname=".")
 

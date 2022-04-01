@@ -14,7 +14,7 @@ import os
 
 
 def gen_key_and_cert(name, alt_name, issuer_name, is_ca, logger):
-    logger.debug(
+    logger.info(
         f"generating a new key and cert, subject={name}, issuer={issuer_name}")
 
     priv_key = rsa.generate_private_key(
@@ -112,7 +112,7 @@ def generate_new_elastic_certs(config, logger):
         dirs_for_keys.append(os.path.join(path_to_containers(), container))
 
     for key_dir in dirs_for_keys:
-        logger.debug(f"writing new certs under {key_dir}")
+        logger.info(f"writing new certs under {key_dir}")
         with open(os.path.join(key_dir, "ca.key"), "wb") as f:
             f.write(ca_key_bytes)
 

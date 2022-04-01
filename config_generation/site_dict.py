@@ -156,7 +156,7 @@ def get_all_sites(config):
 
 
 def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
-    logger.debug(f"Site count in site.yml file: {len(old_sites)}")
+    logger.info(f"Site count in site.yml file: {len(old_sites)}")
 
     new_sites = {}
     for name, old_site in old_sites.items():
