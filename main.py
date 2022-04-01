@@ -47,11 +47,13 @@ def get_host_by_name(config, name):
     for host in [config['controller']] + config['edges']:
         if host['hostname'] == name:
             return host
+        elif host['hostname'].split('.')[0] == name:
+            return host
 
 
 def comma_separated_names_to_hosts(config, names):
     names = names.split(",")
-    return [get_host_by_name(n) for n in names]
+    return [get_host_by_name(config, n) for n in names]
 
 
 def hosts_arg_to_hosts(config, hosts_arg):
@@ -272,23 +274,64 @@ def old_entry_point():
 
 @click.group()
 @click.pass_context
-@click.option('--debug/--no-debug', default=False)
+@click.option('--debug/--no-debug', default=False,
+              help="This overrides global_config log level to DEBUG")
 @click.option('--host', default='all',
-              type=click.Choice(['all', 'controller', 'edges']))
+              help='"all", "controller", "edges" or comma seperate hostname. '
+                   'For example: "edge1,edge2,edge3" (subdomain name) '
+                   'or full hostname "edge1.dev.deflect.network"')
 def cli_base(ctx, debug, host):
     ctx.ensure_object(dict)
     ctx.obj['debug'] = debug
     ctx.obj['config'] = parse_config(get_config_yml_path())
-    ctx.obj['host'] = hosts_arg_to_hosts(ctx.obj['config'], host)
+    ctx.obj['host'] = host
+    ctx.obj['_hosts'] = hosts_arg_to_hosts(ctx.obj['config'], host)
+    click.echo(f"hosts: {ctx.obj['_hosts']}")
 
 
-@click.command('gather-info')
+@click.command('info', help='Fetch docker version via SSH for testing')
 @click.pass_context
 def _gather_info(ctx):
-    gather_info(ctx.obj['config'], ctx.obj['host'] )
+    gather_info(ctx.obj['config'], ctx.obj['_hosts'])
 
+
+@click.command('install-base', help='Install required package on target')
+@click.pass_context
+def _install_base(ctx):
+    install_base(ctx.obj['config'], ctx.obj['_hosts'], logger)
+
+
+@click.command('gen-config', help='Generate config from input dir')
+@click.pass_context
+def _gen_config(ctx):
+    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    gen_config(ctx.obj['config'], all_sites, timestamp)
+
+
+@click.command('install-config', help='Install config to target')
+@click.pass_context
+def _install_config(ctx):
+    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    if ctx.obj['host'] == 'edges':
+        install_edges(ctx.obj['config'], all_sites, timestamp)
+    elif ctx.obj['host'] == 'controller':
+        install_controller(ctx.obj['config'], all_sites, timestamp)
+    else:
+        install_everything(ctx.obj['config'], all_sites, timestamp)
+
+
+"""
+@click.command('', help="")
+@click.pass_context
+def _(ctx):
+    pass
+"""
 
 cli_base.add_command(_gather_info)
+cli_base.add_command(_install_base)
+cli_base.add_command(_gen_config)
+cli_base.add_command(_install_config)
+# cli_base.add_command
 
 if __name__ == '__main__':
     cli_base()
