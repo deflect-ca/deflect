@@ -50,8 +50,7 @@ def get_logger(name, log_level=None, output_file='deflect-next.log'):
 
         # create formatter and add it to the handlers
         formatter = logging.Formatter(
-            '%(asctime)s %(name)s.%(funcName)s +%(lineno)s: %(levelname)-8s'
-            ' [%(process)d] %(message)s'
+            '[%(levelname)s] %(asctime)s %(name)s.%(funcName)s:%(lineno)s | %(message)s'
         )
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
