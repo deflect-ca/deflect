@@ -4,41 +4,24 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import logging
-
-from concurrent.futures.thread import ThreadPoolExecutor
-
-from pyaml_env import parse_config
-import traceback
-import sys
-
-from util.helpers import get_config_yml_path, get_logger
-
-from orchestration.run_container import (
-        Bind,
-        Nginx,
-        Banjax,
-        Filebeat,
-        Metricbeat,
-        DohProxy,
-        Certbot,
-        TestOrigin,
-        Elasticsearch,
-        Kibana,
-        Pebble,
-        EdgeManage,
-        LegacyFilebeat,
-)
-from orchestration.hosts import (
-        get_docker_engine_version,
-        docker_client_for_host,
-        ensure_all_requirements,
-)
-
 import random
 import string
-
+import sys
+import traceback
+from concurrent.futures.thread import ThreadPoolExecutor
 from functools import partial
 from io import StringIO
+
+from pyaml_env import parse_config
+from util.helpers import get_config_yml_path, get_logger
+
+from orchestration.hosts import (docker_client_for_host,
+                                 ensure_all_requirements,
+                                 get_docker_engine_version)
+from orchestration.run_container import (Banjax, Bind, Certbot, DohProxy,
+                                         EdgeManage, Elasticsearch, Filebeat,
+                                         Kibana, LegacyFilebeat, Metricbeat,
+                                         Nginx, Pebble, TestOrigin)
 
 # todo: use configuration for the logger
 logger = get_logger(__name__, logging_level=logging.DEBUG)
@@ -101,8 +84,8 @@ def run_on_threadpool(h_to_fs):
 
 def gather_info(config, hosts):
     results = run_on_threadpool({
-            host['hostname']: partial(get_docker_engine_version, config, host)
-            for host in hosts
+        host['hostname']: partial(get_docker_engine_version, config, host)
+        for host in hosts
     })
 
     for hostname, result in results.items():
@@ -114,8 +97,8 @@ def gather_info(config, hosts):
 def install_base(config, hosts, logger):
     logger.info(f"running ensure_all_requirements on {hosts}")
     results = run_on_threadpool({
-            host['hostname']: partial(ensure_all_requirements, config, host)
-            for host in hosts
+        host['hostname']: partial(ensure_all_requirements, config, host)
+        for host in hosts
     })
 
     for hostname, result in results.items():
@@ -180,6 +163,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
         Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
+
 def install_everything(config, all_sites, timestamp):
     install_controller(config, all_sites, timestamp)
     install_edges(config, all_sites, timestamp)
@@ -195,8 +179,8 @@ def install_edges(config, all_sites, timestamp):
     # now we can install all the edges in parallel
     logger.info(f"running install_edge_components() in parallel for {len(config['edges'])} edges")
     results = run_on_threadpool({
-            edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
-            for edge in config['edges']
+        edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
+        for edge in config['edges']
     })
 
     raise_error = False
