@@ -81,18 +81,19 @@ def run_on_threadpool(h_to_fs):
         for hostname, func in h_to_fs.items():
             logger, log_stream = new_logger_and_stream()
             futures[hostname] = {
-                    'future': executor.submit(func, logger=logger),
-                    'log_stream': log_stream
+                'future': executor.submit(func, logger=logger),
+                'log_stream': log_stream
             }
 
     results = {}
     for hostname, future in futures.items():
-        result = future["future"].exception()
-        if not result:
-            result = future["future"].result()
+        # XXX you might break thread pool if you don't call
+        # exception() / result() in the following order
+        ex = future["future"].exception()
         results[hostname] = {
-                "result": result,
-                "logs": future["log_stream"].getvalue()
+            "result": ex if ex else future["future"].result(),
+            "error": (ex != None),
+            "logs": future["log_stream"].getvalue()
         }
 
     return results
@@ -192,16 +193,29 @@ def install_controller(config, all_sites, timestamp):
 
 def install_edges(config, all_sites, timestamp):
     # now we can install all the edges in parallel
-    logger.info("running install_edge_components()...")
+    logger.info(f"running install_edge_components() in parallel for {len(config['edges'])} edges")
     results = run_on_threadpool({
             edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
             for edge in config['edges']
     })
 
+    raise_error = False
     for hostname, result in results.items():
-        logger.info(f"host: {hostname}, install_edge_components result: {result['result']}")
+        logger.info(f"install_edges: {hostname}")
+        if result['error']:
+            raise_error = True
+            logger.warn(f"\t Error (raise later):\n {result['result']}")
+        else:
+            # When there is no error, this is usually None
+            logger.info(f"\t Result: {result['result']}")
+
+        # detail runtime logs are here
         for line in result["logs"].splitlines():
             logger.info(f"\t {line}")
+
+    if raise_error:
+        raise Exception("Error installing edges in ThreadPoolExecutorStackTraced. "
+                        "Raise error at end to fail CI/CD")
 
 
 if __name__ == "__main__":
