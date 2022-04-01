@@ -172,7 +172,7 @@ python3 main.py --action get-banjax-decision-lists
 python3 main.py --action get-banjax-rate-limit-states
 
 # see the config version (from the site dict) that nginx and banjax are running.
-python3 main.py --action get-nginx-and-banjax-config-versions
+python3 main.py --action get-nginx-banjax-conf-versions
 
 # loop through all our certs and print the expiration time
 python3 main.py --action check-cert-expiry
