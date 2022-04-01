@@ -31,7 +31,7 @@ from util.helpers import (get_logger, get_config_yml_path,
                           path_to_input, path_to_output,
                           path_to_containers)
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def rdata_and_type_for_txt(value):

@@ -1,7 +1,8 @@
 system_root_zone: example.com
 login_user: deflect
 server_env: staging  # or production
-
+debug:
+  log_level: 'INFO'  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 dnets:
   - dnet_a
   - controller

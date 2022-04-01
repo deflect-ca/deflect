@@ -20,7 +20,7 @@ from util.helpers import (
         path_to_output,
 )
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def redirect_to_https_server(site: dict):

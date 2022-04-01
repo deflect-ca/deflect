@@ -19,8 +19,7 @@ from util.helpers import (
     path_to_output,
 )
 
-# todo: use configuration for the logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def generate_edgemanage_config(config, all_sites, timestamp):

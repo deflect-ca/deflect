@@ -20,7 +20,7 @@ from pyaml_env import parse_config
 from util.helpers import get_logger, PEMS, LIST_NAME_TO_DECISION, \
     get_config_yml_path, get_banjax_config_yml_path, path_to_input, path_to_output
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def site_decision_lists(site):

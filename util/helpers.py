@@ -8,10 +8,10 @@ import os
 import logging
 from enum import Enum
 from pathlib import Path
+from pyaml_env import parse_config
 
-def get_logger(
-        name, logging_level=logging.DEBUG, output_file='deflect-next.log'
-):
+
+def get_logger(name, log_level=None, output_file='deflect-next.log'):
     """
     Creates a logger that logs to file and console with the same logging level
     :param str name: the logger name
@@ -20,7 +20,26 @@ def get_logger(
     :return: the initialized logger
     :rtype: logger
     """
+    logging_level_map = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WANRING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL
+    }
     logger = logging.getLogger(name)
+
+    if log_level:
+        logging_level = logging_level_map.get(log_level, 'INFO')
+        info = f"{log_level} / hard-coded"
+    else:
+        config = parse_config(get_config_yml_path())
+        if config.get('debug', {}).get('log_level', None):
+            logging_level = logging_level_map.get(config['debug']['log_level'], 'INFO')
+            info = f"{config['debug']['log_level']} / global-config"
+        else:
+            logging_level = logging_level_map['INFO']
+            info = f"INFO / no-config-default"
     logger.setLevel(logging_level)
     if not len(logger.handlers):
         file_handler = logging.FileHandler(output_file)
@@ -39,6 +58,8 @@ def get_logger(
 
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
+
+    logger.info(f"Set log level to {info}")
     return logger
 
 

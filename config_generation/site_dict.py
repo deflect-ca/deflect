@@ -16,7 +16,7 @@ from util.helpers import (
 import logging
 import json
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def old_to_new_rate_limited_regexes(old_regexes, public_domain):

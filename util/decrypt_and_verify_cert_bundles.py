@@ -29,7 +29,7 @@ from pyaml_env import parse_config
 
 from util.helpers import get_logger, get_config_yml_path
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def read_encrypted_file(filename):

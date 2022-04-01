@@ -23,8 +23,7 @@ from orchestration.run_container import (Banjax, Bind, Certbot, DohProxy,
                                          Kibana, LegacyFilebeat, Metricbeat,
                                          Nginx, Pebble, TestOrigin)
 
-# todo: use configuration for the logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 # XXX probably a better way
