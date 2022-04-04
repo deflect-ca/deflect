@@ -41,4 +41,8 @@ setup(name='deflect',
           'config_generation',
           'util',
       ],
+      entry_points='''
+        [console_scripts]
+        deflect=main:cli_base
+    ''',
       )
