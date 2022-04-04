@@ -80,19 +80,50 @@ def cli_base(ctx, host, action):
         raise click.Abort
 
 
+@click.group(help="Generate stuff like config or certs")
+@click.pass_context
+def gen(ctx):
+    pass
+
+
+@click.group(help="Install config or service")
+@click.pass_context
+def install(ctx):
+    pass
+
+
+@click.group(help="Getting information from remote host")
+@click.pass_context
+def get(ctx):
+    pass
+
+
+@click.group(help="Utility for admin")
+@click.pass_context
+def util(ctx):
+    pass
+
+
+@click.group(help="SSL certs related utility")
+@click.pass_context
+def certs(ctx):
+    pass
+
+
 @click.command('info', help='Fetch docker version via SSH for testing')
 @click.pass_context
 def _info(ctx):
+    click.echo("Connecting to all hosts, this might take a while...")
     gather_info(ctx.obj['config'], ctx.obj['_hosts'])
 
 
-@click.command('install-base', help='Install required package on target')
+@click.command('base', help='Install required package on target')
 @click.pass_context
 def _install_base(ctx):
     install_base(ctx.obj['config'], ctx.obj['_hosts'], logger)
 
 
-@click.command('gen-config', help='Generate config from input dir')
+@click.command('config', help='Generate config from input dir')
 @click.pass_context
 def _gen_config(ctx):
     click.echo("Generating config will ignore --hosts options as it does not matter")
@@ -116,7 +147,7 @@ def _gen_config(ctx):
         generate_legacy_filebeat_config(config, all_sites, timestamp)
 
 
-@click.command('install-config', help='Install config to target')
+@click.command('config', help='Install config to target')
 @click.pass_context
 def _install_config(ctx):
     all_sites, timestamp = get_all_sites(ctx.obj['config'])
@@ -128,7 +159,7 @@ def _install_config(ctx):
         install_everything(ctx.obj['config'], all_sites, timestamp)
 
 
-@click.command('install-es', help='Install Elasticsearch')
+@click.command('es', help='Install Elasticsearch')
 @click.pass_context
 def _install_es(ctx):
     all_sites, timestamp = get_all_sites(ctx.obj['config'])
@@ -138,7 +169,7 @@ def _install_es(ctx):
 
 
 
-@click.command('install-banjax', help='Install and update banjax')
+@click.command('banjax', help='Install and update banjax')
 @click.pass_context
 def _install_banjax(ctx):
     all_sites, timestamp = get_all_sites(ctx.obj['config'])
@@ -162,13 +193,13 @@ def _kill_all_containers(ctx):
         run_local_or_remote_noraise(ctx.obj['config'], host, command, logger)
 
 
-@click.command('gen-new-elastic-certs', help='Generate new ES certs')
+@click.command('new-elastic-certs', help='Generate new ES certs')
 @click.pass_context
 def _gen_new_elastic_certs(ctx):
     generate_new_elastic_certs(ctx.obj['config'], logger)
 
 
-@click.command('get-nginx-errors', help='Get nginx errors')
+@click.command('nginx-errors', help='Get nginx errors')
 @click.pass_context
 def _get_nginx_errors(ctx):
     hosts = ctx.obj['_hosts']
@@ -208,7 +239,7 @@ def _show_useful_curl_commands(ctx, domain):
         print(f"curl --resolve example.com:443:{edge['ip']}{insecure}https://{domain}  # {edge['hostname']}")
 
 
-@click.command('get-banjax-decision-lists',
+@click.command('banjax-decision-lists',
                 help='Call banjax control endpoint')
 @click.pass_context
 def _get_banjax_decision_lists(ctx):
@@ -216,7 +247,7 @@ def _get_banjax_decision_lists(ctx):
     run_remote_commands(ctx.obj['config'], ctx.obj['_hosts'], command)
 
 
-@click.command('get-banjax-rate-limit-states',
+@click.command('banjax-rate-limit-states',
                help='Call banjax control endpoint for rate limit states.')
 @click.pass_context
 def _get_banjax_rate_limit_states(ctx):
@@ -224,7 +255,7 @@ def _get_banjax_rate_limit_states(ctx):
     run_remote_commands(ctx.obj['config'], ctx.obj['_hosts'], command)
 
 
-@click.command('get-nginx-banjax-conf-versions',
+@click.command('nginx-banjax-conf-versions',
                help='See the config version (from site dict) that nginx and banjax are running.')
 @click.pass_context
 def _get_nginx_and_banjax_config_versions(ctx):
@@ -270,7 +301,7 @@ def _check_cert_expiry(ctx):
         logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
 
 
-@click.command('fetch-site-yml', help='Fetch site.yml file from dashboard')
+@click.command('site-yml', help='Fetch site.yml file from dashboard')
 @click.pass_context
 def _fetch_site_yml(ctx):
     fetch_site_yml(ctx.obj['config']['fetch_site_yml'], logger)
@@ -283,23 +314,39 @@ def _decrypt_and_verify_cert_bundles(ctx):
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
 
 
-cli_base.add_command(_info)
-cli_base.add_command(_install_base)
-cli_base.add_command(_gen_config)
-cli_base.add_command(_install_config)
-cli_base.add_command(_install_es)
-cli_base.add_command(_install_banjax)
-cli_base.add_command(_test_es_auth)
-cli_base.add_command(_kill_all_containers)
-cli_base.add_command(_gen_new_elastic_certs)
-cli_base.add_command(_get_nginx_errors)
-cli_base.add_command(_show_useful_curl_commands)
-cli_base.add_command(_get_banjax_decision_lists)
-cli_base.add_command(_get_banjax_rate_limit_states)
-cli_base.add_command(_get_nginx_and_banjax_config_versions)
-cli_base.add_command(_check_cert_expiry)
-cli_base.add_command(_fetch_site_yml)
-cli_base.add_command(_decrypt_and_verify_cert_bundles)
+# Generate section
+gen.add_command(_gen_config)
+gen.add_command(_gen_new_elastic_certs)
+
+# Install section
+install.add_command(_install_base)
+install.add_command(_install_config)
+install.add_command(_install_es)
+install.add_command(_install_banjax)
+
+# Get section
+get.add_command(_get_nginx_errors)
+get.add_command(_get_banjax_decision_lists)
+get.add_command(_get_banjax_rate_limit_states)
+get.add_command(_get_nginx_and_banjax_config_versions)
+get.add_command(_fetch_site_yml)
+
+# Util section
+util.add_command(_info)
+util.add_command(_test_es_auth)
+util.add_command(_kill_all_containers)
+util.add_command(_show_useful_curl_commands)
+
+# Certs section
+certs.add_command(_check_cert_expiry)
+certs.add_command(_decrypt_and_verify_cert_bundles)
+
+# Register sub-base
+cli_base.add_command(gen)
+cli_base.add_command(install)
+cli_base.add_command(get)
+cli_base.add_command(util)
+cli_base.add_command(certs)
 
 
 if __name__ == '__main__':
