@@ -43,7 +43,7 @@ logger = get_logger(__name__)
 
 
 @click.group(help="Welcome to deflect-next orchestration script",
-             invoke_without_command=True)
+             invoke_without_command=True, no_args_is_help=True)
 @click.pass_context
 @click.option('--host', '-h', default='all',
               help='"all", "controller", "edges" or comma seperate hostname. '
@@ -56,14 +56,6 @@ def cli_base(ctx, host, action):
     ctx.obj['host'] = host
     ctx.obj['_hosts'], ctx.obj['_has_controller'] = hosts_arg_to_hosts(ctx.obj['config'], host)
 
-    click.echo("Welcome to Deflect-next orchestration script")
-    click.echo("------------------------------------------------------")
-    click.echo("The following host will be the target:")
-    for host in ctx.obj['_hosts']:
-        click.echo(f"  - {host['hostname']} ({host['ip']})")
-    click.echo(f"* _has_controller = {ctx.obj['_has_controller']}")
-    click.echo("------------------------------------------------------")
-
     # backward compatibility
     if action and not ctx.invoked_subcommand:
         # convert and get function name from string
@@ -75,9 +67,14 @@ def cli_base(ctx, host, action):
             # not found
             click.echo(f"Error: Action {action} not found, can't forward to command")
             raise click.Abort
-    elif not action and not ctx.invoked_subcommand:
-        click.echo("No action specified, See --help")
-        raise click.Abort
+    elif ctx.invoked_subcommand:
+        click.echo("Welcome to Deflect-next orchestration script")
+        click.echo("------------------------------------------------------")
+        click.echo("The following host will be the target:")
+        for host in ctx.obj['_hosts']:
+            click.echo(f"  - {host['hostname']} ({host['ip']})")
+        click.echo(f"* _has_controller = {ctx.obj['_has_controller']}")
+        click.echo("------------------------------------------------------")
 
 
 @click.group(help="Generate stuff like config or certs")
