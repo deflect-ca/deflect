@@ -46,7 +46,7 @@ logger = get_logger(__name__)
              invoke_without_command=True, no_args_is_help=True)
 @click.pass_context
 @click.option('--host', '-h', default='all',
-              help='"all", "controller", "edges" or comma seperate hostname. '
+              help='"all", "controller", "edges" or comma separated hostnames. '
                    'For example: "edge1,edge2,edge3" (subdomain name) '
                    'or full hostname "edge1.dev.deflect.network"')
 @click.option('--action', '-a', default=None, help='DEPRECATED. Forward only')
