@@ -56,10 +56,16 @@ def cli_base(ctx, host, action):
     ctx.obj['config'] = parse_config(get_config_yml_path())
     ctx.obj['host'] = host
     ctx.obj['_hosts'] = hosts_arg_to_hosts(ctx.obj['config'], host)
-    click.echo(f"hosts: {ctx.obj['_hosts']}")
+
+    click.echo("Welcome to Deflect-next orchestration script")
+    click.echo("------------------------------------------------------")
+    click.echo("The following host will be the target:")
+    for host in ctx.obj['_hosts']:
+        click.echo(f"  - {host['hostname']} ({host['ip']})")
+    click.echo("------------------------------------------------------")
 
     # backward compatibility
-    if action:
+    if action and not ctx.invoked_subcommand:
         # convert and get function name from string
         try:
             function_name = globals()[f"_{action.replace('-', '_')}"]
@@ -69,6 +75,9 @@ def cli_base(ctx, host, action):
             # not found
             click.echo(f"Error: Action {action} not found, can't forward to command")
             raise click.Abort
+    elif not action and not ctx.invoked_subcommand:
+        click.echo("No action specified, See --help")
+        raise click.Abort
 
 
 @click.command('info', help='Fetch docker version via SSH for testing')
@@ -86,6 +95,7 @@ def _install_base(ctx):
 @click.command('gen-config', help='Generate config from input dir')
 @click.pass_context
 def _gen_config(ctx):
+    click.echo("Generating config will ignore --hosts options as it does not matter")
     config = ctx.obj['config']
     all_sites, timestamp = get_all_sites(config)
 
