@@ -8,7 +8,6 @@ from pyaml_env import parse_config
 
 from config_generation.site_dict import get_all_sites
 
-import argparse
 import os
 import click
 
@@ -47,16 +46,13 @@ logger = get_logger(__name__)
 @click.group(help="Welcome to deflect-next orchestration script",
              invoke_without_command=True)
 @click.pass_context
-@click.option('--debug/--no-debug', default=False,
-              help="This overrides global_config log level to DEBUG")
 @click.option('--host', '-h', default='all',
               help='"all", "controller", "edges" or comma seperate hostname. '
                    'For example: "edge1,edge2,edge3" (subdomain name) '
                    'or full hostname "edge1.dev.deflect.network"')
 @click.option('--action', '-a', default=None, help="DEPRECATED. Forward only")
-def cli_base(ctx, debug, host, action):
+def cli_base(ctx, host, action):
     ctx.ensure_object(dict)
-    ctx.obj['debug'] = debug
     ctx.obj['config'] = parse_config(get_config_yml_path())
     ctx.obj['host'] = host
     ctx.obj['_hosts'] = hosts_arg_to_hosts(ctx.obj['config'], host)
