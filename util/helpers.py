@@ -206,25 +206,35 @@ LIST_NAME_TO_DECISION = {
 
 
 def get_host_by_name(config, name):
-    for host in [config['controller']] + config['edges']:
-        if host['hostname'] == name:
-            return host
-        elif host['hostname'].split('.')[0] == name:
-            return host
+    for host in [config['controller']]:
+        # handle full and short name
+        if host['hostname'] == name or host['hostname'].split('.')[0] == name:
+            return host, True
+
+    for host in config['edges']:
+        # handle full and short name
+        if host['hostname'] == name or host['hostname'].split('.')[0] == name:
+            return host, False
 
 
 def comma_separated_names_to_hosts(config, names):
     names = names.split(",")
-    return [get_host_by_name(config, n) for n in names]
+    hosts = []
+    has_controller = False
+    for n in names:
+        host, flag = get_host_by_name(config, n)
+        hosts.append(host)
+        has_controller = flag if flag else False
+    return hosts, has_controller
 
 
 def hosts_arg_to_hosts(config, hosts_arg):
     if hosts_arg == "all":
-        return [config['controller']] + config['edges']
+        return [config['controller']] + config['edges'], True
     elif hosts_arg == "controller":
-        return [config['controller']]
+        return [config['controller']], True
     elif hosts_arg == "edges":
-        return config['edges']
+        return config['edges'], False
     else:
         return comma_separated_names_to_hosts(config, hosts_arg)
 

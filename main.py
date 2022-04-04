@@ -21,7 +21,6 @@ from config_generation import (
 from config_generation.generate_elastic_keys import generate_new_elastic_certs
 
 from orchestration.everything import (
-        install_everything,
         install_controller,
         install_edges,
         gather_info,
@@ -55,13 +54,14 @@ def cli_base(ctx, host, action):
     ctx.ensure_object(dict)
     ctx.obj['config'] = parse_config(get_config_yml_path())
     ctx.obj['host'] = host
-    ctx.obj['_hosts'] = hosts_arg_to_hosts(ctx.obj['config'], host)
+    ctx.obj['_hosts'], ctx.obj['_has_controller'] = hosts_arg_to_hosts(ctx.obj['config'], host)
 
     click.echo("Welcome to Deflect-next orchestration script")
     click.echo("------------------------------------------------------")
     click.echo("The following host will be the target:")
     for host in ctx.obj['_hosts']:
         click.echo(f"  - {host['hostname']} ({host['ip']})")
+    click.echo(f"* _has_controller = {ctx.obj['_has_controller']}")
     click.echo("------------------------------------------------------")
 
     # backward compatibility
@@ -152,11 +152,26 @@ def _gen_config(ctx):
 def _install_config(ctx):
     all_sites, timestamp = get_all_sites(ctx.obj['config'])
     if ctx.obj['host'] == 'edges':
-        install_edges(ctx.obj['config'], all_sites, timestamp)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
     elif ctx.obj['host'] == 'controller':
         install_controller(ctx.obj['config'], all_sites, timestamp)
+    elif ctx.obj['host'] == 'all':
+        install_controller(ctx.obj['config'], all_sites, timestamp)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
     else:
-        install_everything(ctx.obj['config'], all_sites, timestamp)
+        if ctx.obj['_has_controller']:
+            install_controller(ctx.obj['config'], all_sites, timestamp)
+
+            # remove the controller from the list of _hosts
+            for host in ctx.obj['_hosts']:
+                if host['hostname'] == ctx.obj['config']['controller']['hostname']:
+                    ctx.obj['_hosts'].remove(host)
+
+            click.echo("The following edges will be the target:")
+            for host in ctx.obj['_hosts']:
+                click.echo(f"  - {host['hostname']} ({host['ip']})")
+
+        install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp)
 
 
 @click.command('es', help='Install Elasticsearch')

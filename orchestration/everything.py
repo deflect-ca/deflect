@@ -163,23 +163,18 @@ def install_controller_components(config, all_sites, timestamp, logger):
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
 
-def install_everything(config, all_sites, timestamp):
-    install_controller(config, all_sites, timestamp)
-    install_edges(config, all_sites, timestamp)
-
-
 def install_controller(config, all_sites, timestamp):
     logger.info("running install_controller_components()...")
     res = install_controller_components(config, all_sites, timestamp, logger)
     logger.info(f"install_controller host: {config['controller']}, result: {res}")
 
 
-def install_edges(config, all_sites, timestamp):
+def install_edges(config, edges, all_sites, timestamp):
     # now we can install all the edges in parallel
     logger.info(f"running install_edge_components() in parallel for {len(config['edges'])} edges")
     results = run_on_threadpool({
         edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
-        for edge in config['edges']
+        for edge in edges
     })
 
     raise_error = False
@@ -199,10 +194,3 @@ def install_edges(config, all_sites, timestamp):
     if raise_error:
         raise Exception("Error installing edges in ThreadPoolExecutorStackTraced. "
                         "Raise error at end to fail CI/CD")
-
-
-if __name__ == "__main__":
-    config = parse_config(get_config_yml_path())
-    install_everything(
-        config=config,
-    )
