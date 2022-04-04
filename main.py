@@ -42,14 +42,14 @@ from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert
 logger = get_logger(__name__)
 
 
-@click.group(help="Welcome to deflect-next orchestration script",
+@click.group(help='Welcome to deflect-next orchestration script',
              invoke_without_command=True, no_args_is_help=True)
 @click.pass_context
 @click.option('--host', '-h', default='all',
               help='"all", "controller", "edges" or comma seperate hostname. '
                    'For example: "edge1,edge2,edge3" (subdomain name) '
                    'or full hostname "edge1.dev.deflect.network"')
-@click.option('--action', '-a', default=None, help="DEPRECATED. Forward only")
+@click.option('--action', '-a', default=None, help='DEPRECATED. Forward only')
 def cli_base(ctx, host, action):
     ctx.ensure_object(dict)
     ctx.obj['config'] = parse_config(get_config_yml_path())
@@ -77,31 +77,31 @@ def cli_base(ctx, host, action):
         click.echo("------------------------------------------------------")
 
 
-@click.group(help="Generate stuff like config or certs")
+@click.group(help='Generate stuff like config or certs')
 @click.pass_context
 def gen(ctx):
     pass
 
 
-@click.group(help="Install config or service")
+@click.group(help='Install config or service')
 @click.pass_context
 def install(ctx):
     pass
 
 
-@click.group(help="Getting information from remote host")
+@click.group(help='Getting information from remote host')
 @click.pass_context
 def get(ctx):
     pass
 
 
-@click.group(help="Utility for admin")
+@click.group(help='Utility for admin')
 @click.pass_context
 def util(ctx):
     pass
 
 
-@click.group(help="SSL certs related utility")
+@click.group(help='SSL certs related utility')
 @click.pass_context
 def certs(ctx):
     pass
@@ -120,9 +120,21 @@ def _install_base(ctx):
     install_base(ctx.obj['config'], ctx.obj['_hosts'], logger)
 
 
-@click.command('config', help='Generate config from input dir')
+@click.command('config', short_help='Generate config from input dir')
 @click.pass_context
 def _gen_config(ctx):
+    """Generate config from input dir
+
+    This will generate config from input dir and
+    write to output dir. No remote machine target
+    is involved in this process.
+
+    You can check the generated config by in the
+    output/{timestamp} dir, where the {timestamp}
+    is generated according to old_site.yml
+
+    *This command will ignore the --host option
+    """
     click.echo("Generating config will ignore --hosts options as it does not matter")
     config = ctx.obj['config']
     all_sites, timestamp = get_all_sites(config)
@@ -230,7 +242,7 @@ def _get_nginx_errors(ctx):
 
 
 @click.command('show-useful-curl-commands', help='Print curl commands for ES and edge testing')
-@click.option('--domain', '-d', default='example.com', help="Domain for testing")
+@click.option('--domain', '-d', default='example.com', help='Domain for testing')
 @click.pass_context
 def _show_useful_curl_commands(ctx, domain):
     hosts = ctx.obj['_hosts']
