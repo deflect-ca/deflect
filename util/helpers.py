@@ -11,15 +11,33 @@ from pathlib import Path
 from pyaml_env import parse_config
 
 
-def get_logger(name, log_level=None, output_file='deflect-next.log'):
+def get_logger(name, log_level=None):
+    return __logger(log_level=log_level).get_logger()
+
+
+def reset_log_level(log_level):
+    return __logger().reset_log_level(log_level)
+
+
+class __singleton(type):
     """
-    Creates a logger that logs to file and console with the same logging level
-    :param str name: the logger name
-    :param int logging_level: the logging level
-    :param str output_file: the file to save to
-    :return: the initialized logger
-    :rtype: logger
+    Singleton metaclass
     """
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        # return instance so we can call Monitor().set()
+        return cls._instances[cls]
+
+
+class __logger(metaclass=__singleton):
+    """
+    Singleton logger class so we
+    don't have multiple logger
+    """
+
     logging_level_map = {
         'DEBUG': logging.DEBUG,
         'INFO': logging.INFO,
@@ -27,39 +45,62 @@ def get_logger(name, log_level=None, output_file='deflect-next.log'):
         'ERROR': logging.ERROR,
         'CRITICAL': logging.CRITICAL
     }
-    logger = logging.getLogger(name)
 
-    if log_level:
-        logging_level = logging_level_map.get(log_level, 'INFO')
-        info = f"{log_level} / hard-coded"
-    else:
-        config = parse_config(get_config_yml_path())
-        if config.get('debug', {}).get('log_level', None):
-            logging_level = logging_level_map.get(config['debug']['log_level'], 'INFO')
-            info = f"{config['debug']['log_level']} / global-config"
+    def __init__(self, log_level=None, output_file='deflect-next.log'):
+        """
+        Creates a logger that logs to file and console with the same logging level
+        :param int logging_level: the logging level
+        :param str output_file: the file to save to
+        :return: the initialized logger
+        """
+        self.logger = logging.getLogger()
+        self.log_file = output_file
+
+        if log_level:
+            logging_level = self.logging_level_map.get(log_level, 'INFO')
+            info = f"{log_level} / hard-coded"
         else:
-            logging_level = logging_level_map['INFO']
-            info = f"INFO / no-config-default"
-    logger.setLevel(logging_level)
-    if not len(logger.handlers):
-        file_handler = logging.FileHandler(output_file)
-        console_handler = logging.StreamHandler()
+            self.config = parse_config(get_config_yml_path())
+            if self.config.get('debug', {}).get('log_level', None):
+                logging_level = self.logging_level_map.get(self.config['debug']['log_level'], 'INFO')
+                info = f"{self.config['debug']['log_level']} / global-config"
+            else:
+                logging_level = self.logging_level_map['INFO']
+                info = f"INFO / no-config-default"
 
-        file_handler.setLevel(logging_level)
-        console_handler.setLevel(logging_level)
+            if self.config.get('debug', {}).get('orchestration_log', None):
+                self.log_file = self.config['debug']['orchestration_log']
 
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter(
-            '[%(levelname)s] %(asctime)s %(funcName)s:%(lineno)s | %(message)s'
-        )
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
+        self.logger.setLevel(logging_level)
 
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+        if not len(self.logger.handlers):
+            self.file_handler = logging.FileHandler(self.log_file)
+            self.console_handler = logging.StreamHandler()
 
-    logger.info(f"Set log level to {info}")
-    return logger
+            self.file_handler.setLevel(logging_level)
+            self.console_handler.setLevel(logging_level)
+
+            # create formatter and add it to the handlers
+            formatter = logging.Formatter(
+                '[%(levelname)s] %(asctime)s %(funcName)s:%(lineno)s | %(message)s')
+            self.file_handler.setFormatter(formatter)
+            self.console_handler.setFormatter(formatter)
+
+            self.logger.addHandler(self.file_handler)
+            self.logger.addHandler(self.console_handler)
+
+        self.logger.info(f"Logger init, set log level to {info}")
+
+    def get_logger(self):
+        return self.logger
+
+    def reset_log_level(self, log_level):
+        logging_level = self.logging_level_map.get(log_level)
+        if logging_level:
+            self.logger.setLevel(logging_level)
+            self.file_handler.setLevel(logging_level)
+            self.console_handler.setLevel(logging_level)
+            self.logger.info(f"Reset log level to {log_level}")
 
 
 def module_root_path():
