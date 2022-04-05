@@ -133,7 +133,7 @@ def _gen_config(ctx):
     output/{timestamp} dir, where the {timestamp}
     is generated according to old_site.yml
 
-    *This command will ignore the --host option
+    This command will ignore the --host option
     """
     click.echo("Generating config will ignore --hosts options as it does not matter")
     config = ctx.obj['config']
@@ -156,9 +156,24 @@ def _gen_config(ctx):
         generate_legacy_filebeat_config(config, all_sites, timestamp)
 
 
-@click.command('config', help='Install config to target')
+@click.command('config', short_help='Install config to target')
 @click.pass_context
 def _install_config(ctx):
+    """Install config to target
+
+    This will install config in output dir to target.
+    By default it installs to all controller and edges
+    defined in the global_config. You can change this
+    by using the global --host options, like this:
+
+    \b
+        --host all
+        --host edges
+        --host controller
+        --host edge1,edge2 (subdomain)
+        --host edge1.dev.deflect.network
+        --host controller,edge3
+    """
     all_sites, timestamp = get_all_sites(ctx.obj['config'])
     if ctx.obj['host'] == 'edges':
         install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
@@ -190,7 +205,6 @@ def _install_es(ctx):
     client = docker_client_for_host(ctx.obj['config']['controller'], config=ctx.obj['config'])
     es = Elasticsearch(client, ctx.obj['config'], find_existing=True, logger=logger)
     es.update(timestamp)
-
 
 
 @click.command('banjax', help='Install and update banjax')
