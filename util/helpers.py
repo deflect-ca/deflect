@@ -28,7 +28,6 @@ class __singleton(type):
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
-        # return instance so we can call Monitor().set()
         return cls._instances[cls]
 
 
@@ -44,6 +43,11 @@ class __logger(metaclass=__singleton):
         'WANRING': logging.WARNING,
         'ERROR': logging.ERROR,
         'CRITICAL': logging.CRITICAL
+    }
+    formatter_str = {
+        'DEBUG': '[%(levelname)s] %(asctime)s %(funcName)s:%(lineno)s | %(message)s',
+        # without function name for rest of the levels
+        '*': '[%(levelname)s] %(asctime)s %(message)s',
     }
 
     def __init__(self, log_level=None, output_file='deflect-next.log'):
@@ -61,6 +65,8 @@ class __logger(metaclass=__singleton):
             info = f"{log_level} / hard-coded"
         else:
             self.config = parse_config(get_config_yml_path())
+
+            # load log level from config or not
             if self.config.get('debug', {}).get('log_level', None):
                 logging_level = self.logging_level_map.get(self.config['debug']['log_level'], 'INFO')
                 info = f"{self.config['debug']['log_level']} / global-config"
@@ -68,6 +74,7 @@ class __logger(metaclass=__singleton):
                 logging_level = self.logging_level_map['INFO']
                 info = f"INFO / no-config-default"
 
+            # load log path from config
             if self.config.get('debug', {}).get('orchestration_log', None):
                 self.log_file = self.config['debug']['orchestration_log']
 
@@ -81,10 +88,7 @@ class __logger(metaclass=__singleton):
             self.console_handler.setLevel(logging_level)
 
             # create formatter and add it to the handlers
-            formatter = logging.Formatter(
-                '[%(levelname)s] %(asctime)s %(funcName)s:%(lineno)s | %(message)s')
-            self.file_handler.setFormatter(formatter)
-            self.console_handler.setFormatter(formatter)
+            self.set_formatter_str(logging_level)
 
             self.logger.addHandler(self.file_handler)
             self.logger.addHandler(self.console_handler)
@@ -100,7 +104,19 @@ class __logger(metaclass=__singleton):
             self.logger.setLevel(logging_level)
             self.file_handler.setLevel(logging_level)
             self.console_handler.setLevel(logging_level)
+            self.set_formatter_str(logging_level)
             self.logger.info(f"Reset log level to {log_level}")
+
+    def get_formatter_str(self, logging_level):
+        inv_map = {v: k for k, v in self.logging_level_map.items()}
+        if inv_map[logging_level] in self.formatter_str:
+            return self.formatter_str.get(inv_map[logging_level])
+        return self.formatter_str['*']
+
+    def set_formatter_str(self, logging_level):
+        formatter = logging.Formatter(self.get_formatter_str(logging_level))
+        self.file_handler.setFormatter(formatter)
+        self.console_handler.setFormatter(formatter)
 
 
 def module_root_path():
