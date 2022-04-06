@@ -4,41 +4,32 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from pyaml_env import parse_config
-
-from config_generation.site_dict import get_all_sites
-
+import datetime
 import os
 import click
-import datetime
 
-from config_generation import (
-    generate_bind_config,
-    generate_nginx_config,
-    generate_banjax_config,
-    generate_edgemanage_config,
-    generate_legacy_filebeat_config,
-)
+from pyaml_env import parse_config
+
+from config_generation import (generate_banjax_config, generate_bind_config,
+                               generate_edgemanage_config,
+                               generate_legacy_filebeat_config,
+                               generate_nginx_config)
 from config_generation.generate_elastic_keys import generate_new_elastic_certs
-
-from orchestration.everything import (
-        install_controller,
-        install_edges,
-        gather_info,
-        install_base,
-)
-from orchestration.run_container.base_class import find_existing_container
-from orchestration.run_container.base_class import get_persisted_config
-
-from orchestration.run_container.elasticsearch import Elasticsearch, attempt_to_authenticate
+from config_generation.site_dict import get_all_sites
+from orchestration.everything import (gather_info, install_base,
+                                      install_controller, install_edges)
+from orchestration.hosts import (docker_client_for_host, host_to_role,
+                                 run_local_or_remote_noraise)
 from orchestration.run_container.banjax import Banjax
-from orchestration.hosts import docker_client_for_host, run_local_or_remote_noraise, host_to_role
-
-import logging
-from util.helpers import (get_logger, get_config_yml_path, path_to_output,
-                          hosts_arg_to_hosts, run_remote_commands, reset_log_level)
+from orchestration.run_container.base_class import (find_existing_container,
+                                                    get_persisted_config)
+from orchestration.run_container.elasticsearch import (Elasticsearch,
+                                                       attempt_to_authenticate)
+from util.decrypt_and_verify_cert_bundles import \
+    main as decrypt_and_verify_cert_bundles
 from util.fetch_site_yml import fetch_site_yml
-from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert_bundles
+from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
+                          path_to_output, reset_log_level, run_remote_commands)
 
 logger = get_logger(__name__)
 
