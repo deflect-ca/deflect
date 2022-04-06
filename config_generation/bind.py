@@ -250,8 +250,7 @@ def template_named_conf(config, client_and_system_sites):
     named_conf_acme = ''
     for site in sorted(client_and_system_sites.values(), key=lambda s: s['public_domain']):
         named_conf_string += zone_block_root(site['public_domain'], indent=" "*4, config=config)
-        for server_name in sorted(set(site['server_names'])):
-            named_conf_acme += zone_block_acme_challenge(server_name, indent=" "*4)
+        named_conf_acme += zone_block_acme_challenge(site['public_domain'], indent=" "*4)
 
     named_conf_string += named_conf_acme + "};\n"
 
