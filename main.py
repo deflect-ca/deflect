@@ -10,6 +10,7 @@ from config_generation.site_dict import get_all_sites
 
 import os
 import click
+import datetime
 
 from config_generation import (
     generate_bind_config,
@@ -338,10 +339,11 @@ def _check_cert_expiry(ctx):
     from cryptography.hazmat.backends import default_backend
 
     all_sites, timestamp = ctx.obj['get_all_sites']
-    # flatten...
     sites = {**all_sites['client'], **all_sites['system']}
-
     latest_cert_dir = os.path.join(path_to_output(), timestamp, "archive")
+    now = datetime.datetime.utcnow()
+    expired = []
+
     for hostname, site in sites.items():
         site_dir = os.path.join(latest_cert_dir, hostname)
         if not os.path.isdir(site_dir):
@@ -352,6 +354,12 @@ def _check_cert_expiry(ctx):
             cert_bytes = f.read()
         cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
         logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
+        if cert.not_valid_after > now:
+            logger.warning(f"{hostname} cert expired")
+            expired.append(hostname)
+
+    if len(expired) > 0:
+        click.echo(click.style(f"expired: {str(expired)}", fg='red'))
 
 
 @click.command('site-yml', help='Fetch site.yml file from dashboard')
