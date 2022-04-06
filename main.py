@@ -349,7 +349,7 @@ def _check_cert_expiry(ctx):
             cert_bytes = f.read()
         cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
         logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
-        if cert.not_valid_after > now:
+        if cert.not_valid_after < now:
             logger.warning(f"{hostname} cert expired")
             expired.append(hostname)
 
