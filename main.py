@@ -35,7 +35,7 @@ from orchestration.hosts import docker_client_for_host, run_local_or_remote_nora
 
 import logging
 from util.helpers import (get_logger, get_config_yml_path, path_to_output,
-                          hosts_arg_to_hosts, run_remote_commands)
+                          hosts_arg_to_hosts, run_remote_commands, reset_log_level)
 from util.fetch_site_yml import fetch_site_yml
 from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert_bundles
 
@@ -45,21 +45,28 @@ logger = get_logger(__name__)
 @click.group(help='Welcome to deflect-next orchestration script',
              invoke_without_command=True, no_args_is_help=True)
 @click.pass_context
+@click.option('--debug', default=False, is_flag=True,
+              help='Override log_level in global_config to DEBUG')
 @click.option('--host', '-h', default='all',
               help='"all", "controller", "edges" or comma separated hostnames. '
                    'For example: "edge1,edge2,edge3" (subdomain name) '
                    'or full hostname "edge1.dev.deflect.network"')
 @click.option('--action', '-a', default=None, help='DEPRECATED. Forward only')
-def cli_base(ctx, host, action):
+def cli_base(ctx, debug, host, action):
     ctx.ensure_object(dict)
+    if debug:
+        reset_log_level('DEBUG')
+
+    ctx.obj['debug'] = debug
     ctx.obj['config'] = parse_config(get_config_yml_path())
     ctx.obj['host'] = host
     ctx.obj['_hosts'], ctx.obj['_has_controller'] = hosts_arg_to_hosts(ctx.obj['config'], host)
 
-    # backward compatibility
+    # backward compatibility, forwards --action to subcommands
     if action and not ctx.invoked_subcommand:
         # convert and get function name from string
         try:
+            # function was named after old commands
             function_name = globals()[f"_{action.replace('-', '_')}"]
             click.echo(f"DEPRECATED: forwarding {action} to {function_name}...")
             ctx.invoke(function_name)
@@ -68,13 +75,10 @@ def cli_base(ctx, host, action):
             click.echo(f"Error: Action {action} not found, can't forward to command")
             raise click.Abort
     elif ctx.invoked_subcommand:
+        # invoke normal subcommand
         click.echo("Welcome to Deflect-next orchestration script")
-        click.echo("------------------------------------------------------")
-        click.echo("The following host will be the target:")
-        for host in ctx.obj['_hosts']:
-            click.echo(f"  - {host['hostname']} ({host['ip']})")
-        click.echo(f"* _has_controller = {ctx.obj['_has_controller']}")
-        click.echo("------------------------------------------------------")
+        print_hosts_and_ctx(ctx)
+        ctx.obj['get_all_sites'] = get_all_sites(ctx.obj['config'])
 
 
 @click.group(help='Generate stuff like config or certs')
@@ -137,7 +141,7 @@ def _gen_config(ctx):
     """
     click.echo("Generating config will ignore --hosts options as it does not matter")
     config = ctx.obj['config']
-    all_sites, timestamp = get_all_sites(config)
+    all_sites, timestamp = ctx.obj['get_all_sites']
 
     logger.info('>>> Generating bind config...')
     generate_bind_config(config, all_sites, timestamp)
@@ -154,6 +158,11 @@ def _gen_config(ctx):
     if config['logging']['mode'] == 'logstash_external':
         logger.info('>>> Generating legacy-filebeat config...')
         generate_legacy_filebeat_config(config, all_sites, timestamp)
+
+
+def abort_if_false(ctx, param, value):
+    if not value:
+        ctx.abort()
 
 
 @click.command('config', short_help='Install config to target')
@@ -174,7 +183,7 @@ def _install_config(ctx):
         --host edge1.dev.deflect.network
         --host controller,edge3
     """
-    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['host'] == 'edges':
         install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
     elif ctx.obj['host'] == 'controller':
@@ -183,25 +192,31 @@ def _install_config(ctx):
         install_controller(ctx.obj['config'], all_sites, timestamp)
         install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
     else:
-        if ctx.obj['_has_controller']:
-            install_controller(ctx.obj['config'], all_sites, timestamp)
+        ctx.invoke(_install_selected, yes=False)
 
-            # remove the controller from the list of _hosts
-            for host in ctx.obj['_hosts']:
-                if host['hostname'] == ctx.obj['config']['controller']['hostname']:
-                    ctx.obj['_hosts'].remove(host)
 
-            click.echo("The following edges will be the target:")
-            for host in ctx.obj['_hosts']:
-                click.echo(f"  - {host['hostname']} ({host['ip']})")
+@click.command('selected', short_help='Install config to selected target')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='Please confirm the target _host is correct')
+@click.pass_context
+def _install_selected(ctx):
+    all_sites, timestamp = ctx.obj['get_all_sites']
+    if ctx.obj['_has_controller']:
+        install_controller(ctx.obj['config'], all_sites, timestamp)
 
-        install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp)
+        # remove the controller from the list of _hosts
+        for host in ctx.obj['_hosts']:
+            if host['hostname'] == ctx.obj['config']['controller']['hostname']:
+                ctx.obj['_hosts'].remove(host)
+
+    install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp)
 
 
 @click.command('es', help='Install Elasticsearch')
 @click.pass_context
 def _install_es(ctx):
-    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    _, timestamp = ctx.obj['get_all_sites']
     client = docker_client_for_host(ctx.obj['config']['controller'], config=ctx.obj['config'])
     es = Elasticsearch(client, ctx.obj['config'], find_existing=True, logger=logger)
     es.update(timestamp)
@@ -210,7 +225,7 @@ def _install_es(ctx):
 @click.command('banjax', help='Install and update banjax')
 @click.pass_context
 def _install_banjax(ctx):
-    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    _, timestamp = ctx.obj['get_all_sites']
     for host in ctx.obj['_hosts']:
         client = docker_client_for_host(host, config=ctx.obj['config'])
         banjax = Banjax(client, ctx.obj['config'], kill_existing=True, logger=logger)
@@ -322,7 +337,7 @@ def _check_cert_expiry(ctx):
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
 
-    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    all_sites, timestamp = ctx.obj['get_all_sites']
     # flatten...
     sites = {**all_sites['client'], **all_sites['system']}
 
@@ -348,8 +363,18 @@ def _fetch_site_yml(ctx):
 @click.command('decrypt-verify-cert', help='Decrypt and verify cert bundles')
 @click.pass_context
 def _decrypt_and_verify_cert_bundles(ctx):
-    all_sites, timestamp = get_all_sites(ctx.obj['config'])
+    all_sites, timestamp = ctx.obj['get_all_sites']
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
+
+
+def print_hosts_and_ctx(ctx):
+    click.echo(f"\n* _has_controller = {ctx.obj['_has_controller']}")
+    click.echo(f"* debug = {ctx.obj['debug']}")
+    click.echo(f"* host = {ctx.obj['host']}")
+    click.echo("* _hosts =")
+    for host in ctx.obj['_hosts']:
+        click.echo(f"  * {host['hostname']} ({host['ip']})")
+    click.echo()
 
 
 # Generate section
@@ -361,6 +386,7 @@ install.add_command(_install_base)
 install.add_command(_install_config)
 install.add_command(_install_es)
 install.add_command(_install_banjax)
+install.add_command(_install_selected)
 
 # Get section
 get.add_command(_get_nginx_errors)
