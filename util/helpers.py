@@ -237,15 +237,3 @@ def hosts_arg_to_hosts(config, hosts_arg):
         return config['edges'], False
     else:
         return comma_separated_names_to_hosts(config, hosts_arg)
-
-
-def run_remote_commands(config, hosts, command):
-    for host in hosts:
-        if host_to_role(config, host) == "controller":
-            continue  # controller doesn't have banjax
-
-        proc = run_local_or_remote_noraise(config, host, command, logger)
-
-        logger.info(f"===== {host['hostname']}")
-        for line in proc.stdout.decode().splitlines():
-            print(line)

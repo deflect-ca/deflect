@@ -29,7 +29,7 @@ from util.decrypt_and_verify_cert_bundles import \
     main as decrypt_and_verify_cert_bundles
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
-                          path_to_output, reset_log_level, run_remote_commands)
+                          path_to_output, reset_log_level)
 
 logger = get_logger(__name__)
 
@@ -378,6 +378,13 @@ def print_hosts_and_ctx(ctx):
     for host in ctx.obj['_hosts']:
         click.echo(f"  * {host['hostname']} ({host['ip']})")
     click.echo()
+
+
+def run_remote_commands(config, hosts, command):
+    for host in hosts:
+        if host_to_role(config, host) == "controller":
+            continue  # controller doesn't have banjax
+        run_local_or_remote_noraise(config, host, command, logger)
 
 
 # Generate section
