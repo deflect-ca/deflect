@@ -190,7 +190,7 @@ def get_serial():
     return int(time.time())
 
 
-def site_to_zone(config, site_name, site):
+def site_to_zone(config, site_name, site, all_sites):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
     acme_ns = f"acme.{config['system_root_zone']}"
@@ -232,6 +232,17 @@ def site_to_zone(config, site_name, site):
 
     for rel_zone, type_and_values in site['dns_records'].items():
         for type_and_value in type_and_values:
+            if type_and_value['type'] == 'CNAME':
+                """
+                check if its an individual site
+                and add _acme challenge for it because putting _acme-challenge
+                record in its individual zone file won't be AXFR tranfer to
+                easydns as we only register the root domain
+                """
+                if f"{rel_zone}.{site_name}" in all_sites:
+                    logger.debug(f"{rel_zone}.{site_name} "
+                                  "is an individual site in all_sites, adding _acme-challenge")
+                    add_record_rel(zone, site_name, f"_acme-challenge.{rel_zone}.{site_name}", "NS", acme_ns)
             add_record_norel(zone, rel_zone, type_and_value['type'], type_and_value['value'])
 
     return zone
@@ -395,7 +406,7 @@ def generate_bind_config(config, all_sites, timestamp):
 
     # write out a zone file for each site
     for site_name, site in client_and_system_sites.items():
-        zone = site_to_zone(config, site_name, site)
+        zone = site_to_zone(config, site_name, site, all_sites=client_and_system_sites)
         zone.to_file(get_output_filename(sites_dir, site_name), relativize=True, sorted=True)
 
     # template for edgemanage
