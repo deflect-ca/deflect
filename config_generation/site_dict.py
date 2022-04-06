@@ -54,7 +54,7 @@ def old_to_new_cache_exceptions(old_cache_exceptions):
 
 def old_to_new_site_dict(old_dict):
     new_dict = {}
-    # XXX not implemented in banjax-next
+    # XXX not implemented in banjax
     new_dict["challenge_everyone_captcha"] = old_dict.get(
         "banjax_captcha", False)
     new_dict["sitewide_sha_inv"] = old_dict.get(
@@ -121,7 +121,7 @@ def complete_system_sites(config, system_sites):
     return fixed_system_sites
 
 def get_all_sites(config):
-    logger.info('Getting all sites')
+    logger.debug('Getting all sites')
     old_client_sites = {}
     old_client_sites_timestamp = None
     # with open("input/current/old-sites.yml", "r") as f:
@@ -156,7 +156,7 @@ def get_all_sites(config):
 
 
 def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
-    logger.info(f"Site count in site.yml file: {len(old_sites)}")
+    logger.debug(f"Site count in site.yml file: {len(old_sites)}")
 
     new_sites = {}
     for name, old_site in old_sites.items():

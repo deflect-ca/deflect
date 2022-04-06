@@ -26,7 +26,7 @@ tests_require = [
 
 setup(name='deflect',
       version='0.0.1',
-      description='Provides the orchestration functionality for Deflect-next',
+      description='Provides the orchestration functionality for Deflect',
       long_description=long_description,
       tests_require=tests_require,
       extras_require={
@@ -41,4 +41,8 @@ setup(name='deflect',
           'config_generation',
           'util',
       ],
+      entry_points='''
+        [console_scripts]
+        deflect=main:cli_base
+    ''',
       )

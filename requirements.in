@@ -10,3 +10,4 @@ python-gnupg==0.4.7
 python-nginx==1.5.3
 PyYAML==5.4.1
 scp==0.14.1
+click==8.1.2

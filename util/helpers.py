@@ -50,7 +50,7 @@ class __logger(metaclass=__singleton):
         '*': '[%(levelname)s] %(asctime)s %(message)s',
     }
 
-    def __init__(self, log_level=None, output_file='deflect-next.log'):
+    def __init__(self, log_level=None, output_file='deflect-orch.log'):
         """
         Creates a logger that logs to file and console with the same logging level
         :param int logging_level: the logging level
@@ -93,7 +93,7 @@ class __logger(metaclass=__singleton):
             self.logger.addHandler(self.file_handler)
             self.logger.addHandler(self.console_handler)
 
-        self.logger.info(f"Logger init, set log level to {info}")
+        self.logger.debug(f"Logger init, set log level to {info}")
 
     def get_logger(self):
         return self.logger
@@ -203,3 +203,37 @@ LIST_NAME_TO_DECISION = {
    'ip_blocklist': 'block',
    'ip_challengelist': 'challenge',
 }
+
+
+def get_host_by_name(config, name):
+    for host in [config['controller']]:
+        # handle full and short name
+        if host['hostname'] == name or host['hostname'].split('.')[0] == name:
+            return host, True
+
+    for host in config['edges']:
+        # handle full and short name
+        if host['hostname'] == name or host['hostname'].split('.')[0] == name:
+            return host, False
+
+
+def comma_separated_names_to_hosts(config, names):
+    names = names.split(",")
+    hosts = []
+    has_controller = False
+    for n in names:
+        host, flag = get_host_by_name(config, n)
+        hosts.append(host)
+        has_controller = flag if flag else False
+    return hosts, has_controller
+
+
+def hosts_arg_to_hosts(config, hosts_arg):
+    if hosts_arg == "all":
+        return [config['controller']] + config['edges'], True
+    elif hosts_arg == "controller":
+        return [config['controller']], True
+    elif hosts_arg == "edges":
+        return config['edges'], False
+    else:
+        return comma_separated_names_to_hosts(config, hosts_arg)

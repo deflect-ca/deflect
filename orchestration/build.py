@@ -18,7 +18,7 @@ from pyaml_env import parse_config
 
 def build_all_images(client, registry=None):
     """
-    Builds all deflect-next images, as they are defined in NAME_TO_ROLE:
+    Builds all deflect images, as they are defined in NAME_TO_ROLE:
         "nginx": RoleEnum.edge,
         "bind-server": RoleEnum.controller,
         "certbot": RoleEnum.controller,
