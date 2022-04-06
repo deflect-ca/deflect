@@ -38,7 +38,8 @@ import logging
 from util.helpers import get_logger, get_config_yml_path, path_to_output
 from util.fetch_site_yml import fetch_site_yml
 from util.decrypt_and_verify_cert_bundles import main as decrypt_and_verify_cert_bundles
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+
+logger = get_logger(__name__)
 
 
 def get_host_by_name(config, name):

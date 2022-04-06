@@ -19,8 +19,7 @@ from util.helpers import (
     path_to_output,
 )
 
-# todo: use configuration for the logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def generate_legacy_filebeat_config(config, all_sites, timestamp):
@@ -54,7 +53,7 @@ def generate_legacy_filebeat_config(config, all_sites, timestamp):
         logger.debug(f"Removing {output_dir_tar}")
         os.remove(output_dir_tar)
 
-    logger.debug(f"Writing {output_dir_tar}")
+    logger.info(f"Writing {output_dir_tar}")
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
 

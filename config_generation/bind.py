@@ -31,7 +31,7 @@ from util.helpers import (get_logger, get_config_yml_path,
                           path_to_input, path_to_output,
                           path_to_containers)
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def rdata_and_type_for_txt(value):
@@ -353,7 +353,7 @@ def generate_bind_config(config, all_sites, timestamp):
     Create all the zone files
     """
     if not hasattr(dns, 'zone'):
-        logger.debug(
+        logger.warn(
             'HACKY: Something is wrong here and dns doesn\'t have zone'
         )
         from dns.zone import Zone
@@ -416,7 +416,7 @@ def generate_bind_config(config, all_sites, timestamp):
         'rndc.conf'
     ]
     for dns_config in dns_configs:
-        logger.debug(f"Copy {dns_config} to output dir")
+        logger.info(f"Copy {dns_config} to output dir")
         shutil.copyfile(
             f"{path_to_input()}/config/{dns_config}",
             f"{output_dir}/{dns_config}")
@@ -430,7 +430,7 @@ def generate_bind_config(config, all_sites, timestamp):
         'named.conf.options',
     ]
     for dns_config in dns_configs_in_container:
-        logger.debug(f"Copy {dns_config} to output dir")
+        logger.info(f"Copy {dns_config} to output dir")
         shutil.copyfile(
             f"{path_to_containers()}/bind/{dns_config}",
             f"{output_dir}/{dns_config}")
@@ -439,7 +439,7 @@ def generate_bind_config(config, all_sites, timestamp):
         logger.debug("Removing old output file: %s", output_dir_tar)
         os.remove(output_dir_tar)
 
-    logger.debug(f'Writing {output_dir_tar}')
+    logger.info(f'Writing {output_dir_tar}')
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
 

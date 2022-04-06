@@ -19,9 +19,9 @@ class Kibana(Container):
                     data = aiohttp.FormData()
                     data.add_field("file", f)
                     async with session.post(url, data=data, headers=headers) as resp:
-                        self.logger.debug(
+                        self.logger.info(
                             f"posted saved objects to kibana, response: {resp.status}")
-                        self.logger.debug(await resp.text())
+                        self.logger.info(await resp.text())
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(main())

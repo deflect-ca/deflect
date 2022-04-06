@@ -16,7 +16,7 @@ from pyaml_env import parse_config
 
 from orchestration.helpers import get_logger, get_config_yml_path
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 # XXX filenames might have these numbers appended: banjax-next.test.me.uk-0001
 

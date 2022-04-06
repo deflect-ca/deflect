@@ -20,7 +20,7 @@ from pyaml_env import parse_config
 from util.helpers import get_logger, PEMS, LIST_NAME_TO_DECISION, \
     get_config_yml_path, get_banjax_config_yml_path, path_to_input, path_to_output
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def site_decision_lists(site):
@@ -116,6 +116,7 @@ def generate_banjax_config(config, all_sites, formatted_time):
     if os.path.isfile(f"{output_dir}.tar"):
         os.remove(f"{output_dir}.tar")
 
+    logger.info(f"Writing {output_dir}.tar")
     with tarfile.open(f"{output_dir}.tar", "x") as tar:
         tar.add(output_dir, arcname=".")
 

@@ -95,7 +95,7 @@ def push_all_to_registry(images, client, registry, pull=False):
 
 if __name__ == '__main__':
     config = parse_config(get_sites_yml_path())
-    logger = get_logger(__name__, logging_level=logging.DEBUG)
+    logger = get_logger(__name__)
     dn_config = parse_config('input/deflect-next_config.yaml')
     docker_conf = dn_config['docker']
     images = []
