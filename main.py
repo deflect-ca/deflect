@@ -167,8 +167,10 @@ def abort_if_false(ctx, param, value):
 
 
 @click.command('config', short_help='Install config to target')
+@click.option('--sync', is_flag=True, default=False,
+              help='Install edge one by one, instead of all at once')
 @click.pass_context
-def _install_config(ctx):
+def _install_config(ctx, sync):
     """Install config to target
 
     This will install config in output dir to target.
@@ -186,22 +188,24 @@ def _install_config(ctx):
     """
     all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['host'] == 'edges':
-        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp, sync=sync)
     elif ctx.obj['host'] == 'controller':
         install_controller(ctx.obj['config'], all_sites, timestamp)
     elif ctx.obj['host'] == 'all':
         install_controller(ctx.obj['config'], all_sites, timestamp)
-        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp, sync=sync)
     else:
-        ctx.invoke(_install_selected, yes=False)
+        ctx.forward(_install_selected)
 
 
 @click.command('selected', short_help='Install config to selected target')
+@click.option('--sync', is_flag=True, default=False,
+              help='Install edge one by one, instead of all at once')
 @click.option('--yes', is_flag=True, callback=abort_if_false,
               expose_value=False,
               prompt='Please confirm the target _host is correct')
 @click.pass_context
-def _install_selected(ctx):
+def _install_selected(ctx, sync):
     all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['_has_controller']:
         install_controller(ctx.obj['config'], all_sites, timestamp)
@@ -211,7 +215,7 @@ def _install_selected(ctx):
             if host['hostname'] == ctx.obj['config']['controller']['hostname']:
                 ctx.obj['_hosts'].remove(host)
 
-    install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp)
+    install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp, sync=sync)
 
 
 @click.command('es', help='Install Elasticsearch')

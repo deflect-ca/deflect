@@ -125,6 +125,7 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
     logger.info(f"$$$ finished install_all_edge_components for {edge}")
+    return True
 
 
 def install_controller_components(config, all_sites, timestamp, logger):
@@ -161,6 +162,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
     else:
         Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+    return True
 
 
 def install_controller(config, all_sites, timestamp):
@@ -169,7 +171,15 @@ def install_controller(config, all_sites, timestamp):
     logger.info(f"install_controller host: {config['controller']}, result: {res}")
 
 
-def install_edges(config, edges, all_sites, timestamp):
+def install_edges(config, edges, all_sites, timestamp, sync=False):
+    """Install to edges, either in sync or parallel"""
+    if sync:
+        for edge in edges:
+            logger.info(f"running install_edge_components() in sync on {edge['hostname']}")
+            res = install_edge_components(edge, config, all_sites, timestamp, logger)
+            logger.info(f"install_edge host: {edge['hostname']}, result: {res}")
+        return
+
     # now we can install all the edges in parallel
     logger.info(f"running install_edge_components() in parallel for {len(config['edges'])} edges")
     results = run_on_threadpool({
