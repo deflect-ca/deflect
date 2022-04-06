@@ -209,15 +209,26 @@ def site_to_zone(config, site_name, site):
     for default_ns in config['dns']['default_ns']:
         add_record_rel(zone, site_name, site_name, "NS", default_ns)
 
-    for alt_name in sorted(set(site["server_names"])):
-        # this somehow lets bind9 forward these requests to certbot's dns-helper
-        add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", acme_ns)
+    def is_additional_domain(alt_name):
+        for prefix in site['additional_domain_prefix']:
+            if alt_name.startswith(f"{prefix}."):
+                return True
 
-        # it's a bit kludgy, but we say the controller is part of dnet "controller"
-        # so we can specify that kibana, elasticsearch, and doh-proxy live there.
-        for edge in [config['controller']] + config['edges']:
-            if edge['dnet'] == site['dnet']:
-                add_record_rel(zone, site_name, alt_name, "A", edge['ip'])
+    for alt_name in sorted(set(site["server_names"])):
+        # we don't want _acme-challenge.www
+        # also no A record for www and additional_domain_prefix, just CNAME
+        if alt_name.startswith("www.") or is_additional_domain(alt_name):
+            logger.debug(f"www/additional_domain handling for {alt_name}")
+            add_record_rel(zone, site_name, alt_name, "CNAME", site_name)
+        else:
+            # this somehow lets bind9 forward these requests to certbot's dns-helper
+            add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", acme_ns)
+
+            # it's a bit kludgy, but we say the controller is part of dnet "controller"
+            # so we can specify that kibana, elasticsearch, and doh-proxy live there.
+            for edge in [config['controller']] + config['edges']:
+                if edge['dnet'] == site['dnet']:
+                    add_record_rel(zone, site_name, alt_name, "A", edge['ip'])
 
     for rel_zone, type_and_values in site['dns_records'].items():
         for type_and_value in type_and_values:
