@@ -50,7 +50,7 @@ class __logger(metaclass=__singleton):
         '*': '[%(levelname)s] %(asctime)s %(message)s',
     }
 
-    def __init__(self, log_level=None, output_file='deflect-next.log'):
+    def __init__(self, log_level=None, output_file='deflect-orch.log'):
         """
         Creates a logger that logs to file and console with the same logging level
         :param int logging_level: the logging level
@@ -93,7 +93,7 @@ class __logger(metaclass=__singleton):
             self.logger.addHandler(self.file_handler)
             self.logger.addHandler(self.console_handler)
 
-        self.logger.info(f"Logger init, set log level to {info}")
+        self.logger.debug(f"Logger init, set log level to {info}")
 
     def get_logger(self):
         return self.logger

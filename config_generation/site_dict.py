@@ -54,7 +54,7 @@ def old_to_new_cache_exceptions(old_cache_exceptions):
 
 def old_to_new_site_dict(old_dict):
     new_dict = {}
-    # XXX not implemented in banjax-next
+    # XXX not implemented in banjax
     new_dict["challenge_everyone_captcha"] = old_dict.get(
         "banjax_captcha", False)
     new_dict["sitewide_sha_inv"] = old_dict.get(

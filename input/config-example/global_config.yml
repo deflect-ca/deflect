@@ -4,7 +4,7 @@ server_env: staging  # or production
 debug:
   log_level: 'INFO'  # DEBUG, INFO, WARNING, ERROR, CRITICAL
   docker_build_log: False  # only for edges
-  orchestration_log: /path/to/deflect.log
+  orchestration_log: deflect-orch.log  # to project root
 dnets:
   - dnet_a
   - controller

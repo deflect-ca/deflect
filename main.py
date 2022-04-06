@@ -34,7 +34,7 @@ from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
 logger = get_logger(__name__)
 
 
-@click.group(help='Welcome to deflect-next orchestration script',
+@click.group(help='Welcome to deflect orchestration script',
              invoke_without_command=True, no_args_is_help=True)
 @click.pass_context
 @click.option('--debug', default=False, is_flag=True,
@@ -68,7 +68,7 @@ def cli_base(ctx, debug, host, action):
             raise click.Abort
     elif ctx.invoked_subcommand:
         # invoke normal subcommand
-        click.echo("Welcome to Deflect-next orchestration script")
+        click.echo("Welcome to Deflect orchestration script")
         print_hosts_and_ctx(ctx)
         ctx.obj['get_all_sites'] = get_all_sites(ctx.obj['config'])
 
@@ -141,7 +141,7 @@ def _gen_config(ctx):
     logger.info('>>> Generating nginx config...')
     generate_nginx_config(all_sites, config, timestamp)
 
-    logger.info('>>> Generating banjax-next config...')
+    logger.info('>>> Generating banjax config...')
     generate_banjax_config(config, all_sites, timestamp)
 
     logger.info('>>> Generating edgemanage config...')
