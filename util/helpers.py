@@ -19,7 +19,7 @@ def reset_log_level(log_level):
     return __logger().reset_log_level(log_level)
 
 
-class __singleton(type):
+class SingletonMetaclass(type):
     """
     Singleton metaclass
     """
@@ -31,7 +31,7 @@ class __singleton(type):
         return cls._instances[cls]
 
 
-class __logger(metaclass=__singleton):
+class __logger(metaclass=SingletonMetaclass):
     """
     Singleton logger class so we
     don't have multiple logger
