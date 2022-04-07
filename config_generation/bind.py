@@ -243,6 +243,7 @@ def site_to_zone(config, site_name, site, all_sites):
                     logger.debug(f"{rel_zone}.{site_name} "
                                   "is an individual site in all_sites, adding _acme-challenge")
                     add_record_rel(zone, site_name, f"_acme-challenge.{rel_zone}.{site_name}", "NS", acme_ns)
+                    add_record_rel(zone, site_name, f"_acme-challenge.www.{rel_zone}.{site_name}", "NS", acme_ns)
             add_record_norel(zone, rel_zone, type_and_value['type'], type_and_value['value'])
 
     return zone
