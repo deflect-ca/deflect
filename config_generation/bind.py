@@ -3,7 +3,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-import logging
+import random
 import shutil
 import tarfile
 import os
@@ -290,6 +290,8 @@ def template_controller_zone(in_filename, out_filename, config):
                 soa_mailbox=config['dns']['soa_mailbox'],
                 soa_nameserver=config['dns']['soa_nameserver'],
                 default_ns=config['dns']['default_ns'],
+                root_domain=config['system_root_zone'],
+                edges=random.sample(config['edges'], 6 if len(config['edges']) > 6 else len(config['edges']))
             )
             # add some extra stuff to the root zone
             # like edges in config, and other neceseary stuff
