@@ -48,9 +48,6 @@ dns:
   soa_nameserver: dns0.example.com.  # The nameserver to write to SOA records
   soa_mailbox: zone.example.com.
 root_zone_extra:  # extra records for system root zone
-  'test-origin':
-    - type: A
-      value: 1.2.3.4  # should be same as controller
   'subdomain':
     - type: A
       value: 8.8.8.8

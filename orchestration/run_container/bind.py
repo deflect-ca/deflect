@@ -1,7 +1,8 @@
 from orchestration.run_container.base_class import Container
+from util.helpers import SingletonMetaclass
 
 
-class Bind(Container):
+class Bind(Container, metaclass=SingletonMetaclass):
     def update(self, config_timestamp):
         with open(f"output/{config_timestamp}/etc-bind.tar", "rb") as f:
             self.container.put_archive("/etc/bind", f.read())

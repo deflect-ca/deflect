@@ -3,7 +3,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
-import logging
+import random
 import shutil
 import tarfile
 import os
@@ -190,7 +190,7 @@ def get_serial():
     return int(time.time())
 
 
-def site_to_zone(config, site_name, site):
+def site_to_zone(config, site_name, site, all_sites):
     zone = dns.zone.Zone(origin=dns.name.from_text(site['public_domain']))
 
     acme_ns = f"acme.{config['system_root_zone']}"
@@ -209,18 +209,41 @@ def site_to_zone(config, site_name, site):
     for default_ns in config['dns']['default_ns']:
         add_record_rel(zone, site_name, site_name, "NS", default_ns)
 
+    def is_additional_domain(alt_name):
+        for prefix in site['additional_domain_prefix']:
+            if alt_name.startswith(f"{prefix}."):
+                return True
+
     for alt_name in sorted(set(site["server_names"])):
         # this somehow lets bind9 forward these requests to certbot's dns-helper
         add_record_rel(zone, site_name, f"_acme-challenge.{alt_name}", "NS", acme_ns)
 
-        # it's a bit kludgy, but we say the controller is part of dnet "controller"
-        # so we can specify that kibana, elasticsearch, and doh-proxy live there.
-        for edge in [config['controller']] + config['edges']:
-            if edge['dnet'] == site['dnet']:
-                add_record_rel(zone, site_name, alt_name, "A", edge['ip'])
+        # we don't want _acme-challenge.www
+        # also no A record for www and additional_domain_prefix, just CNAME
+        if alt_name.startswith("www.") or is_additional_domain(alt_name):
+            logger.debug(f"www/additional_domain handling for {alt_name}")
+            add_record_rel(zone, site_name, alt_name, "CNAME", site_name)
+        else:
+            # it's a bit kludgy, but we say the controller is part of dnet "controller"
+            # so we can specify that kibana, elasticsearch, and doh-proxy live there.
+            for edge in [config['controller']] + config['edges']:
+                if edge['dnet'] == site['dnet']:
+                    add_record_rel(zone, site_name, alt_name, "A", edge['ip'])
 
     for rel_zone, type_and_values in site['dns_records'].items():
         for type_and_value in type_and_values:
+            if type_and_value['type'] == 'CNAME':
+                """
+                check if its an individual site
+                and add _acme challenge for it because putting _acme-challenge
+                record in its individual zone file won't be AXFR tranfer to
+                easydns as we only register the root domain
+                """
+                if f"{rel_zone}.{site_name}" in all_sites:
+                    logger.debug(f"{rel_zone}.{site_name} "
+                                  "is an individual site in all_sites, adding _acme-challenge")
+                    add_record_rel(zone, site_name, f"_acme-challenge.{rel_zone}.{site_name}", "NS", acme_ns)
+                    add_record_rel(zone, site_name, f"_acme-challenge.www.{rel_zone}.{site_name}", "NS", acme_ns)
             add_record_norel(zone, rel_zone, type_and_value['type'], type_and_value['value'])
 
     return zone
@@ -268,6 +291,8 @@ def template_controller_zone(in_filename, out_filename, config):
                 soa_mailbox=config['dns']['soa_mailbox'],
                 soa_nameserver=config['dns']['soa_nameserver'],
                 default_ns=config['dns']['default_ns'],
+                root_domain=config['system_root_zone'],
+                edges=random.sample(config['edges'], 6 if len(config['edges']) > 6 else len(config['edges']))
             )
             # add some extra stuff to the root zone
             # like edges in config, and other neceseary stuff
@@ -385,7 +410,7 @@ def generate_bind_config(config, all_sites, timestamp):
 
     # write out a zone file for each site
     for site_name, site in client_and_system_sites.items():
-        zone = site_to_zone(config, site_name, site)
+        zone = site_to_zone(config, site_name, site, all_sites=client_and_system_sites)
         zone.to_file(get_output_filename(sites_dir, site_name), relativize=True, sorted=True)
 
     # template for edgemanage

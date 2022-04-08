@@ -93,12 +93,15 @@ def old_to_new_site_dict(old_dict):
     new_dict["uploaded_cert_bundle_name"] = old_dict.get("tls_bundle", None)
     server_names = []
     root_name = new_dict["public_domain"]
+    # not seen
     if not old_dict.get("www_only", False):
         server_names.append(root_name)
+    # only 3
     if not old_dict.get("no_www", False):
         server_names.append("www." + root_name)
     for prefix in old_dict.get("additional_domain_prefix", []):
         server_names.append(prefix + "." + root_name)
+    new_dict["additional_domain_prefix"] = old_dict.get("additional_domain_prefix", [])
     new_dict["server_names"] = server_names
     new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
     new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", [])
@@ -117,6 +120,7 @@ def complete_system_sites(config, system_sites):
         fixed_site['server_names'] = fixed_server_names
         fixed_site['public_domain'] = f"{fixed_site['public_domain']}.{config['system_root_zone']}"
         fixed_site['origin_ip'] = config['controller']['ip']  # system sites all live on the controller
+        fixed_site['additional_domain_prefix'] = []
         fixed_system_sites[fixed_name] = fixed_site
     return fixed_system_sites
 
