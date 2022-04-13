@@ -12,27 +12,27 @@ import requests
 def attempt_to_authenticate(ip, logger):
     p_conf = get_persisted_config()
     if 'elastic_password' not in p_conf:
-        logger.debug("'elastic_password' not in persisted/config, auth failed")
+        logger.warn("'elastic_password' not in persisted/config, auth failed")
         return False
     ca_file = f"{path_to_persisted()}/elastic_certs/ca.crt"
     if not os.path.isfile(ca_file):
-        logger.debug("persisted/elastic_certs/ca.crt not found, auth failed")
+        logger.warn("persisted/elastic_certs/ca.crt not found, auth failed")
         return False
     for _ in range(0, 5):
-        logger.debug(f"attempting to auth with password {p_conf['elastic_password']}")
+        logger.info(f"attempting to auth with password {p_conf['elastic_password']}")
         try:
             r = requests.get(
                     f"https://{ip}:9200",
                     verify=ca_file,
                     auth=("elastic", p_conf['elastic_password'])
             )
-            logger.debug(r.text)
+            logger.info(r.text)
             if r.status_code == 401:
                 return False
             else:
                 return True
         except Exception:
-            logger.debug("sleeping and retrying...")
+            logger.info("sleeping and retrying...")
             time.sleep(5)
     return False
 
@@ -41,10 +41,10 @@ class Elasticsearch(Container):
     def build_image(self, config, registry=''):
         for f in ["ca.crt", "ca.key", "instance.crt", "instance.key"]:
             if not os.path.isfile(os.path.join(path_to_persisted(), f)):
-                self.logger.debug(f"ES didn't find persisted/{f}, so re-generating all certs")
+                self.logger.warn(f"ES didn't find persisted/{f}, so re-generating all certs")
                 break
         else:
-            self.logger.debug("ES found all required certs under persisted/, not re-generating")
+            self.logger.info("ES found all required certs under persisted/, not re-generating")
             return super().build_image()
         generate_new_elastic_certs(config, self.logger)
 
@@ -60,7 +60,7 @@ class Elasticsearch(Container):
         for line in lines:
             if line.startswith("PASSWORD elastic"):
                 password = line.split(" ")[-1]
-                self.logger.debug(f"found elastic password: {password}")
+                self.logger.info(f"found elastic password: {password}")
                 return password
         else:
             raise Exception("!!! did not find elastic password")
@@ -80,7 +80,7 @@ class Elasticsearch(Container):
                 break
             except Exception:
                 traceback.print_exc()
-                print("waiting for /usr/share/elasticsearch/config/elasticsearch.keystore to appear...")
+                self.logger.info("waiting for /usr/share/elasticsearch/config/elasticsearch.keystore to appear...")
                 time.sleep(5)
                 continue
         else:

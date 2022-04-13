@@ -17,4 +17,8 @@ $TTL    300
 ; Other essential records
 acme    IN      A       {{ ip }}
 
+; Test origin{% for edge in edges %}
+test-origin     IN      A       {{ edge['ip'] }}{% endfor %}
+_acme-challenge.test-origin     IN      NS       acme.{{ root_domain }}.
+
 ; Additional records in config

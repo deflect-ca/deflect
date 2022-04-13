@@ -1,24 +1,34 @@
 system_root_zone: example.com
 login_user: deflect
 server_env: staging  # or production
+debug:
+  log_level: 'INFO'  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  docker_build_log: False  # only for edges
+  orchestration_log: deflect-orch.log  # to project root
 dnets:
   - dnet_a
   - controller
 controller:
   hostname: controller.example.com
   ip: 1.2.3.4
-  docker_ip: 127.0.0.1  # connect to local docker without SSH
   dnet: controller
 edges:
   - hostname: edge-1.example.com
     ip: 2.3.4.5
     dnet: dnet_a
     user: deflect
-logging:  # used for filebeat and metricbeat in production
-  built_in_elk: True
-  elasticsearch_host: https://127.0.0.1:9200
-  kibana_host: https://127.0.0.1:5601
-  elasticsearch_password: password
+logging:
+  mode: 'elk_internal'
+  elk_internal: ~
+    # stand up built in ELK, no settings required
+  elk_external:
+    # connect to an external ELK via filebeat
+    elasticsearch_host: https://127.0.0.1:9200
+    kibana_host: https://127.0.0.1:5601
+    elasticsearch_password: password
+  logstash_external:
+    # connect to an external ELK via legacy-filebeat
+    logstash_host: logstash.example.com
 fetch_site_yml:
   ssh:
     host: host
@@ -38,9 +48,6 @@ dns:
   soa_nameserver: dns0.example.com.  # The nameserver to write to SOA records
   soa_mailbox: zone.example.com.
 root_zone_extra:  # extra records for system root zone
-  'test-origin':
-    - type: A
-      value: 1.2.3.4  # should be same as controller
   'subdomain':
     - type: A
       value: 8.8.8.8
@@ -48,7 +55,21 @@ staging_certbot_options: "--email some@email.com --server https://127.0.0.1:1400
 production_certbot_options: "--email prod@email.com --server https://acme-v02.api.letsencrypt.org/directory"
 doh_private_port: 8085
 kibana_private_port: 5601
-ssl_ciphers: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
+nginx:
+  # SSL cipher for for each site
+  ssl_ciphers: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
+  # IPs to allow nginx purge cache
+  allow_purge:
+    - ip: 172.17.0.0/24
+      comment: Docker network
+  # IPs to allow info/decision_lists/rate_limit_states
+  allow_banjax_info:
+    - ip: 172.17.0.0/24
+      comment: Docker network
+  # IPs to allow info/stub_status
+  allow_stub_status:
+    - ip: 172.17.0.0/24
+      comment: Docker network
 
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:

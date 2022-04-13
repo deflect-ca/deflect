@@ -20,7 +20,7 @@ from util.helpers import (
         path_to_output,
 )
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def redirect_to_https_server(site: dict):
@@ -64,7 +64,7 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
     if edge_https:
         server.add(nginx.Key('listen', '443 ssl http2'))
         server.add(*ssl_certificate_and_key(dconf, site))
-        server.add(nginx.Key('ssl_ciphers', dconf["ssl_ciphers"]))
+        server.add(nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]))
     else:
         server.add(nginx.Key('listen', '80'))
 
@@ -204,8 +204,9 @@ def _access_granted_fail_open_location_contents(
     limit_except.add(nginx.Key('deny', 'all'))
     location_contents.append(limit_except)
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
-    # location_contents.append(nginx.Key('add_header', "X-Deflect-upstream_addr $upstream_addr"))
-    location_contents.append(nginx.Key('add_header', "X-Deflect-upstream_response_time $upstream_response_time"))
+    location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
+    location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
+    location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
     location_contents.append(nginx.Key('proxy_set_header', "Host $host"))
     location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
@@ -303,27 +304,48 @@ def empty_catchall_server():
 
 # the built-in stub_status route shows us the number of active connections.
 # /info is useful for checking what version of config is loaded.
-def info_and_stub_status_server(timestamp):
-    return nginx.Server(
+def info_and_stub_status_server(timestamp, dconf):
+    server = nginx.Server(
         nginx.Key('listen', "80"),
         nginx.Key('server_name', "127.0.0.1"),  # metricbeat doesn't allow setting the Host header
         nginx.Key('allow', "127.0.0.1"),
+    )
+
+    if 'nginx' in dconf:
+        for item in dconf['nginx']['allow_stub_status']:
+            server.add(nginx.Comment(item['comment']))
+            server.add(nginx.Key('allow', item['ip']))
+
+    info_json = json.dumps({
+        "config_version": timestamp,
+        "hostname": "$hostname"
+    }).replace('"', '\\"')
+    server.add(
         nginx.Key('deny', "all"),
         nginx.Key('access_log', "off"),
 
         nginx.Location('/info',
-            nginx.Key('return', f"200 \"{timestamp}\\n\"")),
+            nginx.Key('return', f"200 \"{info_json}\"")),
 
         nginx.Location('/stub_status',
             nginx.Key('stub_status', None))
     )
+    return server
 
 
-def banjax_server():
-    return nginx.Server(
+def banjax_server(dconf):
+    server = nginx.Server(
         nginx.Key('listen', "80"),
         nginx.Key('server_name', "banjax"),
         nginx.Key('allow', "127.0.0.1"),
+    )
+
+    if 'nginx' in dconf:
+        for item in dconf['nginx']['allow_banjax_info']:
+            server.add(nginx.Comment(item['comment']))
+            server.add(nginx.Key('allow', item['ip']))
+
+    server.add(
         nginx.Key('deny', "all"),
         nginx.Key('access_log', "off"),  # XXX?
 
@@ -337,14 +359,23 @@ def banjax_server():
         nginx.Location('/rate_limit_states',
             nginx.Key('proxy_pass', "http://127.0.0.1:8081/rate_limit_states")),
     )
+    return server
 
 
-def cache_purge_server():
-    return nginx.Server(
+def cache_purge_server(dconf):
+    server = nginx.Server(
         nginx.Key('listen', "80"),
         nginx.Key('server_name', '"cache_purge"'),
         nginx.Key('access_log', "off"),
         nginx.Key('allow', "127.0.0.1"),
+    )
+
+    if 'nginx' in dconf:
+        for item in dconf['nginx']['allow_purge']:
+            server.add(nginx.Comment(item['comment']))
+            server.add(nginx.Key('allow', item['ip']))
+
+    server.add(
         nginx.Key('deny', "all"),
 
         nginx.Location('~ /auth_requests/(.*)',
@@ -353,6 +384,7 @@ def cache_purge_server():
         nginx.Location('~ /site_content/(.*)',
             nginx.Key('proxy_cache_purge', "site_content_cache $1")),
     )
+    return server
 
 
 def http_block(dconf, timestamp):
@@ -403,13 +435,13 @@ def http_block(dconf, timestamp):
     http.add(empty_catchall_server())
 
     # /info and /stub_status
-    http.add(info_and_stub_status_server(timestamp))
+    http.add(info_and_stub_status_server(timestamp, dconf))
 
     # exposing a few banjax endpoints
-    http.add(banjax_server())
+    http.add(banjax_server(dconf))
 
     # purge the auth_requests or site_content caches
-    http.add(cache_purge_server())
+    http.add(cache_purge_server(dconf))
 
     # include all the per-site files
     http.add(nginx.Key('include', "/etc/nginx/sites.d/*.conf"))
@@ -500,7 +532,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
                     f.write(template.render(
                         server_name=name,
                         cert_name=name,
-                        ssl_ciphers=config['ssl_ciphers'],
+                        ssl_ciphers=config['nginx']['ssl_ciphers'],
                         proxy_pass=f"http://{site['origin_ip']}:{site['origin_http_port']}",
                     ))
 
@@ -510,6 +542,7 @@ def generate_nginx_config(all_sites, config, formatted_time):
         if os.path.isfile(f"{output_dir}.tar"):
             os.remove(f"{output_dir}.tar")
 
+        logger.info(f"Writing {output_dir}.tar")
         with tarfile.open(f"{output_dir}.tar", "x") as tar:
             tar.add(output_dir, arcname=".")
 

@@ -16,7 +16,7 @@ from orchestration.helpers import get_logger
 EDGE_IP = "0.0.0.0"
 # EDGE_IP="127.0.0.1"
 # todo: use configuration for the logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def install_nginx_config(client, config, all_sites, config_timestamp, image_build_timestamp):

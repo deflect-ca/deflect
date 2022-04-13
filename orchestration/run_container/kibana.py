@@ -19,9 +19,9 @@ class Kibana(Container):
                     data = aiohttp.FormData()
                     data.add_field("file", f)
                     async with session.post(url, data=data, headers=headers) as resp:
-                        self.logger.debug(
+                        self.logger.info(
                             f"posted saved objects to kibana, response: {resp.status}")
-                        self.logger.debug(await resp.text())
+                        self.logger.info(await resp.text())
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(main())
@@ -31,12 +31,12 @@ class Kibana(Container):
         # self._upload_saved_objects()
 
     def start_new_container(self, config, image_id):
-        ELASTICSEARCH_HOST = config['logging']['elasticsearch_host']
-        ELASTICSEARCH_PASSWORD = config['logging']['elasticsearch_password']
-
-        if config['server_env'] != 'production':
+        if config['logging']['mode'] == 'elk_internal':
             ELASTICSEARCH_HOST = "https://127.0.0.1:9200"  # joined ES network
             ELASTICSEARCH_PASSWORD = get_persisted_config()['elastic_password']
+        elif config['logging']['mode'] == 'elk_external':
+            ELASTICSEARCH_HOST = config['logging']['elk_external']['elasticsearch_host']
+            ELASTICSEARCH_PASSWORD = config['logging']['elk_external']['elasticsearch_password']
 
         return self.client.containers.run(
             image_id,

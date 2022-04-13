@@ -4,43 +4,26 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import logging
-
-from concurrent.futures.thread import ThreadPoolExecutor
-
-from pyaml_env import parse_config
-import traceback
-import sys
-
-from util.helpers import get_config_yml_path, get_logger
-
-from orchestration.run_container import (
-        Bind,
-        Nginx,
-        Banjax,
-        Filebeat,
-        Metricbeat,
-        DohProxy,
-        Certbot,
-        TestOrigin,
-        Elasticsearch,
-        Kibana,
-        Pebble,
-        EdgeManage,
-)
-from orchestration.hosts import (
-        get_docker_engine_version,
-        docker_client_for_host,
-        ensure_all_requirements,
-)
-
 import random
 import string
-
+import sys
+import traceback
+from concurrent.futures.thread import ThreadPoolExecutor
 from functools import partial
 from io import StringIO
 
-# todo: use configuration for the logger
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+from pyaml_env import parse_config
+from util.helpers import get_config_yml_path, get_logger
+
+from orchestration.hosts import (docker_client_for_host,
+                                 ensure_all_requirements,
+                                 get_docker_engine_version)
+from orchestration.run_container import (Banjax, Bind, Certbot, DohProxy,
+                                         EdgeManage, Elasticsearch, Filebeat,
+                                         Kibana, LegacyFilebeat, Metricbeat,
+                                         Nginx, Pebble, TestOrigin)
+
+logger = get_logger(__name__)
 
 
 # XXX probably a better way
@@ -80,18 +63,19 @@ def run_on_threadpool(h_to_fs):
         for hostname, func in h_to_fs.items():
             logger, log_stream = new_logger_and_stream()
             futures[hostname] = {
-                    'future': executor.submit(func, logger=logger),
-                    'log_stream': log_stream
+                'future': executor.submit(func, logger=logger),
+                'log_stream': log_stream
             }
 
     results = {}
     for hostname, future in futures.items():
-        result = future["future"].exception()
-        if not result:
-            result = future["future"].result()
+        # XXX you might break thread pool if you don't call
+        # exception() / result() in the following order
+        ex = future["future"].exception()
         results[hostname] = {
-                "result": result,
-                "logs": future["log_stream"].getvalue()
+            "result": ex if ex else future["future"].result(),
+            "error": (ex != None),
+            "logs": future["log_stream"].getvalue()
         }
 
     return results
@@ -99,8 +83,8 @@ def run_on_threadpool(h_to_fs):
 
 def gather_info(config, hosts):
     results = run_on_threadpool({
-            host['hostname']: partial(get_docker_engine_version, config, host)
-            for host in hosts
+        host['hostname']: partial(get_docker_engine_version, config, host)
+        for host in hosts
     })
 
     for hostname, result in results.items():
@@ -112,8 +96,8 @@ def gather_info(config, hosts):
 def install_base(config, hosts, logger):
     logger.info(f"running ensure_all_requirements on {hosts}")
     results = run_on_threadpool({
-            host['hostname']: partial(ensure_all_requirements, config, host)
-            for host in hosts
+        host['hostname']: partial(ensure_all_requirements, config, host)
+        for host in hosts
     })
 
     for hostname, result in results.items():
@@ -123,23 +107,29 @@ def install_base(config, hosts, logger):
 
 
 def install_edge_components(edge, config, all_sites, timestamp, logger):
-    logger.debug(f"$$$ starting install_all_edge_components for {edge['hostname']}")
+    logger.info(f"$$$ starting install_all_edge_components for {edge['hostname']}")
     # XXX very annoyingly you can't specify a specific ssh key here... has to be in a (the?) default
     # location OR the socket / ssh-agent thing.
     client = docker_client_for_host(edge, config=config)
     hostname = f"{client.info().get('Name')}"
-    logger.debug(f"docker things this host is called {hostname}")
+    logger.info(f"docker things this host is called {hostname}")
 
-    Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
-    Banjax(        client, config, kill_existing=True, logger=logger).update(timestamp)
-    Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
-    Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+    Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
+    Banjax(client, config, kill_existing=True, logger=logger).update(timestamp)
 
-    logger.debug(f"$$$ finished install_all_edge_components for {edge}")
+    logger.info(f"Logging mode is: {config['logging']['mode']}")
+    if config['logging']['mode'] == 'logstash_external':
+        LegacyFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
+    else:
+        Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
+        Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+
+    logger.info(f"$$$ finished install_all_edge_components for {edge}")
+    return True
 
 
 def install_controller_components(config, all_sites, timestamp, logger):
-    logger.debug('Getting a Docker client...')
+    logger.info('Getting a Docker client...')
     client = docker_client_for_host(config['controller'], config=config)
 
     Bind(          client, config, find_existing=True, logger=logger).update(timestamp)
@@ -149,28 +139,30 @@ def install_controller_components(config, all_sites, timestamp, logger):
         DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)
         Pebble(        client, config, find_existing=True, logger=logger).update(timestamp)
     else:
-        logger.debug('skipping DohProxy and Pebble in production')
+        logger.info('skipping DohProxy and Pebble in production')
 
     Certbot(       client, config, find_existing=True, logger=logger).update(all_sites, config, timestamp)
     TestOrigin(    client, config, find_existing=True, logger=logger).update(timestamp)
 
-    if config['logging']['built_in_elk']:
+    if config['logging']['mode'] == 'elk_internal':
         Elasticsearch( client, config, find_existing=True, logger=logger).update(timestamp)
         Kibana(        client, config, find_existing=True, logger=logger).update(timestamp)
     else:
-        logger.debug('skipping Elasticsearch and Kibana for not using built_in_elk')
+        logger.info('skipping Elasticsearch and Kibana for not using elk_internal')
 
     if client.info()["Name"] == "docker-desktop":
         logger.debug("detected Docker Desktop, not installing controller's Nginx, Filebeat, or Metricbeat")
         return
 
-    Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
-    Nginx(         client, config, find_existing=True, logger=logger).update(timestamp)
-    Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+    Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
 
-def install_everything(config, all_sites, timestamp):
-    install_controller(config, all_sites, timestamp)
-    install_edges(config, all_sites, timestamp)
+    logger.info(f"Logging mode is: {config['logging']['mode']}")
+    if config['logging']['mode'] == 'logstash_external':
+        pass
+    else:
+        Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
+        Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+    return True
 
 
 def install_controller(config, all_sites, timestamp):
@@ -179,22 +171,36 @@ def install_controller(config, all_sites, timestamp):
     logger.info(f"install_controller host: {config['controller']}, result: {res}")
 
 
-def install_edges(config, all_sites, timestamp):
+def install_edges(config, edges, all_sites, timestamp, sync=False):
+    """Install to edges, either in sync or parallel"""
+    if sync:
+        for edge in edges:
+            logger.info(f"running install_edge_components() in sync on {edge['hostname']}")
+            res = install_edge_components(edge, config, all_sites, timestamp, logger)
+            logger.info(f"install_edge host: {edge['hostname']}, result: {res}")
+        return
+
     # now we can install all the edges in parallel
-    logger.info("running install_edge_components()...")
+    logger.info(f"running install_edge_components() in parallel for {len(config['edges'])} edges")
     results = run_on_threadpool({
-            edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
-            for edge in config['edges']
+        edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
+        for edge in edges
     })
 
+    raise_error = False
     for hostname, result in results.items():
-        logger.info(f"host: {hostname}, install_edge_components result: {result['result']}")
+        logger.info(f"install_edges: {hostname}")
+        if result['error']:
+            raise_error = True
+            logger.warn(f"\t Error (raise later):\n {result['result']}")
+        else:
+            # When there is no error, this is usually None
+            logger.info(f"\t Result: {result['result']}")
+
+        # detail runtime logs are here
         for line in result["logs"].splitlines():
             logger.info(f"\t {line}")
 
-
-if __name__ == "__main__":
-    config = parse_config(get_config_yml_path())
-    install_everything(
-        config=config,
-    )
+    if raise_error:
+        raise Exception("Error installing edges in ThreadPoolExecutorStackTraced. "
+                        "Raise error at end to fail CI/CD")

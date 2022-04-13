@@ -20,7 +20,7 @@ from pyaml_env import parse_config
 from util.helpers import get_logger, PEMS, LIST_NAME_TO_DECISION, \
     get_config_yml_path, get_banjax_config_yml_path, path_to_input, path_to_output
 
-logger = get_logger(__name__, logging_level=logging.DEBUG)
+logger = get_logger(__name__)
 
 
 def site_decision_lists(site):
@@ -85,6 +85,8 @@ def generate_banjax_config(config, all_sites, formatted_time):
             password_bytes = base64.b64decode(password_b64)
             password_hex = password_bytes.hex()
             all_site_password_hashes[site['public_domain']] = password_hex
+    banjax_next_config["password_protected_paths"] = all_site_password_protected_paths
+    banjax_next_config["password_hashes"] = all_site_password_hashes
 
     # todo: same independent iteration, merge it
     all_per_site_rate_limited_regexes = {}
@@ -114,6 +116,7 @@ def generate_banjax_config(config, all_sites, formatted_time):
     if os.path.isfile(f"{output_dir}.tar"):
         os.remove(f"{output_dir}.tar")
 
+    logger.info(f"Writing {output_dir}.tar")
     with tarfile.open(f"{output_dir}.tar", "x") as tar:
         tar.add(output_dir, arcname=".")
 
