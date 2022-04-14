@@ -6,6 +6,7 @@
 
 import os
 import logging
+import errno
 from enum import Enum
 from pathlib import Path
 from pyaml_env import parse_config
@@ -171,6 +172,16 @@ def get_banjax_config_yml_path():
 
 def get_kibana_saved_objects_path():
     return os.path.join(path_to_input(), 'kibana-saved-objects.ndjson')
+
+def symlink_force(target, link_name):
+    try:
+        os.symlink(target, link_name)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            os.remove(link_name)
+            os.symlink(target, link_name)
+        else:
+            raise e
 
 class RoleEnum(Enum):
     edge = 'edge'
