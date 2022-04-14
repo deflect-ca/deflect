@@ -17,17 +17,7 @@ import errno
 from scp import SCPClient
 from os import path
 from shutil import copyfile
-
-
-def symlink_force(target, link_name):
-    try:
-        os.symlink(target, link_name)
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            os.remove(link_name)
-            os.symlink(target, link_name)
-        else:
-            raise e
+from util.helpers import symlink_force
 
 
 def progress(filename, size, sent):

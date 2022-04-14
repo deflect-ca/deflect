@@ -21,6 +21,7 @@ from orchestration.everything import (gather_info, install_base,
 from orchestration.hosts import (docker_client_for_host, host_to_role,
                                  run_local_or_remote_noraise)
 from orchestration.run_container.banjax import Banjax
+from orchestration.run_container.certbot import Certbot
 from orchestration.run_container.base_class import (find_existing_container,
                                                     get_persisted_config)
 from orchestration.run_container.elasticsearch import (Elasticsearch,
@@ -228,6 +229,16 @@ def _install_banjax(ctx):
         banjax.update(timestamp)
 
 
+@click.command('certbot', help='Install and update certbot')
+@click.pass_context
+def _install_certbot(ctx):
+    all_sites, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        Certbot(client, ctx.obj['config'], find_existing=True, logger=logger).update(
+            all_sites, ctx.obj['config'], timestamp)
+
+
 @click.command('test-es-auth', help='Attempt to authenticate with saved ES auth')
 @click.pass_context
 def _test_es_auth(ctx):
@@ -396,6 +407,7 @@ install.add_command(_install_base)
 install.add_command(_install_config)
 install.add_command(_install_es)
 install.add_command(_install_banjax)
+install.add_command(_install_certbot)
 install.add_command(_install_selected)
 
 # Get section

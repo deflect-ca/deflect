@@ -1,94 +1,149 @@
-from orchestration.run_container.base_class import Container
-from orchestration.run_container import Bind
-import tarfile
-import subprocess
-import shutil
 import os
-import errno
+import shutil
+import subprocess
+import tarfile
 from time import time
-from util.helpers import path_to_input
+from datetime import datetime
+from tempfile import TemporaryDirectory
+
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from orchestration.run_container import Bind
+from orchestration.run_container.base_class import Container
+from util.helpers import path_to_input, symlink_force
 
 
 class Certbot(Container):
+    """
+    Process of the certbot container
+
+    1. clear everything in /etc/letsencrypt/{archive,live,renewal} to start fresh (in case container is running)
+    2. check previous certs under input/certs/latest.tar
+      2.1. check for snake oil certs, remove them so we gen new ones
+      2.2. check for expired certs, remove them so we gen new ones
+      2.3. repack the latest.tar if we removed something in 2.1 or 2.2
+    3. upload latest.tar (or latest_repack.tar) to certbot container, extract at /etc/letsencrypt/archive
+    4. register certbot
+    5. turn on bind recursion for acme-challenge
+    6. call certbot
+      6.1. certonly for missing certs
+      6.2. skip for certs which exist in /etc/letsencrypt/archive
+    7. turn off bind recursion
+    8. generate snake oil certs for certs failling letsencrypt
+    9. pack all the certs (including the previously uploaded, newly obtain from letsencrypt and snake oil) in to latest.tar
+    10. packing latest.tar for the correct format to nginx
+    11. move latest.tar to input/certs/{timestamp}.tar and create a symlink to latest.tar
+    """
+    def __init__(self, client, config, find_existing=False, kill_existing=False, logger=None):
+        super().__init__(client, config, find_existing, kill_existing, logger)
+        self.client_and_system_sites = {}
+        self.sites_with_certs = []
+        self.problematic_certs = {'expired_certs': [], 'snake_oil_certs': []}
+        self.tar_name = 'latest'
+        self.tempdir = TemporaryDirectory()  # for extract and checking latest.tar
+        if self.config['server_env'] == 'production':
+            self.certbot_options = self.config['certs']['production_certbot_options']
+        else:
+            self.certbot_options = self.config['certs']['staging_certbot_options']
+
+    def __del__(self):
+        self.tempdir.cleanup()
+
     def update(self, all_sites, config, config_timestamp):
+        """
+        Step 1 ~ 11
+        """
         # XXX this is another place where certbot might try to connect to pebble before pebble
         # is accepting connections.
         # XXX should i be removing this directory? do i need to worry about
         # stale certs being here?
-        (exit_code, output) = self.container.exec_run("rm -rf /etc/letsencrypt/archive")
-        (exit_code, output) = self.container.exec_run("rm -rf /etc/letsencrypt/live")
-        (exit_code, output) = self.container.exec_run("rm -rf /etc/letsencrypt/renewal")
-        (exit_code, output) = self.container.exec_run(
-            "mkdir -p /etc/letsencrypt/archive")
+        # Step 1
+        self.logger.info('Cleaning /etc/letsencrypt/{archive,live,renewal}...')
+        self.container.exec_run("rm -rf /etc/letsencrypt/archive")
+        self.container.exec_run("rm -rf /etc/letsencrypt/live")
+        self.container.exec_run("rm -rf /etc/letsencrypt/renewal")
+        self.container.exec_run("mkdir -p /etc/letsencrypt/archive")
+        self.client_and_system_sites = {**all_sites['client'], **all_sites['system']}
 
+        # Step 2
         try:
-            with open(f"./input/certs/latest.tar", "rb") as f:
-                self.container.put_archive("/etc/letsencrypt/", f.read())
-            self.logger.info(f"uploaded prev certs input/certs/latest.tar to certbot")
-        except FileNotFoundError:
-            self.logger.warning("didn't find previous certs under input/certs/latest.tar")
+            tar_path = f"./input/certs/{self.tar_name}.tar"
+            tar_path = self.check_previous_certs(tar_path)
+        except Exception as err:
+            self.logger.warning("Error in check_previous_certs")
+            self.logger.warning(err)
 
+        # Step 3
+        try:
+            with open(tar_path, "rb") as previous_certs_tar:
+                self.container.put_archive("/etc/letsencrypt/", previous_certs_tar.read())
+            self.logger.info(f"uploaded prev certs {tar_path} to certbot")
+        except FileNotFoundError:
+            self.logger.warning(f"didn't find previous certs under {tar_path}")
+
+        # Step 4
         (exit_code, output) = self.container.exec_run(
-            f"certbot register {config['production_certbot_options']} --agree-tos --non-interactive"
-        )
+            f"certbot register {self.certbot_options} --agree-tos --non-interactive")
         self.logger.info(output)
         self.logger.info("certbot registered")
 
-        # (exit_code, output) = self.container.exec_run(
-        #     f"certbot renew {config['certbot_options']}"
-        # )
+        self.ls_sites_with_certs()
 
-        # XXX should be handled by the 'renew' command instead of doing it manually like this
-        (exit_code, output) = self.container.exec_run(
-            "ls /etc/letsencrypt/archive")
-        sites_with_certs = output.decode().splitlines()
-
-        client_and_system_sites = {**all_sites['client'], **all_sites['system']}
-        # XXX always get a real non-staging cert for sites in the system list?
-        # client_and_system_sites = {**all_sites['system']}
-
-        # allow recursion
-        Bind(self.client, config, find_existing=True, logger=self.logger).toggle_recursion(True)
-
-        for domain, site in client_and_system_sites.items():
-            # the autodeflect-formatted ones...
-            if f"{domain}.le.key" in sites_with_certs:
-                self.logger.info(f"{domain} (.le.key) already has a cert, skip certbot")
+        # Step 6.1.
+        enabled_recusion = False
+        cert_failed_domain = []
+        for domain, site in self.client_and_system_sites.items():
+            # Step 6.2.
+            action = self.cert_action_selector(domain)
+            if action == 'skip':
                 continue
-            # the letsencrypt / deflect-next formatted ones...
-            if domain in sites_with_certs:
-                self.logger.info(f"{domain} already has a cert, skip certbot")
-                continue
-            self.logger.info(f"trying to get a cert for {site['server_names']}")
-            domains_args = "-d " + " -d ".join(site['server_names'])
-            self.logger.info(domains_args)
-            certbot_options = config['production_certbot_options'] if config['server_env'] == 'production' else config['staging_certbot_options']
-            self.logger.info(f"Using certbot options: {certbot_options}")
-            (exit_code, output) = self.container.exec_run(
-                f"certbot certonly {certbot_options} --non-interactive --agree-tos"
-                f" --preferred-challenges dns --cert-name {domain}"
-                " --authenticator certbot-dns-standalone:dns-standalone"
-                " --certbot-dns-standalone:dns-standalone-address=127.0.0.1"
-                f" --certbot-dns-standalone:dns-standalone-port=5053 {domains_args}"
-            )
-            self.logger.info(output.decode())
 
-        self.logger.info("ran certbot certonly")
-        Bind(self.client, config, find_existing=True, logger=self.logger).toggle_recursion(False)
+            # Step 5 allow recursion for bind server temporary only if necessary
+            if not enabled_recusion:
+                Bind(self.client, config, find_existing=True, logger=self.logger).toggle_recursion(True)
+                enabled_recusion = True
 
-        with open(f"output/{config_timestamp}/etc-ssl-sites.tar", "wb") as tar_file:
-            (chunks, stat) = self.container.get_archive(
-                "/etc/letsencrypt/archive")
+            # since we removed expired cert, we treat them the same
+            # get a new cert for the expired cert to consider it as new certs
+            if action == 'renew' or action == 'certonly':
+                exit_code = self.certbot_certonly(domain, site)
+                if exit_code != 0:
+                    self.logger.warning(f"{domain} certbot exit_code: {exit_code}")
+                    cert_failed_domain.append(domain)
+
+        # Step 7
+        if enabled_recusion:
+            Bind(self.client, config, find_existing=True, logger=self.logger).toggle_recursion(False)
+
+        if len(cert_failed_domain) == 0:
+            self.logger.info("ran certbot certonly, all success")
+        else:
+            self.logger.warning(f"ran certbot and failed {len(cert_failed_domain)} certs: {str(cert_failed_domain)}")
+
+        # Step 8
+        if len(cert_failed_domain) > 0:
+            self.ls_sites_with_certs()
+        for no_cert_domain in cert_failed_domain:
+            if no_cert_domain not in self.sites_with_certs:
+                self.generate_snake_oil_certs(no_cert_domain)
+            else:
+                self.logger.warning(f"{no_cert_domain} failed "
+                                     "but still has certs, not gen snake oil certs")
+
+        # Step 9
+        etc_ssl_sites_tarfile_name = f"./output/{config_timestamp}/etc-ssl-sites.tar"
+        with open(etc_ssl_sites_tarfile_name, "wb") as tar_file:
+            (chunks, _) = self.container.get_archive("/etc/letsencrypt/archive")
             for chunk in chunks:
                 tar_file.write(chunk)
 
-        etc_ssl_sites_tarfile_name = f"./output/{config_timestamp}/etc-ssl-sites.tar"
         # Never extract archives from untrusted sources without prior inspection. It is
         # possible that files are created outside of path, e.g. members that have
         # absolute filenames starting with "/" or filenames with two dots "..".
         with tarfile.open(etc_ssl_sites_tarfile_name, "r") as tar_file:
             tar_file.extractall(path=f"./output/{config_timestamp}/")
 
+        # Step 10
         # XXX might be worth it to compress this before we send it (later)
         gzip_proc = subprocess.run(["gzip", "--keep", "--force", etc_ssl_sites_tarfile_name],
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -101,23 +156,34 @@ class Certbot(Container):
         with tarfile.open(etc_ssl_sites_tarfile_name + ".gz.tar", "w") as tar_file:
             tar_file.add(etc_ssl_sites_tarfile_name + ".gz")
 
-        # copy this to input for next time use
-        latest_certs_in_input = f"{path_to_input()}/certs/{str(int(time()))}.tar"
-        ln_target = f"{path_to_input()}/certs/latest.tar"
+        # Step 11. copy this to input for next time use
+        unixtime = str(int(time()))
+        latest_certs_in_input = f"{path_to_input()}/certs/{unixtime}.tar"
+        ln_target = f"{path_to_input()}/certs/{self.tar_name}.tar"
+
         if not os.path.isdir("./input/certs"):
             os.mkdir("./input/certs")
+
         shutil.copyfile(etc_ssl_sites_tarfile_name, latest_certs_in_input)
         self.logger.info(f"copied {etc_ssl_sites_tarfile_name} to {latest_certs_in_input}")
-        try:
-            # must use abs path to do ln
-            os.symlink(latest_certs_in_input, ln_target)
-        except OSError as err:
-            if err.errno == errno.EEXIST:
-                os.remove(ln_target)
-                os.symlink(latest_certs_in_input, ln_target)
-            else:
-                raise err
+        symlink_force(latest_certs_in_input, ln_target)
         self.logger.info(f"created symlink {ln_target} -> {latest_certs_in_input}")
+
+        # just saving renewal for safety, not using it for now
+        try:
+            etc_ssl_sites_renewal_tarfile_name = f"output/{config_timestamp}/etc-ssl-sites-renewal.tar"
+            with open(etc_ssl_sites_renewal_tarfile_name, "wb") as tar_file:
+                (chunks, _) = self.container.get_archive("/etc/letsencrypt/renewal")
+                for chunk in chunks:
+                    tar_file.write(chunk)
+            latest_renewal_in_input = f"{path_to_input()}/certs/{unixtime}-renewal.tar"
+            ln_target = f"{path_to_input()}/certs/{self.tar_name}-renewal.tar"
+            shutil.copyfile(etc_ssl_sites_renewal_tarfile_name, latest_renewal_in_input)
+            self.logger.info(f"copied {etc_ssl_sites_renewal_tarfile_name} to {latest_renewal_in_input}")
+            symlink_force(latest_renewal_in_input, ln_target)
+            self.logger.info(f"created symlink {ln_target} -> {latest_renewal_in_input}")
+        except Exception:
+            self.logger.info('Save renewal failed, but this is for backup only')
 
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
@@ -131,3 +197,100 @@ class Certbot(Container):
             # XXX should we specify container id instead?
             network_mode="container:bind"
         )
+
+    def generate_snake_oil_certs(self, no_cert_domain):
+        """
+        generate a self-signed cert for a domain that doesn't have one
+        this will prevent our nginx breaks because cert is missing
+        """
+        # self sign one cert so we don't break nginx
+        self.logger.warning(f"Gen snakeoil certs for {no_cert_domain}")
+        self.container.exec_run(f"mkdir -p /etc/letsencrypt/archive/{no_cert_domain}")
+        # don't change the OU=SnakeOilCert, this is used to tell if this cert is a snakeoil cert
+        _, output = self.container.exec_run(
+            "openssl req -new -newkey rsa:2048 -days 365 -nodes -x509"
+            f" -subj \"{self.config['certs']['self_sign_subj']}/OU=SnakeOilCert/CN={no_cert_domain}\""
+            f" -keyout /etc/letsencrypt/archive/{no_cert_domain}/privkey1.pem"
+            f" -out /etc/letsencrypt/archive/{no_cert_domain}/fullchain1.pem")
+        self.logger.info(output.decode())
+        # add a empty file for human eye debugging (no for verfication)
+        self.container.exec_run(
+            f"touch -p /etc/letsencrypt/archive/{no_cert_domain}/SnakeOilCert")
+
+    def check_previous_certs(self, latest_tar):
+        """check expire and if snakeoil cert"""
+        original_path = latest_tar
+        path = self.tempdir.name
+        now = datetime.utcnow()
+        repack = False
+
+        self.logger.info(f"Extracting prev certs to {path} for checking")
+        with tarfile.open(original_path, "r") as latest_tar_file:
+            latest_tar_file.extractall(path=path)
+
+        for domain, _ in self.client_and_system_sites.items():
+            cert_bytes = None
+            with open(os.path.join(path, 'archive', domain, "fullchain1.pem"), "rb") as fullchain1:
+                cert_bytes = fullchain1.read()
+            cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
+            self.logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
+            # cert.issuer contains SnakeOilCert
+            if "SnakeOilCert" in cert.issuer.rfc4514_string():
+                repack = True
+                self.problematic_certs['snake_oil_certs'].append(domain)
+                shutil.rmtree(os.path.join(path, 'archive', domain))
+                self.logger.info(f"removed snake oil cert for {domain}")
+            # cert expired
+            if now > cert.not_valid_after:
+                repack = True
+                self.problematic_certs['expired_certs'].append(domain)
+                shutil.rmtree(os.path.join(path, 'archive', domain))
+                self.logger.info(f"removed expired cert for {domain}")
+
+        self.logger.warning(f"snake_oil_certs: {self.problematic_certs['snake_oil_certs']}")
+        self.logger.warning(f"expired_certs: {self.problematic_certs['expired_certs']}")
+
+        # repack because we deleted some certs
+        if repack:
+            tar_path = os.path.join(path, 'latest_repack.tar')
+            with tarfile.open(tar_path, "w") as latest_repack:
+                latest_repack.add(os.path.join(path, 'archive'), arcname='archive')
+        else:
+            tar_path = latest_tar
+        return tar_path
+
+    def cert_action_selector(self, domain):
+        # expired certs
+        if domain in self.problematic_certs['expired_certs']:
+            self.logger.info(f"{domain} expired and should be renew")
+            return 'renew'
+        # the autodeflect-formatted ones...
+        if f"{domain}.le.key" in self.sites_with_certs:
+            self.logger.info(f"{domain} (.le.key) already has a cert, skip certonly")
+            return 'skip'
+        # the letsencrypt / deflect-next formatted ones...
+        if domain in self.sites_with_certs:
+            self.logger.info(f"{domain} already has a cert, skip certonly")
+            return 'skip'
+        return 'certonly'
+
+    def certbot_certonly(self, domain, site, action='certonly'):
+        domains_args = "-d " + " -d ".join(site['server_names'])
+        self.logger.info(f"trying to get a cert for {site['server_names']}")
+        self.logger.info(domains_args)
+        self.logger.info(f"Using certbot options: {self.certbot_options}")
+        (exit_code, output) = self.container.exec_run(
+            f"certbot {action} {self.certbot_options} --non-interactive --agree-tos"
+            f" --preferred-challenges dns --cert-name {domain}"
+            " --authenticator certbot-dns-standalone:dns-standalone"
+            " --certbot-dns-standalone:dns-standalone-address=127.0.0.1"
+            f" --certbot-dns-standalone:dns-standalone-port=5053 {domains_args}"
+        )
+        self.logger.info(output.decode())
+        return exit_code
+
+    def ls_sites_with_certs(self):
+        (exit_code, output) = self.container.exec_run("ls /etc/letsencrypt/archive")
+        if exit_code == 0:
+            self.sites_with_certs = output.decode().splitlines()
+            self.logger.info(f"sites_with_certs: {self.sites_with_certs}")

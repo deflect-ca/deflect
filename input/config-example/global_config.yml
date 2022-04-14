@@ -51,8 +51,11 @@ root_zone_extra:  # extra records for system root zone
   'subdomain':
     - type: A
       value: 8.8.8.8
-staging_certbot_options: "--email some@email.com --server https://127.0.0.1:14000/dir --no-verify-ssl"
-production_certbot_options: "--email prod@email.com --server https://acme-v02.api.letsencrypt.org/directory"
+certs:
+  staging_certbot_options: --email user@example.com --server https://127.0.0.1:14000/dir --no-verify-ssl
+  production_certbot_options: --email user@example.com --server https://acme-v02.api.letsencrypt.org/directory
+  # do not set OU, CN here, no trailing / required
+  self_sign_subj: /C=CA/ST=QC/L=Montreal/O=Company
 doh_private_port: 8085
 kibana_private_port: 5601
 nginx:
