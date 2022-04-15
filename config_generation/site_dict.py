@@ -73,6 +73,7 @@ def old_to_new_site_dict(old_dict):
         "banjax_password", None)
     new_dict["rate_limited_regexes"] = old_to_new_rate_limited_regexes(
         old_dict.get("banjax_regex_banner", []), old_dict["url"])
+    new_dict["password_protected_paths_exceptions"] = old_dict.get('banjax_path_exceptions', [])
     new_dict["default_cache_time_minutes"] = old_dict["cache_time"]
     new_dict["cache_exceptions"] = old_to_new_cache_exceptions(
         old_dict.get("cache_exceptions", []))
