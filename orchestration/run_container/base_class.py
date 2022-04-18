@@ -146,7 +146,6 @@ class Container:
     def kill_build_and_start_container(self, config):
         kill_containers_with_label(self.client, self.lowercase_name, self.logger)
         (image, image_logs) = self.build_image(config, registry='')
-        self.stream_build_log(image_logs)
         return self.start_new_container(config, image.id)
 
     def set_hostname_and_dnet(self, config):
