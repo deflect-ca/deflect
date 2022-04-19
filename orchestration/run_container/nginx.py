@@ -28,8 +28,11 @@ class Nginx(Container):
         self.container.exec_run("mv /etc/ssl/archive /etc/ssl/sites")
 
         # XXX specific to our internals
-        # with open(f"{path_to_output()}/{config_timestamp}/etc-ssl-uploaded.tar", "rb") as f:
-        #     self.container.put_archive("/etc/ssl-uploaded/", f.read())
+        try:
+            with open(f"{path_to_output()}/{config_timestamp}/etc-ssl-uploaded.tar", "rb") as f:
+                self.container.put_archive("/etc/ssl-uploaded/", f.read())
+        except FileNotFoundError:
+            self.logger.info("No etc-ssl-uploaded.tar found in output")
 
         # XXX note that sending this signal does not guarantee the new config is actually loaded.
         # the config might be invalid.

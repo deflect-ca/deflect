@@ -20,6 +20,7 @@ import pem
 from OpenSSL.crypto import load_certificate, dump_certificate
 from OpenSSL.crypto import FILETYPE_PEM
 from OpenSSL.crypto import X509Store, X509StoreContext
+from OpenSSL.crypto import X509StoreContextError
 
 from util.helpers import get_logger, FILENAMES_TO_TAIL, path_to_output
 
@@ -167,14 +168,14 @@ def validate_leaf_cert_against_root_with_intermediates(leaf_cert, chain_certs):
     for root_cert_pem in pem.parse_file(certifi.where()):
         store.add_cert(load_certificate(FILETYPE_PEM, str(root_cert_pem)))
 
-    store_context = X509StoreContext(store, leaf_cert, chain_certs)
     try:
+        store_context = X509StoreContext(store, leaf_cert, chain_certs)
         store_context.verify_certificate()
-    except Exception as e:
-        print(f"\tverification failed!: {e}")
-        errors.append(f"cert chain verification failed: {e}")
+    except X509StoreContextError as err:
+        logger.warning(f"\tverification failed!: {err}")
+        errors.append(f"cert chain verification failed: {err}")
     else:
-        print(f"\tverification succeeded")
+        logger.info("\tverification succeeded")
     return errors
 
 
@@ -183,7 +184,7 @@ def one_site(site, bundle_name, formatted_time):
     errors = []
     # TODO: remove test.me.uk etc when opensourcing
     filename = f"{site}-{bundle_name}".replace(".test.me.uk", "")  # XXX
-    print(f"doing {filename}")
+    logger.info(f"doing {filename}")
 
     leaf_cert, cert_bytes = load_encrypted_cert(
         f"input/config/tls_bundles/{filename}.cert.crt.gpg")

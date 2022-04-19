@@ -141,8 +141,10 @@ def _install_base(ctx):
 
 
 @click.command('config', short_help='Generate config from input dir')
+@click.option('--no-certs', is_flag=True, default=False,
+              help='Do not run decrypt_and_verify_cert_bundles')
 @click.pass_context
-def _gen_config(ctx):
+def _gen_config(ctx, no_certs):
     """Generate config from input dir
 
     This will generate config from input dir and
@@ -174,6 +176,10 @@ def _gen_config(ctx):
     if config['logging']['mode'] == 'logstash_external':
         logger.info('>>> Generating legacy-filebeat config...')
         generate_legacy_filebeat_config(config, all_sites, timestamp)
+
+    if not no_certs:
+        logger.info('>>> Decrypting and verifying cert bundles...')
+        ctx.invoke(_decrypt_and_verify_cert_bundles)
 
 
 def abort_if_false(ctx, param, value):

@@ -187,7 +187,10 @@ class Certbot(Container):
         with tarfile.open(original_path, "r") as latest_tar_file:
             latest_tar_file.extractall(path=path)
 
-        for domain, _ in self.client_and_system_sites.items():
+        for domain, site in self.client_and_system_sites.items():
+            if site.get("uploaded_cert_bundle_name"):
+                self.logger.info(f"{domain} has uploaded cert bundle, skip checking here")
+                continue
             cert_bytes = None
             with open(os.path.join(path, 'archive', domain, "fullchain1.pem"), "rb") as fullchain1:
                 cert_bytes = fullchain1.read()
@@ -220,6 +223,10 @@ class Certbot(Container):
         return tar_path
 
     def cert_action_selector(self, domain):
+        # custom certs
+        if self.client_and_system_sites[domain].get('uploaded_cert_bundle_name'):
+            self.logger.info(f"{domain} has uploaded cert bundle, skip certbot")
+            return 'skip'
         # expired certs
         if domain in self.problematic_certs['expired_certs']:
             self.logger.info(f"{domain} expired and should be renew")
