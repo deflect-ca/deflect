@@ -11,6 +11,7 @@ import shutil
 import gnupg
 import certifi
 import tarfile
+import copy
 
 from cryptography.hazmat.primitives import serialization
 
@@ -20,9 +21,9 @@ import pem
 from OpenSSL.crypto import load_certificate, dump_certificate
 from OpenSSL.crypto import FILETYPE_PEM
 from OpenSSL.crypto import X509Store, X509StoreContext
-from OpenSSL.crypto import X509StoreContextError
+from OpenSSL.crypto import X509StoreContextError, Error as OpenSSLError
 
-from util.helpers import get_logger, FILENAMES_TO_TAIL, path_to_output
+from util.helpers import get_logger, FILENAMES_TO_TAIL, path_to_output, generate_selfsigned_cert
 
 
 # todo: use configuration for the logger
@@ -57,9 +58,10 @@ def load_encrypted_cert(filename):
     try:
         cert = load_certificate(FILETYPE_PEM, cert_bytes)
     except:
-        import traceback
-        traceback.print_exc()
-        logger.debug(cert_bytes)
+        #import traceback
+        #traceback.print_exc()
+        logger.info('Broken certs:')
+        logger.info(cert_bytes)
         raise
 
     return cert, cert_bytes
@@ -230,6 +232,7 @@ def main(all_sites, formatted_time):
         shutil.rmtree(f"{output_dir}")
     os.mkdir(output_dir)
 
+    error_sites = {}
     for name, site in all_sites['client'].items():
         logger.debug(f'Processing name, site: {name, site}')
         uploaded_cert_bundle_name = site.get("uploaded_cert_bundle_name")
@@ -242,7 +245,23 @@ def main(all_sites, formatted_time):
                 logger.error(
                     f"!!! BAD uploaded cert bundle not found for site {name}"
                 )
-                pass
+                error_sites[name] = site
+            except OpenSSLError as err:
+                logger.error(f"{name} error: {str(err)}")
+                error_sites[name] = site
+
+    # XXX: We can't leave site without certs, so generate a dummy cert for them
+    if error_sites:
+        for name, site in error_sites.items():
+            logger.info(f"generate_selfsigned_cert: {name}")
+            alt_name_arr = copy.copy(site['server_names'])
+            alt_name_arr.remove(name)
+            cert_pem, key_pem = generate_selfsigned_cert(name, alt_name_arr=alt_name_arr)
+            with open(f"./output/{formatted_time}/etc-ssl-uploaded/{name}.cert-and-chain", "wb") as f:
+                f.write(cert_pem)
+
+            with open(f"./output/{formatted_time}/etc-ssl-uploaded/{name}.key", "wb") as f:
+                f.write(key_pem)
 
     if os.path.isfile(output_dir_tar):
         logger.debug(f'Removing output_dir_tar: {output_dir_tar}')
