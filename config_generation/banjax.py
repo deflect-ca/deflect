@@ -72,20 +72,24 @@ def generate_banjax_config(config, all_sites, formatted_time):
     banjax_next_config["sitewide_sha_inv_list"] = sitewide_sha_inv_dict
 
     all_site_password_protected_paths = {}
+    all_site_password_protected_path_exceptions = {}
     all_site_password_hashes = {}
     for _, site in client_sites.items():
         paths = site.get('password_protected_paths', [])
+        exception_paths = site.get('password_protected_path_exceptions', [])
         password_b64 = site.get('password_protected_paths_password', None)
         if len(paths) > 0:
             if password_b64 is None:
                 raise Exception("missing password_protected_paths_password!!!")
             all_site_password_protected_paths[site['public_domain']] = paths
+            all_site_password_protected_path_exceptions[site['public_domain']] = exception_paths
             # banjax expects to read something generated like:
             # python3 -c "import hashlib; print(hashlib.sha256('password'.encode()).hexdigest())"
             password_bytes = base64.b64decode(password_b64)
             password_hex = password_bytes.hex()
             all_site_password_hashes[site['public_domain']] = password_hex
     banjax_next_config["password_protected_paths"] = all_site_password_protected_paths
+    banjax_next_config["password_protected_path_exceptions"] = all_site_password_protected_path_exceptions
     banjax_next_config["password_hashes"] = all_site_password_hashes
 
     # todo: same independent iteration, merge it

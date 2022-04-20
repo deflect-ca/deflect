@@ -219,7 +219,7 @@ def _install_es(ctx):
     es.update(timestamp)
 
 
-@click.command('banjax', help='Install and update banjax')
+@click.command('banjax', help='Install and update banjax (force rebuild)')
 @click.pass_context
 def _install_banjax(ctx):
     _, timestamp = ctx.obj['get_all_sites']
