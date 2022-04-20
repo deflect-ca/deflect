@@ -35,6 +35,29 @@ from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
 logger = get_logger(__name__)
 
 
+class AliasedGroup(click.Group):
+    """
+    Support for command alias
+    you can call `util show-useful-curl-commands` as `util show`
+    """
+    def get_command(self, ctx, cmd_name):
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+        matches = [x for x in self.list_commands(ctx)
+                   if x.startswith(cmd_name)]
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            return click.Group.get_command(self, ctx, matches[0])
+        ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
+
+    def resolve_command(self, ctx, args):
+        # always return the full command name
+        _, cmd, args = super().resolve_command(ctx, args)
+        return cmd.name, cmd, args
+
+
 @click.group(help='Welcome to deflect orchestration script',
              invoke_without_command=True, no_args_is_help=True)
 @click.pass_context
@@ -74,31 +97,31 @@ def cli_base(ctx, debug, host, action):
         ctx.obj['get_all_sites'] = get_all_sites(ctx.obj['config'])
 
 
-@click.group(help='Generate stuff like config or certs')
+@click.group(help='Generate stuff like config or certs', cls=AliasedGroup)
 @click.pass_context
 def gen(ctx):
     pass
 
 
-@click.group(help='Install config or service')
+@click.group(help='Install config or service', cls=AliasedGroup)
 @click.pass_context
 def install(ctx):
     pass
 
 
-@click.group(help='Getting information from remote host')
+@click.group(help='Getting information from remote host', cls=AliasedGroup)
 @click.pass_context
 def get(ctx):
     pass
 
 
-@click.group(help='Utility for admin')
+@click.group(help='Utility for admin', cls=AliasedGroup)
 @click.pass_context
 def util(ctx):
     pass
 
 
-@click.group(help='SSL certs related utility')
+@click.group(help='SSL certs related utility', cls=AliasedGroup)
 @click.pass_context
 def certs(ctx):
     pass
@@ -246,6 +269,9 @@ def _test_es_auth(ctx):
 
 
 @click.command('kill-all-containers', help='Run docker kill $(docker ps -q) on target')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='Please confirm the target _host is correct')
 @click.pass_context
 def _kill_all_containers(ctx):
     command = "docker kill $(docker ps -q)"
@@ -279,24 +305,31 @@ def _get_nginx_errors(ctx):
 
 @click.command('show-useful-curl-commands', help='Print curl commands for ES and edge testing')
 @click.option('--domain', '-d', default='example.com', help='Domain for testing')
+@click.option('--proto', '-p', default='https', help='HTTP protocol, https or http')
 @click.pass_context
-def _show_useful_curl_commands(ctx, domain):
+def _show_useful_curl_commands(ctx, domain, proto):
     hosts = ctx.obj['_hosts']
     config = ctx.obj['config']
     p_conf = get_persisted_config()
     elastic_password = p_conf.get('elastic_password', "<doesn't exist yet>")
+    port = '443' if proto == 'https' else 80
+    pebble = '--cacert persisted/pebble_ca.crt ' if config['server_env'] != 'production' else ''
+    insecure = '--insecure ' if config['server_env'] != 'production' else ''
 
     print("# test the ES certs + creds:\n"
           f"curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']} --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200 --user 'elastic:{elastic_password}'")
 
     print("\n# test a site through a specific edge:")
     for edge in hosts:
-        print(f"curl --resolve test-origin.{config['system_root_zone']}:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://test-origin.{config['system_root_zone']}")
+        print(f"curl --resolve test-origin.{config['system_root_zone']}:443:{edge['ip']} {pebble}{proto}://test-origin.{config['system_root_zone']}")
     for edge in hosts:
-        print(f"curl --resolve example.com:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://{domain}  # {edge['hostname']}")
+        print(f"curl --resolve {domain}:{port}:{edge['ip']} {pebble}{proto}://{domain}")
     for edge in hosts:
-        insecure = ' --insecure ' if config['server_env'] == 'staging' else ' '
-        print(f"curl --resolve example.com:443:{edge['ip']}{insecure}https://{domain}  # {edge['hostname']}")
+        print(f"curl --resolve {domain}:{port}:{edge['ip']} {insecure}{proto}://{domain}")
+
+    print("\n# check SSL certs/header")
+    for edge in hosts:
+        print(f"curl -Iv --resolve {domain}:{port}:{edge['ip']} {insecure}{proto}://{domain}")
 
 
 @click.command('banjax-decision-lists',
