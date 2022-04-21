@@ -73,6 +73,10 @@ nginx:
   allow_stub_status:
     - ip: 172.17.0.0/24
       comment: Docker network
+  # Server header settings
+  header_srv_custom: True # Set False to show 'Server: nginx/1.17'
+  header_srv_custom_str: Deflect (nginx)
+  header_show_time: False
 
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:
