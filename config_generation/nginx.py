@@ -68,6 +68,9 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
     else:
         server.add(nginx.Key('listen', '80'))
 
+    if dconf['nginx'].get('header_srv_custom', False):
+        server.add(nginx.Key('server_tokens', "off"))
+
     for pattern in sorted(site['password_protected_paths']):
         server.add(
             pass_prot_location(pattern, origin_https, site)
@@ -203,9 +206,13 @@ def _access_granted_fail_open_location_contents(
         'GET POST PUT MKCOL COPY MOVE OPTIONS PROPFIND PROPPATCH LOCK UNLOCK PATCH')
     limit_except.add(nginx.Key('deny', 'all'))
     location_contents.append(limit_except)
+    if global_config['nginx'].get('header_srv_custom', False):
+        header_srv_custom_str = global_config['nginx'].get('header_srv_custom_str', 'Deflect (nginx)')
+        location_contents.append(nginx.Key('add_header', f"X-Server '{header_srv_custom_str}'"))
+    if global_config['nginx'].get('header_show_time', False):
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
-    location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
-    location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
     location_contents.append(nginx.Key('proxy_set_header', "Host $host"))
