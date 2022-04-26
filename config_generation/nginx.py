@@ -18,6 +18,7 @@ from util.helpers import (
         get_config_yml_path,
         path_to_input,
         path_to_output,
+        path_to_containers,
 )
 
 logger = get_logger(__name__)
@@ -70,6 +71,8 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
 
     if dconf['nginx'].get('header_srv_custom', False):
         server.add(nginx.Key('server_tokens', "off"))
+
+    server.add(nginx.Key('include', 'snippets/error_pages.conf'))
 
     for pattern in sorted(site['password_protected_paths']):
         server.add(
@@ -167,6 +170,11 @@ def slash_location(origin_https, site):
     location.add(nginx.Key('set', "$loc_in \"slash_block\""))
     # location.add(*default_site_content_cache_include_conf(site['default_cache_time_minutes'], site))
 
+    """
+    This is a tricky part, if banjax is down, we will get error page 502
+    but we redirect this to @fail_open. In that section, we still do
+    reverse proxy to bypass banjax.
+    """
     location.add(nginx.Key('error_page', "500 501 502 @fail_open"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
 
@@ -233,6 +241,8 @@ def _access_granted_fail_open_location_contents(
 def access_granted_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location("@access_granted")
     location.add(nginx.Key('set', "$loc_out \"access_granted\""))
+    # 502 in access granted section means origin is down, not banjax
+    location.add(nginx.Key('error_page', "502 /502.html"))
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
@@ -242,6 +252,8 @@ def access_granted_location_block(site, global_config, edge_https, origin_https)
 def fail_open_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location("@fail_open")
     location.add(nginx.Key('set', "$loc_out \"fail_open\""))
+    # 502 in fail open section means origin is down, not banjax
+    location.add(nginx.Key('error_page', "502 /502.html"))
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
@@ -479,14 +491,16 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
 def access_denied_location(site):
     location = nginx.Location('@access_denied')
     location.add(nginx.Key('set', "$loc_out \"access_denied\""))
-    location.add(nginx.Key('return', "403 \"access denied\""))
+    location.add(nginx.Key('error_page', "403 /403.html"))
+    location.add(nginx.Key('return', "403"))
     return location
 
 
 def fail_closed_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location('@fail_closed')
     location.add(nginx.Key('set', "$loc_out \"fail_closed\""))
-    location.add(nginx.Key('return', "500 \"error talking to banjax, failing closed\""))
+    location.add(nginx.Key('error_page', "500 /500.html"))
+    location.add(nginx.Key('return', "500"))
     return location
 
 
@@ -513,6 +527,12 @@ def generate_nginx_config(all_sites, config, formatted_time):
             f.write(json.dumps({"config_version": formatted_time}))
 
         os.mkdir(output_dir + "/sites.d")
+        shutil.copytree(
+            f"{path_to_containers()}/nginx/error-pages",
+            f"{output_dir}/error-pages")
+        shutil.copytree(
+            f"{path_to_containers()}/nginx/snippets",
+            f"{output_dir}/snippets")
 
     # write out the client sites
     for name, site in all_sites['client'].items():
