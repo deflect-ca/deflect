@@ -143,7 +143,8 @@ def pass_prot_location(pattern, origin_https, site):
     location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
-    location.add(nginx.Key('error_page', "500 501 502 @fail_closed"))
+    location.add(nginx.Key('error_page', "500 /500.html"))
+    location.add(nginx.Key('error_page', "502 /502-banjax.html"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
 
     return location
