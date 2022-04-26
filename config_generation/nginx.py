@@ -140,6 +140,7 @@ def pass_prot_location(pattern, origin_https, site):
 
     location.add(nginx.Key('set', "$loc_in \"pass_prot\""))
 
+    location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
     location.add(nginx.Key('error_page', "500 501 502 @fail_closed"))
@@ -484,7 +485,8 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
     return [
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
-        nginx.Key('proxy_cache_valid', f"any {str(cache_time_minutes)}")
+        nginx.Key('proxy_cache_valid', f"200 302 {str(cache_time_minutes)}m"),
+        nginx.Key('proxy_cache_valid', f"any 1m")
     ]
 
 
