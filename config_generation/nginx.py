@@ -212,7 +212,7 @@ def _access_granted_fail_open_location_contents(
     )
 
     limit_except = nginx.LimitExcept(
-        'GET POST PUT MKCOL COPY MOVE OPTIONS PROPFIND PROPPATCH LOCK UNLOCK PATCH')
+        'GET POST PUT DELETE MKCOL COPY MOVE OPTIONS PROPFIND PROPPATCH LOCK UNLOCK PATCH')
     limit_except.add(nginx.Key('deny', 'all'))
     location_contents.append(limit_except)
     if global_config['nginx'].get('header_srv_custom', False):
