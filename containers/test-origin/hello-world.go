@@ -10,7 +10,6 @@ import (
     "fmt"
     "net/http"
     "github.com/gin-gonic/gin"
-    "strings"
 )
 
 func main() {
@@ -20,7 +19,7 @@ func main() {
         c.Header("Cache-Control", "public,max-age=30")
         c.JSON(200, gin.H{
                     "you-requested": c.Request.URL.Path,
-                    "message": strings.Repeat("hello world", 3),
+                    "message": "Hello, World!",
                     "request-headers": c.Request.Header,
         })
     })

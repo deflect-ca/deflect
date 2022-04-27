@@ -4,7 +4,5 @@ version: "3.9"
 services:
   web:
     build: .
-    volumes:
-      - .:/opt/hello-world
     ports:
       - "8080:8080"
