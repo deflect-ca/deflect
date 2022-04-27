@@ -33,7 +33,12 @@ class Nginx(Container):
 
         # XXX note that sending this signal does not guarantee the new config is actually loaded.
         # the config might be invalid.
-        self.container.kill(signal="SIGHUP")
+        (exit_code, output) = self.container.exec_run("nginx -t")
+        if exit_code != 0:
+            self.logger.error(f"nginx config failed validation. output: {output}")
+            raise Exception("nginx config failed validation")
+        else:
+            self.container.kill(signal="SIGHUP")
 
         self.logger.info("installed new config + certs on nginx container")
 
