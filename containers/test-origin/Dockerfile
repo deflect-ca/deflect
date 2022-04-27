@@ -19,5 +19,6 @@ EXPOSE 8080
 
 WORKDIR /opt/hello-world
 RUN go get -u github.com/gin-gonic/gin
-CMD ["go", "run", "hello-world.go"]
+RUN go build -o test-origin ./hello-world.go
+CMD ["./test-origin"]
 # ENTRYPOINT CompileDaemon --build="go build hello-world.go" --command="./hello-world"
