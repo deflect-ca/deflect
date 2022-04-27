@@ -20,5 +20,6 @@ EXPOSE 8080
 WORKDIR /opt/test-origin
 RUN go get -u github.com/gin-gonic/gin
 RUN go build
+RUN export GIN_MODE=release
 CMD ["./test-origin"]
 # ENTRYPOINT CompileDaemon --build="go build test-origin.go" --command="./test-origin"
