@@ -247,8 +247,11 @@ def main(all_sites, formatted_time):
                 )
                 error_sites[name] = site
             except OpenSSLError as err:
-                logger.error(f"{name} error: {str(err)}")
+                logger.warning(f"{name} error: {str(err)}, will gen self sign cert for it")
                 error_sites[name] = site
+
+    if len(all_sites['client'].items()) == 0:
+        logger.info('No sites with custom certs')
 
     # XXX: We can't leave site without certs, so generate a dummy cert for them
     if error_sites:
