@@ -19,6 +19,7 @@ edges:
     user: deflect
 logging:
   mode: 'elk_internal'
+  filebeat_log_level: 'warning'
   elk_internal: ~
     # stand up built in ELK, no settings required
   elk_external:

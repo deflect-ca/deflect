@@ -19,6 +19,7 @@ class LegacyFilebeat(Container):
                 "LOGSTASH_HOST": config['logging']['logstash_external']['logstash_host'],
                 "DEFLECT_EDGE_NAME": self.hostname,
                 "DEFLECT_DNET": self.dnet,
+                "FILEBEAT_LOG_LEVEL": config['logging'].get('filebeat_log_level', 'warning'),
             },
             volumes={
                 self.get_volume_name('nginx', '/var/log/nginx'):
