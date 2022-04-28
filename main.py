@@ -30,7 +30,7 @@ from util.decrypt_and_verify_cert_bundles import \
     main as decrypt_and_verify_cert_bundles
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
-                          path_to_output, reset_log_level)
+                          path_to_output, reset_log_level, generate_selfsigned_cert)
 
 logger = get_logger(__name__)
 
@@ -420,6 +420,23 @@ def _decrypt_and_verify_cert_bundles(ctx):
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
 
 
+@click.command('gen-self-sign-certs', help='Decrypt and verify cert bundles')
+@click.option('--name', '-n', required=True, help='Domain name for this cert')
+@click.option('--alt-name', '-a', default=[], help='Alt name, seperate by comma')
+@click.option('--output', '-o', default='.', help='Output path, default .')
+@click.pass_context
+def _gen_self_sign_certs(ctx, name, alt_name, output):
+    alt_name_arr = alt_name.split(',')
+    cert_pem, key_pem = generate_selfsigned_cert(name, alt_name_arr=alt_name_arr)
+
+    with open(f"{output}/{name}.pem", "wb") as f:
+        click.echo(f"Writing {output}/{name}.pem")
+        f.write(cert_pem)
+    with open(f"{output}/{name}.key", "wb") as f:
+        click.echo(f"Writing {output}/{name}.key")
+        f.write(key_pem)
+
+
 def print_hosts_and_ctx(ctx):
     click.echo(f"\n* _has_controller = {ctx.obj['_has_controller']}")
     click.echo(f"* debug = {ctx.obj['debug']}")
@@ -465,6 +482,7 @@ util.add_command(_show_useful_curl_commands)
 # Certs section
 certs.add_command(_check_cert_expiry)
 certs.add_command(_decrypt_and_verify_cert_bundles)
+certs.add_command(_gen_self_sign_certs)
 
 # Register sub-base
 cli_base.add_command(gen)
