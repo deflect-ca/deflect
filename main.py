@@ -420,7 +420,7 @@ def _decrypt_and_verify_cert_bundles(ctx):
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
 
 
-@click.command('gen-self-sign-certs', help='Decrypt and verify cert bundles')
+@click.command('gen-self-sign-certs', help='Generate a self sign cert')
 @click.option('--name', '-n', required=True, help='Domain name for this cert')
 @click.option('--alt-name', '-a', default=[], help='Alt name, seperate by comma')
 @click.option('--output', '-o', default='.', help='Output path, default .')
@@ -435,6 +435,34 @@ def _gen_self_sign_certs(ctx, name, alt_name, output):
     with open(f"{output}/{name}.key", "wb") as f:
         click.echo(f"Writing {output}/{name}.key")
         f.write(key_pem)
+
+
+@click.command('verify-cert', help='Verify input certs')
+@click.option('--cert', '-c', required=True, help='Cert to verify')
+@click.option('--decrypt', '-d', is_flag=True, default=False, help='Attempt to decrpyt it')
+@click.pass_context
+def _verify_cert(ctx, cert, decrypt):
+    from util.decrypt_and_verify_cert_bundles import \
+        load_encrypted_cert, get_subject_and_alt_names
+    from OpenSSL.crypto import \
+        load_certificate, FILETYPE_PEM, X509Store, X509StoreContext
+    if decrypt:
+        cert, cert_bytes = load_encrypted_cert(cert)
+    else:
+        cert_bytes = None
+        with open(cert, "rb") as f:
+            cert_bytes = f.read()
+        cert = load_certificate(FILETYPE_PEM, cert_bytes)
+
+    subject_names, alt_names = get_subject_and_alt_names(cert)
+    click.echo(cert.get_subject().get_components())
+    click.echo(f"subject: {subject_names}")
+    click.echo(f"alt names: {alt_names}")
+    click.echo(f"not_valid_after: {cert.get_notAfter()}")
+    click.echo("X509StoreContext.verify_certificate()")
+    store = X509Store()
+    store_context = X509StoreContext(store, cert)
+    store_context.verify_certificate()
 
 
 def print_hosts_and_ctx(ctx):
@@ -483,6 +511,7 @@ util.add_command(_show_useful_curl_commands)
 certs.add_command(_check_cert_expiry)
 certs.add_command(_decrypt_and_verify_cert_bundles)
 certs.add_command(_gen_self_sign_certs)
+certs.add_command(_verify_cert)
 
 # Register sub-base
 cli_base.add_command(gen)
