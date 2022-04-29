@@ -9,6 +9,8 @@ import os
 import click
 
 from pyaml_env import parse_config
+from OpenSSL.crypto import \
+    load_certificate, FILETYPE_PEM, X509Store, X509StoreContext
 
 from config_generation import (generate_banjax_config, generate_bind_config,
                                generate_edgemanage_config,
@@ -27,10 +29,10 @@ from orchestration.run_container.base_class import (find_existing_container,
 from orchestration.run_container.elasticsearch import (Elasticsearch,
                                                        attempt_to_authenticate)
 from util.decrypt_and_verify_cert_bundles import \
-    main as decrypt_and_verify_cert_bundles
+    main as decrypt_and_verify_cert_bundles, load_encrypted_cert, get_subject_and_alt_names
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
-                          path_to_output, reset_log_level)
+                          path_to_output, reset_log_level, generate_selfsigned_cert)
 
 logger = get_logger(__name__)
 
@@ -141,8 +143,10 @@ def _install_base(ctx):
 
 
 @click.command('config', short_help='Generate config from input dir')
+@click.option('--no-certs', is_flag=True, default=False,
+              help='Do not run decrypt_and_verify_cert_bundles')
 @click.pass_context
-def _gen_config(ctx):
+def _gen_config(ctx, no_certs):
     """Generate config from input dir
 
     This will generate config from input dir and
@@ -174,6 +178,10 @@ def _gen_config(ctx):
     if config['logging']['mode'] == 'logstash_external':
         logger.info('>>> Generating legacy-filebeat config...')
         generate_legacy_filebeat_config(config, all_sites, timestamp)
+
+    if not no_certs:
+        logger.info('>>> Decrypting and verifying cert bundles...')
+        ctx.invoke(_decrypt_and_verify_cert_bundles)
 
 
 def abort_if_false(ctx, param, value):
@@ -414,6 +422,47 @@ def _decrypt_and_verify_cert_bundles(ctx):
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
 
 
+@click.command('gen-self-sign-certs', help='Generate a self sign cert')
+@click.option('--name', '-n', required=True, help='Domain name for this cert')
+@click.option('--alt-name', '-a', default=[], help='Alt name, seperate by comma')
+@click.option('--output', '-o', default='.', help='Output path, default .')
+@click.pass_context
+def _gen_self_sign_certs(ctx, name, alt_name, output):
+    alt_name_arr = alt_name.split(',')
+    cert_pem, key_pem = generate_selfsigned_cert(name, alt_name_arr=alt_name_arr)
+
+    with open(f"{output}/{name}.pem", "wb") as f:
+        click.echo(f"Writing {output}/{name}.pem")
+        f.write(cert_pem)
+    with open(f"{output}/{name}.key", "wb") as f:
+        click.echo(f"Writing {output}/{name}.key")
+        f.write(key_pem)
+
+
+@click.command('verify-cert', help='Verify input certs')
+@click.option('--cert', '-c', required=True, help='Cert to verify')
+@click.option('--decrypt', '-d', is_flag=True, default=False, help='Attempt to decrpyt it')
+@click.pass_context
+def _verify_cert(ctx, cert, decrypt):
+    if decrypt:
+        cert, cert_bytes = load_encrypted_cert(cert)
+    else:
+        cert_bytes = None
+        with open(cert, "rb") as f:
+            cert_bytes = f.read()
+        cert = load_certificate(FILETYPE_PEM, cert_bytes)
+
+    subject_names, alt_names = get_subject_and_alt_names(cert)
+    click.echo(cert.get_subject().get_components())
+    click.echo(f"subject: {subject_names}")
+    click.echo(f"alt names: {alt_names}")
+    click.echo(f"not_valid_after: {cert.get_notAfter()}")
+    click.echo("X509StoreContext.verify_certificate()")
+    store = X509Store()
+    store_context = X509StoreContext(store, cert)
+    store_context.verify_certificate()
+
+
 def print_hosts_and_ctx(ctx):
     click.echo(f"\n* _has_controller = {ctx.obj['_has_controller']}")
     click.echo(f"* debug = {ctx.obj['debug']}")
@@ -459,6 +508,8 @@ util.add_command(_show_useful_curl_commands)
 # Certs section
 certs.add_command(_check_cert_expiry)
 certs.add_command(_decrypt_and_verify_cert_bundles)
+certs.add_command(_gen_self_sign_certs)
+certs.add_command(_verify_cert)
 
 # Register sub-base
 cli_base.add_command(gen)
