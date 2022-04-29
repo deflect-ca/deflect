@@ -9,6 +9,8 @@ import os
 import click
 
 from pyaml_env import parse_config
+from OpenSSL.crypto import \
+    load_certificate, FILETYPE_PEM, X509Store, X509StoreContext
 
 from config_generation import (generate_banjax_config, generate_bind_config,
                                generate_edgemanage_config,
@@ -27,7 +29,7 @@ from orchestration.run_container.base_class import (find_existing_container,
 from orchestration.run_container.elasticsearch import (Elasticsearch,
                                                        attempt_to_authenticate)
 from util.decrypt_and_verify_cert_bundles import \
-    main as decrypt_and_verify_cert_bundles
+    main as decrypt_and_verify_cert_bundles, load_encrypted_cert, get_subject_and_alt_names
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
                           path_to_output, reset_log_level, generate_selfsigned_cert)
@@ -442,10 +444,6 @@ def _gen_self_sign_certs(ctx, name, alt_name, output):
 @click.option('--decrypt', '-d', is_flag=True, default=False, help='Attempt to decrpyt it')
 @click.pass_context
 def _verify_cert(ctx, cert, decrypt):
-    from util.decrypt_and_verify_cert_bundles import \
-        load_encrypted_cert, get_subject_and_alt_names
-    from OpenSSL.crypto import \
-        load_certificate, FILETYPE_PEM, X509Store, X509StoreContext
     if decrypt:
         cert, cert_bytes = load_encrypted_cert(cert)
     else:

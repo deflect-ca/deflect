@@ -57,11 +57,12 @@ def load_encrypted_cert(filename):
     cert_bytes = read_encrypted_file(filename)
     try:
         cert = load_certificate(FILETYPE_PEM, cert_bytes)
+        logger.info('cert expire at: {}'.format(cert.get_notAfter()))
     except:
         #import traceback
         #traceback.print_exc()
-        logger.info('Broken certs:')
-        logger.info(cert_bytes)
+        logger.info('\tBroken certs:')
+        logger.info('\t' + str(cert_bytes))
         raise
 
     return cert, cert_bytes
@@ -186,7 +187,7 @@ def one_site(site, bundle_name, formatted_time):
     errors = []
     # TODO: remove test.me.uk etc when opensourcing
     filename = f"{site}-{bundle_name}".replace(".test.me.uk", "")  # XXX
-    logger.info(f"doing {filename}")
+    logger.info(f"checking certs bundle {filename}")
 
     leaf_cert, cert_bytes = load_encrypted_cert(
         f"input/config/tls_bundles/{filename}.cert.crt.gpg")
@@ -209,7 +210,7 @@ def one_site(site, bundle_name, formatted_time):
     errors += validate_leaf_cert_against_root_with_intermediates(
         leaf_cert, chain_certs)
 
-    logger.error(f"\t-- {site} errors: {errors}")
+    logger.warning(f"{site} errors: {errors}")
 
     with open(f"./output/{formatted_time}/etc-ssl-uploaded/{site}.cert-and-chain", "wb") as f:
         f.write(dump_certificate(FILETYPE_PEM, leaf_cert))
