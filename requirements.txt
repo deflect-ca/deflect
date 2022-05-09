@@ -51,7 +51,7 @@ multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
-paramiko==2.7.2
+paramiko==2.10.1
     # via
     #   -r requirements.in
     #   scp
@@ -80,6 +80,7 @@ scp==0.14.1
 six==1.16.0
     # via
     #   bcrypt
+    #   paramiko
     #   pyopenssl
 urllib3==1.26.8
     # via requests
