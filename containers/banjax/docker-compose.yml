@@ -1,0 +1,15 @@
+version: '3.4'
+volumes:
+  var-log-banjax:
+
+services:
+  banjax:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    cap_add:
+      - NET_ADMIN  # we use iptables for banning
+    volumes:
+      - var-log-banjax:/var/log/banjax/
+    ports:
+      - "8081:8081"
