@@ -19,4 +19,4 @@ output.logstash:
   ssl.certificate: "/etc/filebeat/edgecert.pem"
   ssl.key: "/etc/filebeat/edgecert.key"
 
-logging.level: debug
+logging.level: "${FILEBEAT_LOG_LEVEL}"

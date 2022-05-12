@@ -24,6 +24,7 @@ from orchestration.hosts import (docker_client_for_host, host_to_role,
                                  run_local_or_remote_noraise)
 from orchestration.run_container.banjax import Banjax
 from orchestration.run_container.certbot import Certbot
+from orchestration.run_container.legacy_filebeat import LegacyFilebeat
 from orchestration.run_container.base_class import (find_existing_container,
                                                     get_persisted_config)
 from orchestration.run_container.elasticsearch import (Elasticsearch,
@@ -260,6 +261,16 @@ def _install_banjax(ctx):
         banjax.update(timestamp)
 
 
+@click.command('legacy-filebat', help='Install and update legacy_filebat (force rebuild)')
+@click.pass_context
+def _install_legacy_filebeat(ctx):
+    _, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        filebeat = LegacyFilebeat(client, ctx.obj['config'], kill_existing=True, logger=logger)
+        filebeat.update(timestamp)
+
+
 @click.command('certbot', help='Install and update certbot')
 @click.pass_context
 def _install_certbot(ctx):
@@ -338,6 +349,17 @@ def _show_useful_curl_commands(ctx, domain, proto):
     print("\n# check SSL certs/header")
     for edge in hosts:
         print(f"curl -Iv --resolve {domain}:{port}:{edge['ip']} {insecure}{proto}://{domain}")
+
+
+@click.command('cmd', help='Run remote commands')
+@click.option('--cmd', '-c', help='Commands to run')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='Please confirm the target _host and command is correct')
+@click.pass_context
+def _commands(ctx, cmd):
+    for host in ctx.obj['_hosts']:
+        run_local_or_remote_noraise(ctx.obj['config'], host, cmd, logger)
 
 
 @click.command('banjax-decision-lists',
@@ -491,6 +513,7 @@ install.add_command(_install_es)
 install.add_command(_install_banjax)
 install.add_command(_install_certbot)
 install.add_command(_install_selected)
+install.add_command(_install_legacy_filebeat)
 
 # Get section
 get.add_command(_get_nginx_errors)
@@ -504,6 +527,7 @@ util.add_command(_info)
 util.add_command(_test_es_auth)
 util.add_command(_kill_all_containers)
 util.add_command(_show_useful_curl_commands)
+util.add_command(_commands)
 
 # Certs section
 certs.add_command(_check_cert_expiry)
