@@ -31,7 +31,8 @@ def fetch_site_yml(config, logger):
     logger.info(f"SSH Connection to {config['ssh']['host']}...")
     ssh.connect(hostname=config['ssh']['host'],
                 username=config['ssh']['user'],
-                port=config['ssh']['port'])
+                port=config['ssh']['port'],
+                disabled_algorithms=dict(pubkeys=["rsa-sha2-512", "rsa-sha2-256"]))
 
     # get dashdate
     # cmd: date +%Y%m%d%H%M%S
