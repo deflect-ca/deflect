@@ -252,6 +252,9 @@ def _install_es(ctx):
 
 
 @click.command('banjax', help='Install and update banjax (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild banjax, are you sure?')
 @click.pass_context
 def _install_banjax(ctx):
     _, timestamp = ctx.obj['get_all_sites']
@@ -259,9 +262,13 @@ def _install_banjax(ctx):
         client = docker_client_for_host(host, config=ctx.obj['config'])
         banjax = Banjax(client, ctx.obj['config'], kill_existing=True, logger=logger)
         banjax.update(timestamp)
+    click.echo("Please rebuild legacy-filebeat too after rebuilding banjax")
 
 
-@click.command('legacy-filebat', help='Install and update legacy_filebat (force rebuild)')
+@click.command('legacy-filebeat', help='Install and update legacy-filebeat (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild legacy-filebeat, are you sure?')
 @click.pass_context
 def _install_legacy_filebeat(ctx):
     _, timestamp = ctx.obj['get_all_sites']
