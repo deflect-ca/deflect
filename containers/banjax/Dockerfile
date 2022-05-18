@@ -17,7 +17,7 @@ RUN set -x \
         iptables
 
 COPY ./banjax-config.yaml /etc/banjax/
-RUN go install github.com/deflect-ca/banjax@develop
+RUN go install github.com/deflect-ca/banjax@v0.2.2
 
 EXPOSE 8081
 
