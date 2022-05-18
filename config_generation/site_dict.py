@@ -20,24 +20,56 @@ logger = get_logger(__name__)
 
 
 def old_to_new_rate_limited_regexes(old_regexes, public_domain):
+    """
+    Old format: [
+        {
+            "regex": {
+                "url": "\\/xmlrpc\\.php",
+                "ua": ".*",
+                "method": "POST"
+            },
+            "interval": 120,
+            "hits_per_interval": 10
+        }
+    ]
+
+    Banjax log tailing:
+        1651049088.455 1.1.1.1 POST equalit.ie POST /xmlrpc.php HTTP/1.1 Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)
+        1651049088.455 2.2.2.2 GET equalit.ie GET / HTTP/1.1 Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)
+        1651049575.705 3.3.3.3 GET equalit.ie GET / HTTP/1.1 Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML,like Gecko) Chrome/51.0.2704.103 Safari/537.36
+    """
     new_regexes = []
     for old_regex in old_regexes:
-        new_regex = {}
-        # print(public_domain)
-        # print(old_regex)
-        escaped_public_domain = public_domain.replace('.', '\.')
-        old_regex_method = old_regex['regex']['method']
-        old_regex_path = old_regex['regex']['url']
+        rprop = {}
+        rprop['method'] = old_regex['regex'].get('method')
+        rprop['url'] = old_regex['regex'].get('url')
+        rprop['ua'] = old_regex['regex'].get('ua', '.*')
+        rprop['interval'] = old_regex.get('interval')
+        rprop['hits_per_interval'] = old_regex['hits_per_interval']
 
-        new_regex["name"] = old_regex.get("rule", "UNNAMED RULE")
-        new_regex["interval"] = old_regex["interval"]
-        new_regex["hits_per_interval"] = old_regex["hits_per_interval"]
-        new_regex["decision"] = "nginx_block"
-        # GET http://wp-admin example.com Mozilla
-        temp_regex = f"^{old_regex_method} "
-        temp_regex += f"{escaped_public_domain} "
-        temp_regex += f"{old_regex_path} "
-        temp_regex += old_regex.get("ua", "")
+        skip = False
+        for prop in rprop.items():
+            if prop is None:
+                skip = True
+                break
+        if skip:
+            logger.warning(f"skipping broken regex {old_regex} for {public_domain}")
+            continue
+
+        escaped_public_domain = public_domain.replace('.', '\.')
+        new_regex = {}
+        new_regex["name"] = old_regex.get("rule",
+            f"Per site {public_domain} {rprop['method']} {rprop['url']}: "
+            f"{rprop['hits_per_interval']} req/{rprop['interval']} sec")
+        new_regex["interval"] = rprop["interval"]
+        new_regex["hits_per_interval"] = rprop["hits_per_interval"]
+        new_regex["decision"] = old_regex.get("decision", "nginx_block")
+
+        # GET equalit.ie GET .* HTTP/[1-2.]+ .*Mozilla.*
+        temp_regex = f"{rprop['method']} {escaped_public_domain} "
+        temp_regex += f"{rprop['method']} {rprop['url']} "
+        # Handle HTTP/1.1 and HTTP/2.0 before user agent
+        temp_regex += f"HTTP/[0-2.]+ {rprop['ua']}"
         new_regex["regex"] = temp_regex
         new_regexes.append(new_regex)
 
