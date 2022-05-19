@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import yaml
-import shutil
+import re
 import os
 from datetime import datetime
 from util.helpers import (
@@ -13,10 +13,28 @@ from util.helpers import (
         get_system_sites_yml_path,
         get_logger,
 )
-import logging
-import json
 
 logger = get_logger(__name__)
+
+
+def validate_old_regex(rprop):
+    skip = False
+    for prop in rprop.items():
+        if prop is None:
+            skip = True
+            break
+    return skip
+
+
+def validate_regex(regex, public_domain):
+    try:
+        re.compile(regex)
+    except re.error as err:
+        logger.warning(f"{public_domain}: skip invalid regex")
+        logger.warning(f"\tre.compile error: {err}, strlen: {len(regex)}")
+        logger.warning(f"\t{regex}")
+        return False
+    return True
 
 
 def old_to_new_rate_limited_regexes(old_regexes, public_domain):
@@ -47,12 +65,7 @@ def old_to_new_rate_limited_regexes(old_regexes, public_domain):
         rprop['interval'] = old_regex.get('interval')
         rprop['hits_per_interval'] = old_regex['hits_per_interval']
 
-        skip = False
-        for prop in rprop.items():
-            if prop is None:
-                skip = True
-                break
-        if skip:
+        if validate_old_regex(rprop):
             logger.warning(f"skipping broken regex {old_regex} for {public_domain}")
             continue
 
@@ -69,9 +82,11 @@ def old_to_new_rate_limited_regexes(old_regexes, public_domain):
         temp_regex = f"{rprop['method']} {escaped_public_domain} "
         temp_regex += f"{rprop['method']} {rprop['url']} "
         # Handle HTTP/1.1 and HTTP/2.0 before user agent
-        temp_regex += f"HTTP/[0-2.]+ {rprop['ua']}"
-        new_regex["regex"] = temp_regex
-        new_regexes.append(new_regex)
+        temp_regex += f"HTTP\/[0-2.]+ {rprop['ua']}"
+
+        if validate_regex(temp_regex, public_domain):
+            new_regex["regex"] = temp_regex
+            new_regexes.append(new_regex)
 
     return new_regexes
 
@@ -110,7 +125,7 @@ def old_to_new_site_dict(old_dict):
     new_dict["cache_exceptions"] = old_to_new_cache_exceptions(
         old_dict.get("cache_exceptions", []))
     new_dict["disable_logging"] = old_dict.get("disable_logging", False)
-    new_dict["dnet"] = old_dict["network"]
+    new_dict["dnet"] = old_dict.get("network", "dnext1")
     new_dict["origin_ip"] = old_dict["origin"]
     new_dict["public_domain"] = old_dict["url"]
     new_dict["dns_records"] = old_dict.get("dns_records", {})
@@ -193,7 +208,7 @@ def get_all_sites(config):
 
 
 def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
-    logger.debug(f"Site count in site.yml file: {len(old_sites)}")
+    logger.info(f">>> Converting old sites to new sites, count {len(old_sites)}")
 
     new_sites = {}
     for name, old_site in old_sites.items():
