@@ -11,6 +11,7 @@ import shutil
 import gnupg
 import certifi
 import tarfile
+import copy
 
 from cryptography.hazmat.primitives import serialization
 
@@ -20,8 +21,9 @@ import pem
 from OpenSSL.crypto import load_certificate, dump_certificate
 from OpenSSL.crypto import FILETYPE_PEM
 from OpenSSL.crypto import X509Store, X509StoreContext
+from OpenSSL.crypto import X509StoreContextError, Error as OpenSSLError
 
-from util.helpers import get_logger, FILENAMES_TO_TAIL, path_to_output
+from util.helpers import get_logger, FILENAMES_TO_TAIL, path_to_output, generate_selfsigned_cert
 
 
 # todo: use configuration for the logger
@@ -55,10 +57,12 @@ def load_encrypted_cert(filename):
     cert_bytes = read_encrypted_file(filename)
     try:
         cert = load_certificate(FILETYPE_PEM, cert_bytes)
+        logger.info('cert expire at: {}'.format(cert.get_notAfter()))
     except:
-        import traceback
-        traceback.print_exc()
-        logger.debug(cert_bytes)
+        #import traceback
+        #traceback.print_exc()
+        logger.info('\tBroken certs:')
+        logger.info('\t' + str(cert_bytes))
         raise
 
     return cert, cert_bytes
@@ -167,14 +171,14 @@ def validate_leaf_cert_against_root_with_intermediates(leaf_cert, chain_certs):
     for root_cert_pem in pem.parse_file(certifi.where()):
         store.add_cert(load_certificate(FILETYPE_PEM, str(root_cert_pem)))
 
-    store_context = X509StoreContext(store, leaf_cert, chain_certs)
     try:
+        store_context = X509StoreContext(store, leaf_cert, chain_certs)
         store_context.verify_certificate()
-    except Exception as e:
-        print(f"\tverification failed!: {e}")
-        errors.append(f"cert chain verification failed: {e}")
+    except X509StoreContextError as err:
+        logger.warning(f"\tverification failed!: {err}")
+        errors.append(f"cert chain verification failed: {err}")
     else:
-        print(f"\tverification succeeded")
+        logger.info("\tverification succeeded")
     return errors
 
 
@@ -183,7 +187,7 @@ def one_site(site, bundle_name, formatted_time):
     errors = []
     # TODO: remove test.me.uk etc when opensourcing
     filename = f"{site}-{bundle_name}".replace(".test.me.uk", "")  # XXX
-    print(f"doing {filename}")
+    logger.info(f"checking certs bundle {filename}")
 
     leaf_cert, cert_bytes = load_encrypted_cert(
         f"input/config/tls_bundles/{filename}.cert.crt.gpg")
@@ -206,7 +210,7 @@ def one_site(site, bundle_name, formatted_time):
     errors += validate_leaf_cert_against_root_with_intermediates(
         leaf_cert, chain_certs)
 
-    logger.error(f"\t-- {site} errors: {errors}")
+    logger.warning(f"{site} errors: {errors}")
 
     with open(f"./output/{formatted_time}/etc-ssl-uploaded/{site}.cert-and-chain", "wb") as f:
         f.write(dump_certificate(FILETYPE_PEM, leaf_cert))
@@ -229,6 +233,7 @@ def main(all_sites, formatted_time):
         shutil.rmtree(f"{output_dir}")
     os.mkdir(output_dir)
 
+    error_sites = {}
     for name, site in all_sites['client'].items():
         logger.debug(f'Processing name, site: {name, site}')
         uploaded_cert_bundle_name = site.get("uploaded_cert_bundle_name")
@@ -241,7 +246,26 @@ def main(all_sites, formatted_time):
                 logger.error(
                     f"!!! BAD uploaded cert bundle not found for site {name}"
                 )
-                pass
+                error_sites[name] = site
+            except OpenSSLError as err:
+                logger.warning(f"{name} error: {str(err)}, will gen self sign cert for it")
+                error_sites[name] = site
+
+    if len(all_sites['client'].items()) == 0:
+        logger.info('No sites with custom certs')
+
+    # XXX: We can't leave site without certs, so generate a dummy cert for them
+    if error_sites:
+        for name, site in error_sites.items():
+            logger.info(f"generate_selfsigned_cert: {name}")
+            alt_name_arr = copy.copy(site['server_names'])
+            alt_name_arr.remove(name)
+            cert_pem, key_pem = generate_selfsigned_cert(name, alt_name_arr=alt_name_arr)
+            with open(f"./output/{formatted_time}/etc-ssl-uploaded/{name}.cert-and-chain", "wb") as f:
+                f.write(cert_pem)
+
+            with open(f"./output/{formatted_time}/etc-ssl-uploaded/{name}.key", "wb") as f:
+                f.write(key_pem)
 
     if os.path.isfile(output_dir_tar):
         logger.debug(f'Removing output_dir_tar: {output_dir_tar}')

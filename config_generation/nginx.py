@@ -18,6 +18,7 @@ from util.helpers import (
         get_config_yml_path,
         path_to_input,
         path_to_output,
+        path_to_containers,
 )
 
 logger = get_logger(__name__)
@@ -67,6 +68,11 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
         server.add(nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]))
     else:
         server.add(nginx.Key('listen', '80'))
+
+    if dconf['nginx'].get('header_srv_custom', False):
+        server.add(nginx.Key('server_tokens', "off"))
+
+    server.add(nginx.Key('include', 'snippets/error_pages.conf'))
 
     for pattern in sorted(site['password_protected_paths']):
         server.add(
@@ -134,9 +140,11 @@ def pass_prot_location(pattern, origin_https, site):
 
     location.add(nginx.Key('set', "$loc_in \"pass_prot\""))
 
+    location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
-    location.add(nginx.Key('error_page', "500 501 502 @fail_closed"))
+    location.add(nginx.Key('error_page', "500 /500.html"))
+    location.add(nginx.Key('error_page', "502 /502-banjax.html"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
 
     return location
@@ -164,6 +172,11 @@ def slash_location(origin_https, site):
     location.add(nginx.Key('set', "$loc_in \"slash_block\""))
     # location.add(*default_site_content_cache_include_conf(site['default_cache_time_minutes'], site))
 
+    """
+    This is a tricky part, if banjax is down, we will get error page 502
+    but we redirect this to @fail_open. In that section, we still do
+    reverse proxy to bypass banjax.
+    """
     location.add(nginx.Key('error_page', "500 501 502 @fail_open"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
 
@@ -200,12 +213,16 @@ def _access_granted_fail_open_location_contents(
     )
 
     limit_except = nginx.LimitExcept(
-        'GET POST PUT MKCOL COPY MOVE OPTIONS PROPFIND PROPPATCH LOCK UNLOCK PATCH')
+        'GET POST PUT DELETE MKCOL COPY MOVE OPTIONS PROPFIND PROPPATCH LOCK UNLOCK PATCH')
     limit_except.add(nginx.Key('deny', 'all'))
     location_contents.append(limit_except)
+    if global_config['nginx'].get('header_srv_custom', False):
+        header_srv_custom_str = global_config['nginx'].get('header_srv_custom_str', 'Deflect (nginx)')
+        location_contents.append(nginx.Key('add_header', f"X-Server '{header_srv_custom_str}'"))
+    if global_config['nginx'].get('header_show_time', False):
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
-    location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
-    location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
     location_contents.append(nginx.Key('proxy_set_header', "Host $host"))
@@ -226,6 +243,8 @@ def _access_granted_fail_open_location_contents(
 def access_granted_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location("@access_granted")
     location.add(nginx.Key('set', "$loc_out \"access_granted\""))
+    # 502 in access granted section means origin is down, not banjax
+    location.add(nginx.Key('error_page', "502 /502.html"))
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
@@ -235,6 +254,8 @@ def access_granted_location_block(site, global_config, edge_https, origin_https)
 def fail_open_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location("@fail_open")
     location.add(nginx.Key('set', "$loc_out \"fail_open\""))
+    # 502 in fail open section means origin is down, not banjax
+    location.add(nginx.Key('error_page', "502 /502.html"))
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
@@ -465,21 +486,24 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
     return [
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
-        nginx.Key('proxy_cache_valid', f"any {str(cache_time_minutes)}")
+        nginx.Key('proxy_cache_valid', f"200 302 {str(cache_time_minutes)}m"),
+        nginx.Key('proxy_cache_valid', f"any 1m")
     ]
 
 
 def access_denied_location(site):
     location = nginx.Location('@access_denied')
     location.add(nginx.Key('set', "$loc_out \"access_denied\""))
-    location.add(nginx.Key('return', "403 \"access denied\""))
+    location.add(nginx.Key('error_page', "403 /403.html"))
+    location.add(nginx.Key('return', "403"))
     return location
 
 
 def fail_closed_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location('@fail_closed')
     location.add(nginx.Key('set', "$loc_out \"fail_closed\""))
-    location.add(nginx.Key('return', "500 \"error talking to banjax, failing closed\""))
+    location.add(nginx.Key('error_page', "500 /500.html"))
+    location.add(nginx.Key('return', "500"))
     return location
 
 
@@ -506,6 +530,12 @@ def generate_nginx_config(all_sites, config, formatted_time):
             f.write(json.dumps({"config_version": formatted_time}))
 
         os.mkdir(output_dir + "/sites.d")
+        shutil.copytree(
+            f"{path_to_containers()}/nginx/error-pages",
+            f"{output_dir}/error-pages")
+        shutil.copytree(
+            f"{path_to_containers()}/nginx/snippets",
+            f"{output_dir}/snippets")
 
     # write out the client sites
     for name, site in all_sites['client'].items():

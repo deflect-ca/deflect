@@ -115,7 +115,7 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
     logger.info(f"docker things this host is called {hostname}")
 
     Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
-    Banjax(client, config, kill_existing=True, logger=logger).update(timestamp)
+    Banjax(client, config, find_existing=True, logger=logger).update(timestamp)
 
     logger.info(f"Logging mode is: {config['logging']['mode']}")
     if config['logging']['mode'] == 'logstash_external':

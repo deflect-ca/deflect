@@ -9,6 +9,8 @@ import os
 import click
 
 from pyaml_env import parse_config
+from OpenSSL.crypto import \
+    load_certificate, FILETYPE_PEM, X509Store, X509StoreContext
 
 from config_generation import (generate_banjax_config, generate_bind_config,
                                generate_edgemanage_config,
@@ -21,17 +23,42 @@ from orchestration.everything import (gather_info, install_base,
 from orchestration.hosts import (docker_client_for_host, host_to_role,
                                  run_local_or_remote_noraise)
 from orchestration.run_container.banjax import Banjax
+from orchestration.run_container.certbot import Certbot
+from orchestration.run_container.legacy_filebeat import LegacyFilebeat
 from orchestration.run_container.base_class import (find_existing_container,
                                                     get_persisted_config)
 from orchestration.run_container.elasticsearch import (Elasticsearch,
                                                        attempt_to_authenticate)
 from util.decrypt_and_verify_cert_bundles import \
-    main as decrypt_and_verify_cert_bundles
+    main as decrypt_and_verify_cert_bundles, load_encrypted_cert, get_subject_and_alt_names
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
-                          path_to_output, reset_log_level)
+                          path_to_output, reset_log_level, generate_selfsigned_cert)
 
 logger = get_logger(__name__)
+
+
+class AliasedGroup(click.Group):
+    """
+    Support for command alias
+    you can call `util show-useful-curl-commands` as `util show`
+    """
+    def get_command(self, ctx, cmd_name):
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+        matches = [x for x in self.list_commands(ctx)
+                   if x.startswith(cmd_name)]
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            return click.Group.get_command(self, ctx, matches[0])
+        ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
+
+    def resolve_command(self, ctx, args):
+        # always return the full command name
+        _, cmd, args = super().resolve_command(ctx, args)
+        return cmd.name, cmd, args
 
 
 @click.group(help='Welcome to deflect orchestration script',
@@ -73,31 +100,31 @@ def cli_base(ctx, debug, host, action):
         ctx.obj['get_all_sites'] = get_all_sites(ctx.obj['config'])
 
 
-@click.group(help='Generate stuff like config or certs')
+@click.group(help='Generate stuff like config or certs', cls=AliasedGroup)
 @click.pass_context
 def gen(ctx):
     pass
 
 
-@click.group(help='Install config or service')
+@click.group(help='Install config or service', cls=AliasedGroup)
 @click.pass_context
 def install(ctx):
     pass
 
 
-@click.group(help='Getting information from remote host')
+@click.group(help='Getting information from remote host', cls=AliasedGroup)
 @click.pass_context
 def get(ctx):
     pass
 
 
-@click.group(help='Utility for admin')
+@click.group(help='Utility for admin', cls=AliasedGroup)
 @click.pass_context
 def util(ctx):
     pass
 
 
-@click.group(help='SSL certs related utility')
+@click.group(help='SSL certs related utility', cls=AliasedGroup)
 @click.pass_context
 def certs(ctx):
     pass
@@ -117,8 +144,10 @@ def _install_base(ctx):
 
 
 @click.command('config', short_help='Generate config from input dir')
+@click.option('--no-certs', is_flag=True, default=False,
+              help='Do not run decrypt_and_verify_cert_bundles')
 @click.pass_context
-def _gen_config(ctx):
+def _gen_config(ctx, no_certs):
     """Generate config from input dir
 
     This will generate config from input dir and
@@ -150,6 +179,10 @@ def _gen_config(ctx):
     if config['logging']['mode'] == 'logstash_external':
         logger.info('>>> Generating legacy-filebeat config...')
         generate_legacy_filebeat_config(config, all_sites, timestamp)
+
+    if not no_certs:
+        logger.info('>>> Decrypting and verifying cert bundles...')
+        ctx.invoke(_decrypt_and_verify_cert_bundles)
 
 
 def abort_if_false(ctx, param, value):
@@ -218,7 +251,10 @@ def _install_es(ctx):
     es.update(timestamp)
 
 
-@click.command('banjax', help='Install and update banjax')
+@click.command('banjax', help='Install and update banjax (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild banjax, are you sure?')
 @click.pass_context
 def _install_banjax(ctx):
     _, timestamp = ctx.obj['get_all_sites']
@@ -226,6 +262,30 @@ def _install_banjax(ctx):
         client = docker_client_for_host(host, config=ctx.obj['config'])
         banjax = Banjax(client, ctx.obj['config'], kill_existing=True, logger=logger)
         banjax.update(timestamp)
+    click.echo("Please rebuild legacy-filebeat too after rebuilding banjax")
+
+
+@click.command('legacy-filebeat', help='Install and update legacy-filebeat (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild legacy-filebeat, are you sure?')
+@click.pass_context
+def _install_legacy_filebeat(ctx):
+    _, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        filebeat = LegacyFilebeat(client, ctx.obj['config'], kill_existing=True, logger=logger)
+        filebeat.update(timestamp)
+
+
+@click.command('certbot', help='Install and update certbot')
+@click.pass_context
+def _install_certbot(ctx):
+    all_sites, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        Certbot(client, ctx.obj['config'], find_existing=True, logger=logger).update(
+            all_sites, ctx.obj['config'], timestamp)
 
 
 @click.command('test-es-auth', help='Attempt to authenticate with saved ES auth')
@@ -235,6 +295,9 @@ def _test_es_auth(ctx):
 
 
 @click.command('kill-all-containers', help='Run docker kill $(docker ps -q) on target')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='Please confirm the target _host is correct')
 @click.pass_context
 def _kill_all_containers(ctx):
     command = "docker kill $(docker ps -q)"
@@ -268,24 +331,42 @@ def _get_nginx_errors(ctx):
 
 @click.command('show-useful-curl-commands', help='Print curl commands for ES and edge testing')
 @click.option('--domain', '-d', default='example.com', help='Domain for testing')
+@click.option('--proto', '-p', default='https', help='HTTP protocol, https or http')
 @click.pass_context
-def _show_useful_curl_commands(ctx, domain):
+def _show_useful_curl_commands(ctx, domain, proto):
     hosts = ctx.obj['_hosts']
     config = ctx.obj['config']
     p_conf = get_persisted_config()
     elastic_password = p_conf.get('elastic_password', "<doesn't exist yet>")
+    port = '443' if proto == 'https' else 80
+    pebble = '--cacert persisted/pebble_ca.crt ' if config['server_env'] != 'production' else ''
+    insecure = '--insecure ' if config['server_env'] != 'production' else ''
 
     print("# test the ES certs + creds:\n"
           f"curl -v --resolve {config['controller']['hostname']}:9200:{config['controller']['ip']} --cacert persisted/elastic_certs/ca.crt https://{config['controller']['hostname']}:9200 --user 'elastic:{elastic_password}'")
 
     print("\n# test a site through a specific edge:")
     for edge in hosts:
-        print(f"curl --resolve test-origin.{config['system_root_zone']}:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://test-origin.{config['system_root_zone']}")
+        print(f"curl --resolve test-origin.{config['system_root_zone']}:443:{edge['ip']} {pebble}{proto}://test-origin.{config['system_root_zone']}")
     for edge in hosts:
-        print(f"curl --resolve example.com:443:{edge['ip']} --cacert persisted/pebble_ca.crt https://{domain}  # {edge['hostname']}")
+        print(f"curl --resolve {domain}:{port}:{edge['ip']} {pebble}{proto}://{domain}")
     for edge in hosts:
-        insecure = ' --insecure ' if config['server_env'] == 'staging' else ' '
-        print(f"curl --resolve example.com:443:{edge['ip']}{insecure}https://{domain}  # {edge['hostname']}")
+        print(f"curl --resolve {domain}:{port}:{edge['ip']} {insecure}{proto}://{domain}")
+
+    print("\n# check SSL certs/header")
+    for edge in hosts:
+        print(f"curl -Iv --resolve {domain}:{port}:{edge['ip']} {insecure}{proto}://{domain}")
+
+
+@click.command('cmd', help='Run remote commands')
+@click.option('--cmd', '-c', help='Commands to run')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='Please confirm the target _host and command is correct')
+@click.pass_context
+def _commands(ctx, cmd):
+    for host in ctx.obj['_hosts']:
+        run_local_or_remote_noraise(ctx.obj['config'], host, cmd, logger)
 
 
 @click.command('banjax-decision-lists',
@@ -370,6 +451,47 @@ def _decrypt_and_verify_cert_bundles(ctx):
     decrypt_and_verify_cert_bundles(all_sites, timestamp)
 
 
+@click.command('gen-self-sign-certs', help='Generate a self sign cert')
+@click.option('--name', '-n', required=True, help='Domain name for this cert')
+@click.option('--alt-name', '-a', default=[], help='Alt name, seperate by comma')
+@click.option('--output', '-o', default='.', help='Output path, default .')
+@click.pass_context
+def _gen_self_sign_certs(ctx, name, alt_name, output):
+    alt_name_arr = alt_name.split(',')
+    cert_pem, key_pem = generate_selfsigned_cert(name, alt_name_arr=alt_name_arr)
+
+    with open(f"{output}/{name}.pem", "wb") as f:
+        click.echo(f"Writing {output}/{name}.pem")
+        f.write(cert_pem)
+    with open(f"{output}/{name}.key", "wb") as f:
+        click.echo(f"Writing {output}/{name}.key")
+        f.write(key_pem)
+
+
+@click.command('verify-cert', help='Verify input certs')
+@click.option('--cert', '-c', required=True, help='Cert to verify')
+@click.option('--decrypt', '-d', is_flag=True, default=False, help='Attempt to decrpyt it')
+@click.pass_context
+def _verify_cert(ctx, cert, decrypt):
+    if decrypt:
+        cert, cert_bytes = load_encrypted_cert(cert)
+    else:
+        cert_bytes = None
+        with open(cert, "rb") as f:
+            cert_bytes = f.read()
+        cert = load_certificate(FILETYPE_PEM, cert_bytes)
+
+    subject_names, alt_names = get_subject_and_alt_names(cert)
+    click.echo(cert.get_subject().get_components())
+    click.echo(f"subject: {subject_names}")
+    click.echo(f"alt names: {alt_names}")
+    click.echo(f"not_valid_after: {cert.get_notAfter()}")
+    click.echo("X509StoreContext.verify_certificate()")
+    store = X509Store()
+    store_context = X509StoreContext(store, cert)
+    store_context.verify_certificate()
+
+
 def print_hosts_and_ctx(ctx):
     click.echo(f"\n* _has_controller = {ctx.obj['_has_controller']}")
     click.echo(f"* debug = {ctx.obj['debug']}")
@@ -396,7 +518,9 @@ install.add_command(_install_base)
 install.add_command(_install_config)
 install.add_command(_install_es)
 install.add_command(_install_banjax)
+install.add_command(_install_certbot)
 install.add_command(_install_selected)
+install.add_command(_install_legacy_filebeat)
 
 # Get section
 get.add_command(_get_nginx_errors)
@@ -410,10 +534,13 @@ util.add_command(_info)
 util.add_command(_test_es_auth)
 util.add_command(_kill_all_containers)
 util.add_command(_show_useful_curl_commands)
+util.add_command(_commands)
 
 # Certs section
 certs.add_command(_check_cert_expiry)
 certs.add_command(_decrypt_and_verify_cert_bundles)
+certs.add_command(_gen_self_sign_certs)
+certs.add_command(_verify_cert)
 
 # Register sub-base
 cli_base.add_command(gen)
