@@ -11,7 +11,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from orchestration.run_container import Bind
 from orchestration.run_container.base_class import Container
-from util.helpers import path_to_input, symlink_force
+from util.helpers import path_to_input, symlink_force, expire_in_days
 
 
 class Certbot(Container):
@@ -46,6 +46,7 @@ class Certbot(Container):
         self.problematic_certs = {'expired_certs': [], 'snake_oil_certs': [], 'error_certs': []}
         self.tar_name = 'latest'
         self.tempdir = TemporaryDirectory()  # for extract and checking latest.tar
+        self.renew_if_expire_in_days = self.config['certs'].get('renew_if_expire_in_days', 7)
         if self.config['server_env'] == 'production':
             self.certbot_options = self.config['certs']['production_certbot_options']
         else:
@@ -211,7 +212,8 @@ class Certbot(Container):
                 cert_bytes = fullchain1.read()
             cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
             self.logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, "
-                             f"expires: {cert.not_valid_after}")
+                             f"expires: {cert.not_valid_after} "
+                             f"expire in: {expire_in_days(cert.not_valid_after)} days")
             # cert.issuer contains SnakeOilCert
             if "SnakeOilCert" in cert.issuer.rfc4514_string():
                 repack = True
@@ -219,7 +221,7 @@ class Certbot(Container):
                 shutil.rmtree(os.path.join(path, 'archive', domain))
                 self.logger.info(f"removed snake oil cert for {domain}")
             # cert expired
-            if now > cert.not_valid_after:
+            if expire_in_days(cert.not_valid_after) <= self.renew_if_expire_in_days:
                 repack = True
                 self.problematic_certs['expired_certs'].append(domain)
                 shutil.rmtree(os.path.join(path, 'archive', domain))
