@@ -182,7 +182,6 @@ class Certbot(Container):
         """check expire and if snakeoil cert"""
         original_path = latest_tar
         path = self.tempdir.name
-        now = datetime.utcnow()
         repack = False
 
         self.logger.info(f"Extracting prev certs to {path} for checking")
@@ -249,10 +248,6 @@ class Certbot(Container):
         if domain in self.problematic_certs['expired_certs']:
             self.logger.info(f"{domain} expired and should be renew")
             return 'renew'
-        # the autodeflect-formatted ones...
-        if f"{domain}.le.key" in self.sites_with_certs:
-            self.logger.info(f"{domain} (.le.key) already has a cert, skip certonly")
-            return 'skip'
         # the letsencrypt / deflect-next formatted ones...
         if domain in self.sites_with_certs:
             self.logger.info(f"{domain} already has a cert, skip certonly")
