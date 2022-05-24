@@ -369,14 +369,14 @@ def _curl_gen(ctx, insecure):
     all_sites, timestamp = ctx.obj['get_all_sites']
     sites = {**all_sites['client'], **all_sites['system']}
 
-    arg = "-L --write-out '%{url_effective} -> HTTP Code: %{http_code}, Time: %{time_connect}, Edge: %{remote_ip}\\n' --silent --output /dev/null"
+    arg = "-L --write-out '[%{http_code}] %{url_effective} Time: %{time_connect}, Edge: %{remote_ip}, SSL: %{ssl_verify_result}\\n' --silent --output /dev/null --connect-timeout 5 --max-time 10"
     if insecure:
         arg = "-k " + arg
 
     for domain, site in sites.items():
         edge_ip = config['edges'][random.randrange(0, len(config['edges']))]['ip']
         port = '443' if site["https_request_does"] != 'nothing' else '80'
-        print(f"curl {arg} --resolve {domain}:{port}:{edge_ip} {'https' if port == '443' else 'http'}://{domain}")
+        print(f"curl {arg} --resolve {domain}:{port}:{edge_ip} {'https' if port == '443' else 'http'}://{domain}/")
 
 
 @click.command('cmd', help='Run remote commands')
