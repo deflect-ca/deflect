@@ -71,8 +71,9 @@ def old_to_new_rate_limited_regexes(old_regexes, public_domain):
 
         escaped_public_domain = public_domain.replace('.', '\.')
         new_regex = {}
+        h_url = rprop['url'].replace('\\/', '/')  # for rule name
         new_regex["name"] = old_regex.get("rule",
-            f"Per site {public_domain} {rprop['method']} {rprop['url']}: "
+            f"Per site {public_domain} {rprop['method']} {h_url}: "
             f"{rprop['hits_per_interval']} req/{rprop['interval']} sec")
         new_regex["interval"] = rprop["interval"]
         new_regex["hits_per_interval"] = rprop["hits_per_interval"]
