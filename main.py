@@ -361,7 +361,7 @@ def _show_useful_curl_commands(ctx, domain, proto):
 
 
 @click.command('curl-gen', help='Generate curl command for testing all site')
-@click.option('--insecure', '-k', is_flag=True, default=False, help='Do not print header')
+@click.option('--insecure', '-k', is_flag=True, default=False, help='Add insecure flag (-k) in curl, usually for dev')
 @click.pass_context
 def _curl_gen(ctx, insecure):
     import random
