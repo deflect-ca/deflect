@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import tarfile
+import OpenSSL
 from time import time
 from datetime import datetime
 from tempfile import TemporaryDirectory
@@ -10,7 +11,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from orchestration.run_container import Bind
 from orchestration.run_container.base_class import Container
-from util.helpers import path_to_input, symlink_force
+from util.helpers import path_to_input, symlink_force, expire_in_days
 
 
 class Certbot(Container):
@@ -42,9 +43,10 @@ class Certbot(Container):
         super().__init__(client, config, find_existing, kill_existing, logger)
         self.client_and_system_sites = {}
         self.sites_with_certs = []
-        self.problematic_certs = {'expired_certs': [], 'snake_oil_certs': []}
+        self.problematic_certs = {'expired_certs': [], 'snake_oil_certs': [], 'error_certs': []}
         self.tar_name = 'latest'
         self.tempdir = TemporaryDirectory()  # for extract and checking latest.tar
+        self.renew_if_expire_in_days = self.config['certs'].get('renew_if_expire_in_days', 7)
         if self.config['server_env'] == 'production':
             self.certbot_options = self.config['certs']['production_certbot_options']
         else:
@@ -89,6 +91,12 @@ class Certbot(Container):
             # Step 6.2.
             action = self.cert_action_selector(domain)
             if action == 'skip':
+                continue
+
+            # If NS not on deflect, skip it and give it a snake oil cert
+            if site.get('ns_on_deflect', True):
+                self.logger.info(f"{domain} NS not on deflect, skip certbot")
+                cert_failed_domain.append(domain)
                 continue
 
             # Hitting this line means some cert isn't skipped
@@ -180,7 +188,6 @@ class Certbot(Container):
         """check expire and if snakeoil cert"""
         original_path = latest_tar
         path = self.tempdir.name
-        now = datetime.utcnow()
         repack = False
 
         self.logger.info(f"Extracting prev certs to {path} for checking")
@@ -191,12 +198,27 @@ class Certbot(Container):
             if site.get("uploaded_cert_bundle_name"):
                 self.logger.info(f"{domain} has uploaded cert bundle, skip checking here")
                 continue
-            cert_bytes = None
-            with open(os.path.join(path, 'archive', domain, "fullchain1.pem"), "rb") as fullchain1:
+
+            fullchain_path = os.path.join(path, 'archive', domain, "fullchain1.pem")
+            key_path = os.path.join(path, 'archive', domain, "privkey1.pem")
+            if not os.path.isfile(fullchain_path) or not os.path.isfile(key_path):
+                self.logger.warning(f"{domain} missing cert or key, skip checking")
+                shutil.rmtree(os.path.join(path, 'archive', domain))
+                continue
+
+            if not self.check_associate_cert_with_private_key(domain, fullchain_path, key_path):
+                repack = True
+                self.problematic_certs['error_certs'].append(domain)
+                shutil.rmtree(os.path.join(path, 'archive', domain))
+                self.logger.info(f"removed error certs for {domain}")
+                continue
+
+            with open(fullchain_path, "rb") as fullchain1:
                 cert_bytes = fullchain1.read()
             cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
             self.logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, "
-                             f"expires: {cert.not_valid_after}")
+                             f"expires: {cert.not_valid_after} "
+                             f"expire in: {expire_in_days(cert.not_valid_after)} days")
             # cert.issuer contains SnakeOilCert
             if "SnakeOilCert" in cert.issuer.rfc4514_string():
                 repack = True
@@ -204,7 +226,7 @@ class Certbot(Container):
                 shutil.rmtree(os.path.join(path, 'archive', domain))
                 self.logger.info(f"removed snake oil cert for {domain}")
             # cert expired
-            if now > cert.not_valid_after:
+            if expire_in_days(cert.not_valid_after) <= self.renew_if_expire_in_days:
                 repack = True
                 self.problematic_certs['expired_certs'].append(domain)
                 shutil.rmtree(os.path.join(path, 'archive', domain))
@@ -212,6 +234,7 @@ class Certbot(Container):
 
         self.logger.warning(f"snake_oil_certs: {self.problematic_certs['snake_oil_certs']}")
         self.logger.warning(f"expired_certs: {self.problematic_certs['expired_certs']}")
+        self.logger.warning(f"error_certs: {self.problematic_certs['error_certs']}")
 
         # repack because we deleted some certs
         if repack:
@@ -231,10 +254,6 @@ class Certbot(Container):
         if domain in self.problematic_certs['expired_certs']:
             self.logger.info(f"{domain} expired and should be renew")
             return 'renew'
-        # the autodeflect-formatted ones...
-        if f"{domain}.le.key" in self.sites_with_certs:
-            self.logger.info(f"{domain} (.le.key) already has a cert, skip certonly")
-            return 'skip'
         # the letsencrypt / deflect-next formatted ones...
         if domain in self.sites_with_certs:
             self.logger.info(f"{domain} already has a cert, skip certonly")
@@ -339,3 +358,35 @@ class Certbot(Container):
         except Exception as err:
             self.logger.info(str(err))
             self.logger.info('Save renewal failed, but this is for backup only')
+
+    def check_associate_cert_with_private_key(self, domain, cert, private_key):
+        """
+        :type cert: str
+        :type private_key: str
+        :rtype: bool
+        """
+        try:
+            with open(private_key, "rb") as private_key_file:
+                private_key_obj = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, private_key_file.read())
+        except OpenSSL.crypto.Error as err:
+            self.logger.warning(err)
+            self.logger.warning(f"{domain} has invalid private key")
+            return False
+
+        try:
+            with open(cert, "rb") as cert_file:
+                cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_file.read())
+        except OpenSSL.crypto.Error as err:
+            self.logger.warning(err)
+            self.logger.warning(f"{domain} has invalid private certs")
+            return False
+
+        context = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
+        context.use_privatekey(private_key_obj)
+        context.use_certificate(cert_obj)
+        try:
+            context.check_privatekey()
+            return True
+        except OpenSSL.SSL.Error:
+            self.logger.warning(f"{domain} key does not match with its certs")
+            return False

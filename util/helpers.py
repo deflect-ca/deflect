@@ -304,3 +304,8 @@ def generate_selfsigned_cert(hostname, alt_name_arr=[], key=None):
     )
 
     return cert_pem, key_pem
+
+
+def expire_in_days(not_valid_after):
+    now = datetime.utcnow()
+    return (not_valid_after - now).days

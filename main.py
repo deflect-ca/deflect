@@ -33,7 +33,8 @@ from util.decrypt_and_verify_cert_bundles import \
     main as decrypt_and_verify_cert_bundles, load_encrypted_cert, get_subject_and_alt_names
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
-                          path_to_output, reset_log_level, generate_selfsigned_cert)
+                          path_to_output, reset_log_level, generate_selfsigned_cert,
+                          expire_in_days)
 
 logger = get_logger(__name__)
 
@@ -450,7 +451,8 @@ def _check_cert_expiry(ctx):
         with open(os.path.join(site_dir, "cert1.pem"), "rb") as f:
             cert_bytes = f.read()
         cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
-        logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, expires: {cert.not_valid_after}")
+        logger.info(f"subject: {cert.subject}, issuer: {cert.issuer}, "
+                    f"expires: {cert.not_valid_after}, expire in days: {expire_in_days(cert.not_valid_after)}")
         if cert.not_valid_after < now:
             logger.warning(f"{hostname} cert expired")
             expired.append(hostname)

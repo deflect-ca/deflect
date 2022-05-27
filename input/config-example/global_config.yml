@@ -57,6 +57,7 @@ certs:
   production_certbot_options: --email user@example.com --server https://acme-v02.api.letsencrypt.org/directory
   # do not set OU, CN here, no trailing / required
   self_sign_subj: /C=CA/ST=QC/L=Montreal/O=Company
+  renew_if_expire_in_days: 7
 doh_private_port: 8085
 kibana_private_port: 5601
 nginx:
