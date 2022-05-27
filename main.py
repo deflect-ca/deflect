@@ -71,7 +71,8 @@ class AliasedGroup(click.Group):
                    'For example: "edge1,edge2,edge3" (subdomain name) '
                    'or full hostname "edge1.dev.deflect.network"')
 @click.option('--action', '-a', default=None, help='DEPRECATED. Forward only')
-def cli_base(ctx, debug, host, action):
+@click.option('--quiet', '-q', is_flag=True, default=False, help='Do not print header')
+def cli_base(ctx, debug, host, action, quiet):
     ctx.ensure_object(dict)
     if debug:
         reset_log_level('DEBUG')
@@ -95,8 +96,9 @@ def cli_base(ctx, debug, host, action):
             raise click.Abort
     elif ctx.invoked_subcommand:
         # invoke normal subcommand
-        click.echo("Welcome to Deflect orchestration script")
-        print_hosts_and_ctx(ctx)
+        if not quiet:
+            click.echo("Welcome to Deflect orchestration script")
+            print_hosts_and_ctx(ctx)
         ctx.obj['get_all_sites'] = get_all_sites(ctx.obj['config'])
 
 
@@ -358,6 +360,25 @@ def _show_useful_curl_commands(ctx, domain, proto):
         print(f"curl -Iv --resolve {domain}:{port}:{edge['ip']} {insecure}{proto}://{domain}")
 
 
+@click.command('curl-gen', help='Generate curl command for testing all site')
+@click.option('--insecure', '-k', is_flag=True, default=False, help='Add insecure flag (-k) in curl, usually for dev')
+@click.pass_context
+def _curl_gen(ctx, insecure):
+    import random
+    config = ctx.obj['config']
+    all_sites, timestamp = ctx.obj['get_all_sites']
+    sites = {**all_sites['client'], **all_sites['system']}
+
+    arg = "-L --write-out '[%{http_code}] %{url_effective} Time: %{time_connect}, Edge: %{remote_ip}, SSL: %{ssl_verify_result}\\n' --silent --output /dev/null --connect-timeout 5 --max-time 10"
+    if insecure:
+        arg = "-k " + arg
+
+    for domain, site in sites.items():
+        edge_ip = config['edges'][random.randrange(0, len(config['edges']))]['ip']
+        port = '443' if site["https_request_does"] != 'nothing' else '80'
+        print(f"curl {arg} --resolve {domain}:{port}:{edge_ip} {'https' if port == '443' else 'http'}://{domain}/")
+
+
 @click.command('cmd', help='Run remote commands')
 @click.option('--cmd', '-c', help='Commands to run')
 @click.option('--yes', is_flag=True, callback=abort_if_false,
@@ -535,6 +556,7 @@ util.add_command(_test_es_auth)
 util.add_command(_kill_all_containers)
 util.add_command(_show_useful_curl_commands)
 util.add_command(_commands)
+util.add_command(_curl_gen)
 
 # Certs section
 certs.add_command(_check_cert_expiry)
