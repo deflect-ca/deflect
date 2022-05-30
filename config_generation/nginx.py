@@ -441,6 +441,7 @@ def http_block(dconf, timestamp):
             '"request": "$request",'
             '"request_uri": "$request_uri",'
             '"client_url": "$uri",'
+            '"querystring": "$args",'
             '"proxy_host": "$proxy_host",'
             '"proxy_url": "$scheme://$proxy_host:$proxy_port$uri",'
             '"content_type": "$sent_http_content_type",'
