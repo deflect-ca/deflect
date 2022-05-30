@@ -435,6 +435,7 @@ def http_block(dconf, timestamp):
             '"http_response_code": "$status",'
             '"reply_length_bytes": "$body_bytes_sent",'
             '"cache_result": "$upstream_cache_status",'
+            '"http_request_version": "$server_protocol",'
             '"referer": "$http_referer",'
             '"client_ua": "$http_user_agent",'
             '"request": "$request",'
