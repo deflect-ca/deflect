@@ -445,7 +445,7 @@ def http_block(dconf, timestamp):
             '"ngx_upstream_addr": "$upstream_addr",'
             '"ngx_upstream_response_time": "$upstream_response_time",'
             '"ngx_request_time": "$request_time",'
-            '"http_x_forwarded_for": "$http_x_forwarded_for",'
+            '"forwardedfor": "$http_x_forwarded_for",'
             '"ngx_loc_in": "$loc_in",'
             '"ngx_loc_out": "$loc_out",'
             '"upstream_status": "$upstream_status",'
