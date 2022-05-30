@@ -438,8 +438,6 @@ def http_block(dconf, timestamp):
             '"http_request_version": "$server_protocol",'
             '"referer": "$http_referer",'
             '"client_ua": "$http_user_agent",'
-            '"request": "$request",'
-            '"request_uri": "$request_uri",'
             '"client_url": "$uri",'
             '"querystring": "$args",'
             '"proxy_host": "$proxy_host",'
