@@ -440,6 +440,7 @@ def http_block(dconf, timestamp):
             '"client_ua": "$http_user_agent",'
             '"request": "$request",'
             '"request_uri": "$request_uri",'
+            '"uri": "$uri",'
             '"proxy_host": "$proxy_host",'
             '"proxy_url": "$scheme://$proxy_host:$proxy_port$uri",'
             '"content_type": "$sent_http_content_type",'
