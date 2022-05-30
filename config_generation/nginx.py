@@ -441,7 +441,7 @@ def http_block(dconf, timestamp):
             '"request_uri": "$request_uri",'
             '"proxy_host": "$proxy_host",'
             '"proxy_url": "$scheme://$proxy_host:$proxy_port$uri",'
-            '"sent_http_content_type": "$sent_http_content_type",'
+            '"content_type": "$sent_http_content_type",'
             '"ngx_upstream_addr": "$upstream_addr",'
             '"ngx_upstream_response_time": "$upstream_response_time",'
             '"ngx_request_time": "$request_time",'
