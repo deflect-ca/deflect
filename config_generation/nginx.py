@@ -443,7 +443,6 @@ def http_block(dconf, timestamp):
             '"proxy_url": "$scheme://$proxy_host:$proxy_port$uri",'
             '"content_type": "$sent_http_content_type",'
             '"upstream_addr": "$upstream_addr",'
-            '"upstream_response_time": "$upstream_response_time",'
             '"request_time": "$request_time",'
             '"forwardedfor": "$http_x_forwarded_for",'
             '"loc_in": "$loc_in",'
