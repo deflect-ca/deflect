@@ -94,7 +94,7 @@ class Certbot(Container):
                 continue
 
             # If NS not on deflect, skip it and give it a snake oil cert
-            if site.get('ns_on_deflect', True):
+            if not site.get('ns_on_deflect', True):
                 self.logger.info(f"{domain} NS not on deflect, skip certbot")
                 cert_failed_domain.append(domain)
                 continue
