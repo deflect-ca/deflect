@@ -1,5 +1,6 @@
 filebeat.inputs:
 - type: log
+  tail_files: true
   paths:
     - /var/log/nginx/nginx-logstash-format.log
   fields:
@@ -7,6 +8,7 @@ filebeat.inputs:
     type: deflect_access
 
 - type: log
+  tail_files: true
   paths:
     - /var/log/banjax/banjax-logstash-format.log
   fields:
