@@ -64,7 +64,10 @@ class Banjax(Container):
                 restart_policy={"Name": "on-failure", "MaximumRetryCount": 5}
             )
 
-        self.logger.info("starting banjax config container")
+        # We create a container here that does nothing
+        # but bind to a volume of /etc/banjax so we can upload stuff to it
+        # before the banjax container starts
+        self.logger.info("starting banjax-config container")
         banjax_config_container = self.client.containers.run(
             "debian:buster-slim",
             command="sleep infinity",
@@ -82,10 +85,12 @@ class Banjax(Container):
             name="banjax-config",
             restart_policy=Container.DEFAULT_RESTART_POLICY
         )
+
         self.logger.info("uploading etc-banjax.tar to banjax config container")
         with open(f"output/{self.timestamp}/etc-banjax.tar", "rb") as tar:
             banjax_config_container.put_archive("/etc/banjax", tar.read())
 
+        self.logger.info("starting banjax container")
         return self.client.containers.run(
             image_id,
             detach=True,
