@@ -79,10 +79,11 @@ class Container:
         "Name": "on-failure", "MaximumRetryCount": CONTAINER_MAX_RETRY_COUNT
     }
 
-    def __init__(self, client, config, find_existing=False, kill_existing=False, logger=None):
+    def __init__(self, client, config, find_existing=False, kill_existing=False, logger=None, timestamp=None):
         self.client = client
         self.logger = logger
         self.config = config
+        self.timestamp = timestamp
         concrete_class = self.__class__.__name__
         self.set_hostname_and_dnet(config)
         self.lowercase_name = {

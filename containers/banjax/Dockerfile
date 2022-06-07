@@ -16,8 +16,8 @@ RUN set -x \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         iptables
 
-COPY ./banjax-config.yaml /etc/banjax/
-RUN go install github.com/deflect-ca/banjax@v0.2.2
+# We don't copy file here anymore, config is taken from a volume bind at /etc/banjax
+RUN go install github.com/deflect-ca/banjax@@v0.2.2
 
 EXPOSE 8081
 
