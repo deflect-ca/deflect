@@ -417,14 +417,53 @@ def http_block(dconf, timestamp):
         "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
         "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
         "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\"'"))
+    http.add(nginx.Key('log_format',
+        "logstash_format_new '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
+        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
+        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\" "
+        "\"$upstream_status\" \"$upstream_response_time\" \"$upstream_header_time\" \"$upstream_connect_time\" "
+        "\"$upstream_bytes_sent\" \"$upstream_bytes_received\"'"))
+
+    http.add(nginx.Key('log_format', """ logstash_format_json escape=json
+        '{'
+            '"time_local": "$time_local",'
+            '"client_user": "$remote_user",'
+            '"client_ip": "$remote_addr",'
+            '"http_request_scheme": "$scheme",'
+            '"client_request_method": "$request_method",'
+            '"client_request_host": "$host",'
+            '"http_response_code": $status,'
+            '"reply_length_bytes": $body_bytes_sent,'
+            '"cache_result": "$upstream_cache_status",'
+            '"http_request_version": "$server_protocol",'
+            '"referer": "$http_referer",'
+            '"client_ua": "$http_user_agent",'
+            '"client_url": "$uri",'
+            '"querystring": "$args",'
+            '"proxy_host": "$proxy_host",'
+            '"proxy_port": "$proxy_port",'
+            '"content_type": "$sent_http_content_type",'
+            '"request_time": $request_time,'
+            '"forwardedfor": "$http_x_forwarded_for",'
+            '"loc_in": "$loc_in",'
+            '"loc_out": "$loc_out",'
+            '"upstream_addr": "$upstream_addr",'
+            '"upstream_status": "$upstream_status",'
+            '"upstream_response_time": "$upstream_response_time",'
+            '"upstream_header_time": "$upstream_header_time",'
+            '"upstream_connect_time": "$upstream_connect_time",'
+            '"upstream_bytes_sent": "$upstream_bytes_sent",'
+            '"upstream_bytes_received": "$upstream_bytes_received"'
+        '}' """
+    ))
 
     # renaming so they don't collide in ES/kibana
     http.add(nginx.Key('log_format', """ json_combined escape=json
         '{'
-            '"time_local":"$time_local",'
-            '"remote_addr":"$remote_addr",'
-            '"request_host":"$host",'
-            '"request_uri":"$request_uri",'
+            '"time_local": "$time_local",'
+            '"remote_addr": "$remote_addr",'
+            '"request_host": "$host",'
+            '"request_uri": "$request_uri",'
             '"ngx_status": "$status",'
             '"ngx_body_bytes_sent": "$body_bytes_sent",'
             '"ngx_upstream_addr": "$upstream_addr",'
@@ -440,9 +479,9 @@ def http_block(dconf, timestamp):
     ))
 
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/access.log json_combined"))
+    http.add(nginx.Key('access_log', "/var/log/nginx/access.log logstash_format_new"))
     http.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format"))
+    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json"))
 
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"))
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:10m max_size=50g"))
