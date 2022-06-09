@@ -203,7 +203,10 @@ class Certbot(Container):
             key_path = os.path.join(path, 'archive', domain, "privkey1.pem")
             if not os.path.isfile(fullchain_path) or not os.path.isfile(key_path):
                 self.logger.warning(f"{domain} missing cert or key, skip checking")
-                shutil.rmtree(os.path.join(path, 'archive', domain))
+                try:
+                    shutil.rmtree(os.path.join(path, 'archive', domain))
+                except FileNotFoundError:
+                    self.logger.warning(f"{domain} missing cert or key, rmtree failed")
                 continue
 
             if not self.check_associate_cert_with_private_key(domain, fullchain_path, key_path):
