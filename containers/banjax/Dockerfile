@@ -17,7 +17,7 @@ RUN set -x \
         iptables
 
 # We don't copy file here anymore, config is taken from a volume bind at /etc/banjax
-RUN go install github.com/deflect-ca/banjax@json-log-v4
+RUN go install github.com/deflect-ca/banjax@v0.3.0
 
 EXPOSE 8081
 
