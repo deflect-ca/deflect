@@ -123,6 +123,7 @@ def proxy_pass_to_banjax_keys(origin_https, site):
         nginx.Key('proxy_set_header', "X-Requested-Host $host"),
         nginx.Key('proxy_set_header', "X-Client-IP $remote_addr"),
         nginx.Key('proxy_set_header', "X-Requested-Path $request_uri"),
+        nginx.Key('proxy_set_header', "X-Client-User-Agent $http_user_agent"),
         nginx.Key('proxy_pass_request_body', "off"),
         # XXX i just want to discard the path
         # TODO: use config for port, ip
@@ -143,6 +144,8 @@ def pass_prot_location(pattern, origin_https, site):
     location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
+    # XXX not working
+    location.add(nginx.Key('proxy_intercept_errors', 'on'))
     location.add(nginx.Key('error_page', "500 /500.html"))
     location.add(nginx.Key('error_page', "502 /502-banjax.html"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
@@ -176,8 +179,12 @@ def slash_location(origin_https, site):
     This is a tricky part, if banjax is down, we will get error page 502
     but we redirect this to @fail_open. In that section, we still do
     reverse proxy to bypass banjax.
+
+    Confirm fail open working
     """
-    location.add(nginx.Key('error_page', "500 501 502 @fail_open"))
+    location.add(nginx.Key('proxy_intercept_errors', 'on'))
+    location.add(nginx.Key('error_page', "500 @fail_open"))
+    location.add(nginx.Key('error_page', "502 @fail_open"))
     location.add(*proxy_pass_to_banjax_keys(origin_https, site))
 
     return location
@@ -243,22 +250,28 @@ def _access_granted_fail_open_location_contents(
 def access_granted_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location("@access_granted")
     location.add(nginx.Key('set', "$loc_out \"access_granted\""))
-    # 502 in access granted section means origin is down, not banjax
-    location.add(nginx.Key('error_page', "502 /502.html"))
+    location.add(nginx.Key('set', "$banjax_decision \"$upstream_http_x_banjax_decision\""))
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
+    # Confirm working
+    # 502 in access granted section means origin is down, not banjax
+    location.add(nginx.Key('error_page', "502 /502.html"))
+    location.add(nginx.Key('error_page', "504 /504.html"))
     return location
 
 
 def fail_open_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location("@fail_open")
     location.add(nginx.Key('set', "$loc_out \"fail_open\""))
-    # 502 in fail open section means origin is down, not banjax
-    location.add(nginx.Key('error_page', "502 /502.html"))
+    location.add(nginx.Key('set', "$banjax_error \"$upstream_http_x_banjax_error\""))
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
+    # XXX Not working for now
+    # 502 in fail open section means origin is down, not banjax
+    location.add(nginx.Key('error_page', "502 /502.html"))
+    location.add(nginx.Key('error_page', "504 /504.html"))
     return location
 
 
@@ -424,7 +437,17 @@ def http_block(dconf, timestamp):
         "\"$upstream_status\" \"$upstream_response_time\" \"$upstream_header_time\" \"$upstream_connect_time\" "
         "\"$upstream_bytes_sent\" \"$upstream_bytes_received\"'"))
 
-    http.add(nginx.Key('log_format', """ logstash_format_json escape=json
+    # Init $banjax_decision to avoid var not defined errors
+    # We use $host here but it does not matter since we make it default to "-"
+    map_decision = nginx.Map("$host $banjax_decision")
+    map_decision.add(nginx.Key('default', '"-"'))
+    http.add(map_decision)
+    # Error if banjax panic
+    map_error = nginx.Map("$host $banjax_error")
+    map_error.add(nginx.Key('default', '"-"'))
+    http.add(map_error)
+
+    http.add(nginx.Key('log_format', """logstash_format_json escape=json
         '{'
             '"time_local": "$time_local",'
             '"client_user": "$remote_user",'
@@ -453,12 +476,14 @@ def http_block(dconf, timestamp):
             '"upstream_header_time": "$upstream_header_time",'
             '"upstream_connect_time": "$upstream_connect_time",'
             '"upstream_bytes_sent": "$upstream_bytes_sent",'
-            '"upstream_bytes_received": "$upstream_bytes_received"'
+            '"upstream_bytes_received": "$upstream_bytes_received",'
+            '"banjax_decision": "$banjax_decision",'
+            '"banjax_error": "$banjax_error"'
         '}' """
     ))
 
     # renaming so they don't collide in ES/kibana
-    http.add(nginx.Key('log_format', """ json_combined escape=json
+    http.add(nginx.Key('log_format', """json_combined escape=json
         '{'
             '"time_local": "$time_local",'
             '"remote_addr": "$remote_addr",'
@@ -533,6 +558,8 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
 def access_denied_location(site):
     location = nginx.Location('@access_denied')
     location.add(nginx.Key('set', "$loc_out \"access_denied\""))
+    location.add(nginx.Key('set', "$banjax_decision \"$upstream_http_x_banjax_decision\""))
+    # Confirm working
     location.add(nginx.Key('error_page', "403 /403.html"))
     location.add(nginx.Key('return', "403"))
     return location
@@ -541,6 +568,7 @@ def access_denied_location(site):
 def fail_closed_location_block(site, global_config, edge_https, origin_https):
     location = nginx.Location('@fail_closed')
     location.add(nginx.Key('set', "$loc_out \"fail_closed\""))
+    # This block isn't used for now
     location.add(nginx.Key('error_page', "500 /500.html"))
     location.add(nginx.Key('return', "500"))
     return location
