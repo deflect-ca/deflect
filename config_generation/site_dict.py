@@ -72,9 +72,12 @@ def old_to_new_rate_limited_regexes(old_regexes, public_domain):
         escaped_public_domain = public_domain.replace('.', '\.')
         new_regex = {}
         h_url = rprop['url'].replace('\\/', '/')  # for rule name
-        new_regex["name"] = old_regex.get("rule",
-            f"Per site {public_domain} {rprop['method']} {h_url}: "
-            f"{rprop['hits_per_interval']} req/{rprop['interval']} sec")
+
+        # Per site example.com POST /xmlrpc\.php: 10 req/120 sec
+        # XXX in banjax its not "name" but "rule"
+        new_regex["rule"] = old_regex.get("rule",
+            f"Per-site {public_domain} m={rprop['method']} p={h_url} u={rprop['ua']} "
+            f"{rprop['hits_per_interval']}req/{rprop['interval']}sec")
         new_regex["interval"] = rprop["interval"]
         new_regex["hits_per_interval"] = rprop["hits_per_interval"]
         new_regex["decision"] = old_regex.get("decision", "nginx_block")
@@ -153,7 +156,8 @@ def old_to_new_site_dict(old_dict):
     new_dict["additional_domain_prefix"] = old_dict.get("additional_domain_prefix", [])
     new_dict["server_names"] = server_names
     new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
-    new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", [])
+    # append origin IP to banjax per site whitelist
+    new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", []) + [old_dict["origin"]]
 
     return new_dict
 
