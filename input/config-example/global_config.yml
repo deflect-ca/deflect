@@ -79,8 +79,6 @@ nginx:
   header_srv_custom: True # Set False to show 'Server: nginx/1.17'
   header_srv_custom_str: Deflect (nginx)
   header_show_time: False
-  # print nginx default access.log
-  default_access_log: True
 
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:
