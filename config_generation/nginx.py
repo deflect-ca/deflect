@@ -424,18 +424,8 @@ def cache_purge_server(dconf):
 def http_block(dconf, timestamp):
     http = nginx.Http()
     http.add(nginx.Key('server_names_hash_bucket_size', '128'))
-    http.add(nginx.Key('log_format', "main '$time_local | $status | $request_time (s)| $remote_addr | $request'"))
     http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"))
-    http.add(nginx.Key('log_format',
-        "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
-        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
-        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\"'"))
-    http.add(nginx.Key('log_format',
-        "logstash_format_new '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
-        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
-        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\" "
-        "\"$upstream_status\" \"$upstream_response_time\" \"$upstream_header_time\" \"$upstream_connect_time\" "
-        "\"$upstream_bytes_sent\" \"$upstream_bytes_received\"'"))
+    http.add(nginx.Key('log_format', 'nginx_default \'$remote_addr $server_name $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" $server_port $upstream_bytes_received "$sent_http_content_type" $host "$https" "$http_cookie"\''))
 
     # Init $banjax_decision to avoid var not defined errors
     # We use $host here but it does not matter since we make it default to "-"
@@ -482,29 +472,9 @@ def http_block(dconf, timestamp):
         '}' """
     ))
 
-    # renaming so they don't collide in ES/kibana
-    http.add(nginx.Key('log_format', """json_combined escape=json
-        '{'
-            '"time_local": "$time_local",'
-            '"remote_addr": "$remote_addr",'
-            '"request_host": "$host",'
-            '"request_uri": "$request_uri",'
-            '"ngx_status": "$status",'
-            '"ngx_body_bytes_sent": "$body_bytes_sent",'
-            '"ngx_upstream_addr": "$upstream_addr",'
-            '"ngx_upstream_cache_status": "$upstream_cache_status",'
-            '"ngx_upstream_response_time": "$upstream_response_time",'
-            '"ngx_request_time": "$request_time",'
-            '"http_referrer": "$http_referer",'
-            '"http_user_agent": "$http_user_agent",'
-            '"ngx_loc_in": "$loc_in",'
-            '"ngx_loc_out": "$loc_out",'
-            '"ngx_loc_in_out": "${loc_in}-${loc_out}"'
-        '}' """
-    ))
-
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/access.log logstash_format_new"))
+    if dconf['nginx'].get('default_access_log', True):
+        http.add(nginx.Key('access_log', "/var/log/nginx/access.log nginx_default"))
     http.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))
     http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json"))
 
