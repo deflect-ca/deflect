@@ -266,7 +266,7 @@ def _install_banjax(ctx):
         client = docker_client_for_host(host, config=ctx.obj['config'])
         banjax = Banjax(client, ctx.obj['config'], kill_existing=True, logger=logger, timestamp=timestamp)
         banjax.update(timestamp)
-    click.echo("Please rebuild legacy-filebeat too after rebuilding banjax")
+    click.echo("Please rebuild legacy-filebeat & logrotate too after rebuilding banjax")
 
 
 @click.command('legacy-filebeat', help='Install and update legacy-filebeat (force rebuild)')
