@@ -21,7 +21,7 @@ from orchestration.hosts import (docker_client_for_host,
 from orchestration.run_container import (Banjax, Bind, Certbot, DohProxy,
                                          EdgeManage, Elasticsearch, Filebeat,
                                          Kibana, LegacyFilebeat, Metricbeat,
-                                         Nginx, Pebble, TestOrigin)
+                                         Nginx, Pebble, TestOrigin, Logrotate)
 
 logger = get_logger(__name__)
 
@@ -123,6 +123,8 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
     else:
         Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
+
+    Logrotate(client, config, find_existing=True, logger=logger).update(timestamp)
 
     logger.info(f"$$$ finished install_all_edge_components for {edge}")
     return True

@@ -11,3 +11,4 @@ from orchestration.run_container.kibana import Kibana
 from orchestration.run_container.pebble import Pebble
 from orchestration.run_container.edgemanage import EdgeManage
 from orchestration.run_container.legacy_filebeat import LegacyFilebeat
+from orchestration.run_container.logrotate import Logrotate

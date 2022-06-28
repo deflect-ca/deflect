@@ -100,6 +100,7 @@ class Container:
             "TestOrigin": "test-origin",
             "EdgeManage": "edgemanage",
             "LegacyFilebeat": "legacy-filebeat",
+            "Logrotate": "logrotate",
         }[concrete_class]
         if find_existing:
             self.container = find_existing_container(self.client, self.lowercase_name, None, config, logger)
@@ -171,3 +172,20 @@ class Container:
                 break
         else:
             raise Exception("didn't find this host in config!")
+
+    def get_volume_name(self, label, destination_path):
+        containers = self.client.containers.list(
+            filters={"label": f"name={label}"}
+        )
+        inspect_container = self.client.api.inspect_container(containers[0].id)
+        volume_name = None
+        for mount in inspect_container["Mounts"]:
+            if mount["Type"] == "volume":
+                if mount["Destination"] == destination_path:
+                    volume_name = mount["Name"]
+                    self.logger.info(f"Found volume {volume_name} for {label}")
+                    break
+        else:
+            self.logger.error(inspect_container["Mounts"])
+            raise Exception(f"couldn't find volume in {label} container")
+        return volume_name
