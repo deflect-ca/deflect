@@ -127,11 +127,12 @@ def proxy_pass_to_banjax_keys(origin_https, site):
         nginx.Key('proxy_set_header', "X-Client-User-Agent $http_user_agent"),
         nginx.Key('proxy_pass_request_body', "off"),
         # to make keepalive work
-        nginx.Key('proxy_set_header', "Connection \"\""),
-        nginx.Key('proxy_http_version', "1.1"),
+        # XXX remove 0706 client are getting 504 in pass_prot
+        #nginx.Key('proxy_set_header', "Connection \"\""),
+        #nginx.Key('proxy_http_version', "1.1"),
         nginx.Key('proxy_pass', "http://banjax/auth_request?"),
-        nginx.Key('proxy_read_timeout', str(CONFIG['nginx'].get('banjax_proxy_read_timeout', 30))),
-        nginx.Key('proxy_connect_timeout', str(CONFIG['nginx'].get('banjax_proxy_connect_timeout', 30))),
+        #nginx.Key('proxy_read_timeout', str(CONFIG['nginx'].get('banjax_proxy_read_timeout', 30))),
+        #nginx.Key('proxy_connect_timeout', str(CONFIG['nginx'].get('banjax_proxy_connect_timeout', 30))),
     ]
 
 
@@ -516,7 +517,8 @@ def http_block(dconf, timestamp):
     # only add upstream once
     banjax_upstream = nginx.Upstream('banjax')
     banjax_upstream.add(nginx.Key('server', '127.0.0.1:8081'))
-    banjax_upstream.add(nginx.Key('keepalive', str(dconf['nginx'].get('banjax_keepalive', '128'))))
+    # XXX remove 0706 client are getting 504 in pass_prot
+    # banjax_upstream.add(nginx.Key('keepalive', str(dconf['nginx'].get('banjax_keepalive', '128'))))
     http.add(banjax_upstream)
 
     # include all the per-site files
