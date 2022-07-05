@@ -73,7 +73,12 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
         server.add(nginx.Key('server_tokens', "off"))
 
     server.add(nginx.Key('include', 'snippets/error_pages.conf'))
+
+    # for sites who disable logging, we send their log to baskerville for ML only
+    # therefore put it in different file and send to different logstash topic
     server.add(nginx.Key('set', f"$disable_logging {1 if site['disable_logging'] else 0}"))
+    if site['disable_logging']:
+        server.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format-temp.log logstash_format_json"))
 
     for pattern in sorted(site['password_protected_paths']):
         server.add(
@@ -496,11 +501,13 @@ def http_block(dconf, timestamp):
         '}' """
     ))
 
+    http.add(init_nginx_var_with_map('loggable', 1))
+
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
     if dconf['nginx'].get('default_access_log', True):
         http.add(nginx.Key('access_log', "/var/log/nginx/access.log nginx_default"))
     http.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json"))
+    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json if=$loggable"))
 
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"))
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:10m max_size=50g"))
