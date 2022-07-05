@@ -22,7 +22,7 @@ from util.helpers import (
 )
 
 logger = get_logger(__name__)
-
+CONFIG = None
 
 def redirect_to_https_server(site: dict):
     """
@@ -113,6 +113,7 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
 
 
 def proxy_pass_to_banjax_keys(origin_https, site):
+    global CONFIG
     return [
         # nginx.Key('access_log', "off"),  # XXX maybe log to a different file
 
@@ -125,9 +126,12 @@ def proxy_pass_to_banjax_keys(origin_https, site):
         nginx.Key('proxy_set_header', "X-Requested-Path $request_uri"),
         nginx.Key('proxy_set_header', "X-Client-User-Agent $http_user_agent"),
         nginx.Key('proxy_pass_request_body', "off"),
-        # XXX i just want to discard the path
-        # TODO: use config for port, ip
-        nginx.Key('proxy_pass', "http://127.0.0.1:8081/auth_request?")
+        # to make keepalive work
+        nginx.Key('proxy_set_header', "Connection \"\""),
+        nginx.Key('proxy_http_version', "1.1"),
+        nginx.Key('proxy_pass', "http://banjax/auth_request?"),
+        nginx.Key('proxy_read_timeout', str(CONFIG['nginx'].get('banjax_proxy_read_timeout', 30))),
+        nginx.Key('proxy_connect_timeout', str(CONFIG['nginx'].get('banjax_proxy_connect_timeout', 30))),
     ]
 
 
@@ -423,19 +427,20 @@ def cache_purge_server(dconf):
 
 def http_block(dconf, timestamp):
     http = nginx.Http()
-    http.add(nginx.Key('server_names_hash_bucket_size', '128'))
-    http.add(nginx.Key('log_format', "main '$time_local | $status | $request_time (s)| $remote_addr | $request'"))
+    # optimization
+    # XXX could not build optimal server_names_hash, you should increase either server_names_hash_max_size: 512 or server_names_hash_bucket_size: 128; ignoring server_names_hash_bucket_size
+    http.add(nginx.Key('server_names_hash_bucket_size', str(dconf['nginx'].get('server_names_hash_bucket_size', 64))))
+    http.add(nginx.Key('server_names_hash_max_size', str(dconf['nginx'].get('server_names_hash_max_size', 1024))))
+
+    # copies data between one FD and other from within the kernel
+    # faster than read() + write()
+    http.add(nginx.Key('sendfile', 'on'))
+
+    # send headers in one piece, it is better than sending them one by one
+    http.add(nginx.Key('tcp_nopush', 'on'))
+
     http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"))
-    http.add(nginx.Key('log_format',
-        "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
-        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
-        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\"'"))
-    http.add(nginx.Key('log_format',
-        "logstash_format_new '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
-        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
-        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\" "
-        "\"$upstream_status\" \"$upstream_response_time\" \"$upstream_header_time\" \"$upstream_connect_time\" "
-        "\"$upstream_bytes_sent\" \"$upstream_bytes_received\"'"))
+    http.add(nginx.Key('log_format', 'nginx_default \'$remote_addr $server_name $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" $server_port $upstream_bytes_received "$sent_http_content_type" $host "$https" "$http_cookie"\''))
 
     # Init $banjax_decision to avoid var not defined errors
     # We use $host here but it does not matter since we make it default to "-"
@@ -482,29 +487,9 @@ def http_block(dconf, timestamp):
         '}' """
     ))
 
-    # renaming so they don't collide in ES/kibana
-    http.add(nginx.Key('log_format', """json_combined escape=json
-        '{'
-            '"time_local": "$time_local",'
-            '"remote_addr": "$remote_addr",'
-            '"request_host": "$host",'
-            '"request_uri": "$request_uri",'
-            '"ngx_status": "$status",'
-            '"ngx_body_bytes_sent": "$body_bytes_sent",'
-            '"ngx_upstream_addr": "$upstream_addr",'
-            '"ngx_upstream_cache_status": "$upstream_cache_status",'
-            '"ngx_upstream_response_time": "$upstream_response_time",'
-            '"ngx_request_time": "$request_time",'
-            '"http_referrer": "$http_referer",'
-            '"http_user_agent": "$http_user_agent",'
-            '"ngx_loc_in": "$loc_in",'
-            '"ngx_loc_out": "$loc_out",'
-            '"ngx_loc_in_out": "${loc_in}-${loc_out}"'
-        '}' """
-    ))
-
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/access.log logstash_format_new"))
+    if dconf['nginx'].get('default_access_log', True):
+        http.add(nginx.Key('access_log', "/var/log/nginx/access.log nginx_default"))
     http.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))
     http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json"))
 
@@ -528,6 +513,12 @@ def http_block(dconf, timestamp):
     # purge the auth_requests or site_content caches
     http.add(cache_purge_server(dconf))
 
+    # only add upstream once
+    banjax_upstream = nginx.Upstream('banjax')
+    banjax_upstream.add(nginx.Key('server', '127.0.0.1:8081'))
+    banjax_upstream.add(nginx.Key('keepalive', str(dconf['nginx'].get('banjax_keepalive', '128'))))
+    http.add(banjax_upstream)
+
     # include all the per-site files
     http.add(nginx.Key('include', "/etc/nginx/sites.d/*.conf"))
 
@@ -539,7 +530,21 @@ def top_level_conf(dconf, timestamp):
 
     nconf.add(nginx.Key('load_module', '/usr/lib/nginx/modules/ngx_http_cache_purge_module_torden.so'))
 
-    nconf.add(nginx.Events(nginx.Key('worker_connections', '1024')))
+    # you must set worker processes based on your CPU cores, nginx does not benefit from setting more than that
+    nconf.add(nginx.Key('worker_processes', 'auto'))
+
+    # number of file descriptors used for nginx
+    # the limit for the maximum FDs on the server is usually set by the OS.
+    # if you don't set FD's then OS settings will be used which is by default 2000
+    nconf.add(nginx.Key('worker_rlimit_nofile', '100000'))
+
+    # determines how much clients will be served per worker
+    # max clients = worker_connections * worker_processes
+    # max clients is also limited by the number of socket connections available on the system (~64k)
+    nconf.add(nginx.Events(
+        nginx.Key('worker_connections', '4096'),
+        nginx.Key('use', 'epoll'),
+    ))
 
     nconf.add(http_block(dconf, timestamp))
 
@@ -580,6 +585,8 @@ def get_output_dir(formatted_time, dnet):
 
 # XXX ugh this needs redoing
 def generate_nginx_config(all_sites, config, formatted_time):
+    global CONFIG
+    CONFIG = config
     # clear out directories
     for dnet in sorted(config['dnets']):
         output_dir = get_output_dir(formatted_time, dnet)
