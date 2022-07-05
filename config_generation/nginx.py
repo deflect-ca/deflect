@@ -73,6 +73,7 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
         server.add(nginx.Key('server_tokens', "off"))
 
     server.add(nginx.Key('include', 'snippets/error_pages.conf'))
+    server.add(nginx.Key('set', f"$disable_logging {1 if site['disable_logging'] else 0}"))
 
     for pattern in sorted(site['password_protected_paths']):
         server.add(
@@ -426,6 +427,15 @@ def cache_purge_server(dconf):
     return server
 
 
+def init_nginx_var_with_map(var_name, default_val='-'):
+    map = nginx.Map(f"$host ${var_name}")
+    if type(default_val) == 'string':
+        map.add(nginx.Key('default', f"\"{default_val}\""))
+    else:
+        map.add(nginx.Key('default', f"{default_val}"))
+    return map
+
+
 def http_block(dconf, timestamp):
     http = nginx.Http()
     # optimization
@@ -445,13 +455,10 @@ def http_block(dconf, timestamp):
 
     # Init $banjax_decision to avoid var not defined errors
     # We use $host here but it does not matter since we make it default to "-"
-    map_decision = nginx.Map("$host $banjax_decision")
-    map_decision.add(nginx.Key('default', '"-"'))
-    http.add(map_decision)
+    http.add(init_nginx_var_with_map('banjax_decision'))
     # Error if banjax panic
-    map_error = nginx.Map("$host $banjax_error")
-    map_error.add(nginx.Key('default', '"-"'))
-    http.add(map_error)
+    http.add(init_nginx_var_with_map('banjax_error'))
+    http.add(init_nginx_var_with_map('disable_logging', 0))
 
     http.add(nginx.Key('log_format', """logstash_format_json escape=json
         '{'
@@ -484,7 +491,8 @@ def http_block(dconf, timestamp):
             '"upstream_bytes_sent": "$upstream_bytes_sent",'
             '"upstream_bytes_received": "$upstream_bytes_received",'
             '"banjax_decision": "$banjax_decision",'
-            '"banjax_error": "$banjax_error"'
+            '"banjax_error": "$banjax_error",'
+            '"disable_logging": $disable_logging'
         '}' """
     ))
 
