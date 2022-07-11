@@ -247,9 +247,8 @@ def _access_granted_fail_open_location_contents(
         # but do cache if cookie name match config
         site_name = site['public_domain'].replace('.', '_')
         location_contents.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
-        location_contents.append(nginx.Key('proxy_no_cache', f'${site_name}_bypass_cache'))
-        location_contents.append(nginx.Key('proxy_cache_bypass', f'${site_name}_bypass_cache'))
-        location_contents.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass f${site_name}_bypass_cache'))
+        location_contents.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
+        location_contents.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
 
     if origin_https:
         location_contents.append(nginx.Key(
@@ -319,19 +318,21 @@ def per_site_include_conf(site, dconf):
     nconf = nginx.Conf()
 
     """
-    map $upstream_http_set_cookie $bypass_cache {
-        ~*pll       0;
-        default     1;
+    map $upstream_http_set_cookie $bypass_cache_{site_name} {
+        "~*pll" 0;
+        "~*="   1;
+        default 0;
     }
     """
     if len(site['cache_cookie_allowlist']) > 0:
         site_name = site['public_domain'].replace('.', '_')
-        cache_cookie_map = nginx.Map(f'$upstream_http_set_cookie ${site_name}_bypass_cache')
+        cache_cookie_map = nginx.Map(f'$upstream_http_set_cookie $bypass_cache_{site_name}')
         for cookie in site['cache_cookie_allowlist']:
             # if regex match these cookie, allow cache
             cache_cookie_map.add(nginx.Key(f"~*{cookie}", '0'))
         # default prevent cache if there is set-cookie
-        cache_cookie_map.add(nginx.Key("default", '1'))
+        cache_cookie_map.add(nginx.Key("~*=", '1'))
+        cache_cookie_map.add(nginx.Key("default", '0'))
         nconf.add(cache_cookie_map)
 
     # 301 to https:// or proxy_pass to origin port 80
