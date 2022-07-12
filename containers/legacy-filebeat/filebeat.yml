@@ -23,6 +23,14 @@ filebeat.inputs:
     dnet: "${DEFLECT_DNET}"
     type: banjax
 
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/banjax-logstash-format-temp.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax_temp
+
 output.logstash:
   hosts: ["${LOGSTASH_HOST}"]
   ssl.certificate_authorities: ["/etc/filebeat/rootca.pem"]
