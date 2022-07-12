@@ -432,9 +432,11 @@ def cache_purge_server(dconf):
     return server
 
 
-def init_nginx_var_with_map(var_name, default_val='-'):
-    map = nginx.Map(f"$host ${var_name}")
-    if type(default_val) == 'string':
+def init_nginx_var_with_map(var_name, default_val='-', base_var='host', add_keys=[]):
+    map = nginx.Map(f"${base_var} ${var_name}")
+    for key in add_keys:
+        map.add(key)
+    if isinstance(default_val, str):
         map.add(nginx.Key('default', f"\"{default_val}\""))
     else:
         map.add(nginx.Key('default', f"{default_val}"))
@@ -501,7 +503,8 @@ def http_block(dconf, timestamp):
         '}' """
     ))
 
-    http.add(init_nginx_var_with_map('loggable', 1))
+    http.add(init_nginx_var_with_map(
+        'loggable', default_val=1, base_var='disable_logging', add_keys=[nginx.Key('1', '0')]))
 
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
     if dconf['nginx'].get('default_access_log', True):
