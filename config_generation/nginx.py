@@ -200,7 +200,7 @@ def slash_location(origin_https, site):
 def static_files_location(site, global_config, edge_https, origin_https):
     # XXX how to avoid sending js challenger pages to (embedded) filetypes?
     location = nginx.Location(
-        '~* \.(css|js|json|png|gif|ico|jpg|jpeg|svg|ttf|woff|woff2)$')
+        '~* \.(css|js|json|png|gif|ico|jpg|jpeg|svg|ttf|woff|woff2|avi|bin|bmp|dmg|doc|docx|dpkg|exe|flv|htm|html|ics|img|m2a|m2v|mov|mp3|mp4|mpeg|mpg|msi|pdf|pkg|png|ppt|pptx|ps|rar|rss|rtf|swf|tif|tiff|txt|webp|wmv|xhtml|xls|xml|zip)$')
     location.add(nginx.Key('set', "$loc_in \"static_file\""))
     location.add(nginx.Key('set', "$loc_out \"static_file\""))
     location_contents = _access_granted_fail_open_location_contents(
