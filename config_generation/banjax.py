@@ -101,6 +101,12 @@ def generate_banjax_config(config, all_sites, formatted_time):
             banjax_next_config["regexes_with_rates"] += copy.deepcopy(rate_limited_regexes)
     banjax_next_config["per_site_rate_limited_regexes"] = all_per_site_rate_limited_regexes
 
+    # pass disable_logging = true sites to banjax
+    banjax_next_config["disable_logging"] = {}
+    for domain, site in client_sites.items():
+        if site['disable_logging']:
+            banjax_next_config["disable_logging"][domain] = True
+
     # todo: refactor into a writing/ output function - this pattern is repeated with a few variations
     output_dir = f"{path_to_output()}/{formatted_time}/etc-banjax"
     if os.path.isdir(output_dir):
