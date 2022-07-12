@@ -78,6 +78,7 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
     # therefore put it in different file and send to different logstash topic
     server.add(nginx.Key('set', f"$disable_logging {1 if site['disable_logging'] else 0}"))
     if site['disable_logging']:
+        server.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))  # always send to banjax
         server.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format-temp.log logstash_format_json"))
 
     for pattern in sorted(site['password_protected_paths']):
