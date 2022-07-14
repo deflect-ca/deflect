@@ -251,8 +251,10 @@ def _access_granted_fail_open_location_contents(
         location_contents.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
 
     if origin_https:
+        # if origin_https_port == 80, we assume it is http
+        proto = 'https' if site['origin_https_port'] != 80 else 'http'
         location_contents.append(nginx.Key(
-            'proxy_pass', f"https://{site['origin_ip']}:{site['origin_https_port']}"))
+            'proxy_pass', f"{proto}://{site['origin_ip']}:{site['origin_https_port']}"))
     else:
         location_contents.append(nginx.Key(
             'proxy_pass', f"http://{site['origin_ip']}:{site['origin_http_port']}"))
