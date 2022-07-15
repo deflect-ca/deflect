@@ -159,6 +159,7 @@ def old_to_new_site_dict(old_dict):
     # append origin IP to banjax per site whitelist
     new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", []) + [old_dict["origin"]]
     new_dict["cache_cookie_allowlist"] = old_dict.get("cache_cookie_allowlist", [])
+    new_dict["cache_lock"] = old_dict.get("cache_lock", False)
 
     return new_dict
 

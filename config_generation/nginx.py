@@ -582,12 +582,15 @@ def top_level_conf(dconf, timestamp):
 
 
 def default_site_content_cache_include_conf(cache_time_minutes, site):
-    return [
+    arr = [
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
         nginx.Key('proxy_cache_valid', f"200 302 {str(cache_time_minutes)}m"),
-        nginx.Key('proxy_cache_valid', f"any 1m")
+        nginx.Key('proxy_cache_valid', f"any 1m"),
     ]
+    if site["cache_lock"]:
+        arr.append(nginx.Key('proxy_cache_lock', "on"))
+    return arr
 
 
 def access_denied_location(site):
