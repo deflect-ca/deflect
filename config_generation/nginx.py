@@ -590,6 +590,8 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
     ]
     if site["cache_lock"]:
         arr.append(nginx.Key('proxy_cache_lock', "on"))
+    if site['cache_use_stale']:
+        arr.append(nginx.Key('proxy_cache_use_stale', "updating error timeout invalid_header http_500 http_502 http_503 http_504"))
     return arr
 
 
