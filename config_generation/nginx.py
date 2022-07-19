@@ -484,6 +484,7 @@ def http_block(dconf, timestamp):
     http.add(nginx.Key('log_format', """logstash_format_json escape=json
         '{'
             '"time_local": "$time_local",'
+            '"request_id": "$request_id",'
             '"client_user": "$remote_user",'
             '"client_ip": "$remote_addr",'
             '"http_request_scheme": "$scheme",'
