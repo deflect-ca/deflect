@@ -74,6 +74,13 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
 
     server.add(nginx.Key('include', 'snippets/error_pages.conf'))
 
+    # for sites who disable logging, we send their log to baskerville for ML only
+    # therefore put it in different file and send to different logstash topic
+    server.add(nginx.Key('set', f"$disable_logging {1 if site['disable_logging'] else 0}"))
+    if site['disable_logging']:
+        server.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))  # always send to banjax
+        server.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format-temp.log logstash_format_json"))
+
     for pattern in sorted(site['password_protected_paths']):
         server.add(
             pass_prot_location(pattern, origin_https, site)
@@ -454,6 +461,17 @@ def cache_purge_server(dconf):
     return server
 
 
+def init_nginx_var_with_map(var_name, default_val='-', base_var='host', add_keys=[]):
+    map = nginx.Map(f"${base_var} ${var_name}")
+    for key in add_keys:
+        map.add(key)
+    if isinstance(default_val, str):
+        map.add(nginx.Key('default', f"\"{default_val}\""))
+    else:
+        map.add(nginx.Key('default', f"{default_val}"))
+    return map
+
+
 def http_block(dconf, timestamp):
     http = nginx.Http()
     # optimization
@@ -473,13 +491,10 @@ def http_block(dconf, timestamp):
 
     # Init $banjax_decision to avoid var not defined errors
     # We use $host here but it does not matter since we make it default to "-"
-    map_decision = nginx.Map("$host $banjax_decision")
-    map_decision.add(nginx.Key('default', '"-"'))
-    http.add(map_decision)
+    http.add(init_nginx_var_with_map('banjax_decision'))
     # Error if banjax panic
-    map_error = nginx.Map("$host $banjax_error")
-    map_error.add(nginx.Key('default', '"-"'))
-    http.add(map_error)
+    http.add(init_nginx_var_with_map('banjax_error'))
+    http.add(init_nginx_var_with_map('disable_logging', 0))
 
     http.add(nginx.Key('log_format', """logstash_format_json escape=json
         '{'
@@ -513,15 +528,19 @@ def http_block(dconf, timestamp):
             '"upstream_bytes_sent": "$upstream_bytes_sent",'
             '"upstream_bytes_received": "$upstream_bytes_received",'
             '"banjax_decision": "$banjax_decision",'
-            '"banjax_error": "$banjax_error"'
+            '"banjax_error": "$banjax_error",'
+            '"disable_logging": $disable_logging'
         '}' """
     ))
+
+    http.add(init_nginx_var_with_map(
+        'loggable', default_val=1, base_var='disable_logging', add_keys=[nginx.Key('1', '0')]))
 
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
     if dconf['nginx'].get('default_access_log', True):
         http.add(nginx.Key('access_log', "/var/log/nginx/access.log nginx_default"))
     http.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json"))
+    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json if=$loggable"))
 
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"))
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:10m max_size=50g"))

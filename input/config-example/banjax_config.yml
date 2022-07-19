@@ -8,6 +8,7 @@ password_cookie_ttl_seconds: 3600
 sha_inv_cookie_ttl_seconds: 3600
 server_log_file: "/var/log/nginx/banjax-format.log"
 banning_log_file: "/var/log/banjax/banjax-logstash-format.log"
+banning_log_file_temp: /var/log/banjax/banjax-logstash-format-temp.log
 iptables_ban_seconds: 60
 iptables_unbanner_seconds: 10  # how often we check for and remove old bans
 kafka_brokers:  # for Baskerville communication

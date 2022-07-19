@@ -10,10 +10,26 @@ filebeat.inputs:
 - type: log
   tail_files: true
   paths:
+    - /var/log/nginx/nginx-logstash-format-temp.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access_temp
+
+- type: log
+  tail_files: true
+  paths:
     - /var/log/banjax/banjax-logstash-format.log
   fields:
     dnet: "${DEFLECT_DNET}"
     type: banjax
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/banjax-logstash-format-temp.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax_temp
 
 output.logstash:
   hosts: ["${LOGSTASH_HOST}"]
