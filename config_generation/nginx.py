@@ -592,7 +592,7 @@ def top_level_conf(dconf, timestamp):
     # max clients = worker_connections * worker_processes
     # max clients is also limited by the number of socket connections available on the system (~64k)
     nconf.add(nginx.Events(
-        nginx.Key('worker_connections', '4096'),
+        nginx.Key('worker_connections', str(dconf['nginx'].get('worker_connections', '4096'))),
         nginx.Key('use', 'epoll'),
     ))
 
