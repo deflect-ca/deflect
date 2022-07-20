@@ -241,14 +241,6 @@ def _access_granted_fail_open_location_contents(
     location_contents.append(nginx.Key('proxy_ssl_name', '$host'))
     location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
 
-    if len(site['cache_cookie_allowlist']) > 0:
-        # by default, do not cache content if 'Set cookie' header present
-        # but do cache if cookie name match config
-        site_name = site['public_domain'].replace('.', '_')
-        location_contents.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
-        location_contents.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
-        location_contents.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
-
     if origin_https:
         # if origin_https_port == 80, we assume it is http
         proto = 'https' if site['origin_https_port'] != 80 else 'http'
@@ -591,8 +583,10 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
     ]
     if site["cache_lock"]:
         arr.append(nginx.Key('proxy_cache_lock', "on"))
+
     if site['cache_use_stale']:
         arr.append(nginx.Key('proxy_cache_use_stale', "updating error timeout invalid_header http_500 http_502 http_503 http_504"))
+
     # option to force site to use 'Vary: Accept-Encoding' header
     if site['cache_override_vary_only_encoding']:
         arr += [
@@ -600,6 +594,14 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
             nginx.Key('proxy_hide_header', "Vary"),
             nginx.Key('add_header', "Vary 'Accept-Encoding'"),
         ]
+
+    # by default, do not cache content if 'Set cookie' header present
+    # but do cache if cookie name match config
+    if len(site['cache_cookie_allowlist']) > 0:
+        site_name = site['public_domain'].replace('.', '_')
+        arr.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
+        arr.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
+        arr.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
 
     return arr
 
