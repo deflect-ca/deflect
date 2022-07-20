@@ -233,6 +233,7 @@ def _access_granted_fail_open_location_contents(
     if global_config['nginx'].get('header_show_time', False):
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Status $upstream_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
