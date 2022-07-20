@@ -99,6 +99,7 @@ nginx:
   # should first be increased.
   server_names_hash_max_size: 1024
   server_names_hash_bucket_size: 64
+  worker_connections: 4096
 
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:
