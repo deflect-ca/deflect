@@ -351,21 +351,39 @@ def per_site_include_conf(site, dconf):
 
 # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
 # this keeps nginx from choosing some random site if it can't find one...
-def empty_catchall_server():
-    return nginx.Server(
+def empty_catchall_server_http():
+    server = nginx.Server(
         nginx.Key('listen', "80 default_server"),
-        nginx.Key('listen', "443 ssl http2 default_server"),
         nginx.Key('listen', "[::]:80 default_server"),
-        nginx.Key('listen', "[::]:443 ssl http2 default_server"),
-
         nginx.Key('server_name', "_"),
+        nginx.Key('limit_conn', 'default_http_limit_per_ip 1'),
+        nginx.Key('limit_req', 'zone=default_http_req_limit burst=5 nodelay'),
+        nginx.Key('return', '444')
+    )
+    return [
+        nginx.Key('limit_conn_zone', '$binary_remote_addr zone=default_http_limit_per_ip:10m'),
+        nginx.Key('limit_req_zone','$binary_remote_addr zone=default_http_req_limit:10m rate=1r/s'),
+        server,
+    ]
 
+
+def empty_catchall_server_https():
+    server = nginx.Server(
+        nginx.Key('listen', "443 ssl http2 default_server"),
+        nginx.Key('listen', "[::]:443 ssl http2 default_server"),
+        nginx.Key('server_name', "_"),
         nginx.Key('ssl_ciphers', "aNULL"),
         nginx.Key('ssl_certificate', "data:$empty"),
         nginx.Key('ssl_certificate_key', "data:$empty"),
-
+        nginx.Key('limit_conn', 'default_https_limit_per_ip 1'),
+        nginx.Key('limit_req', 'zone=default_https_req_limit burst=5 nodelay'),
         nginx.Key('return', '444')
     )
+    return [
+        nginx.Key('limit_conn_zone', '$binary_remote_addr zone=default_https_limit_per_ip:10m'),
+        nginx.Key('limit_req_zone','$binary_remote_addr zone=default_https_req_limit:10m rate=1r/s'),
+        server,
+    ]
 
 
 # the built-in stub_status route shows us the number of active connections.
@@ -543,7 +561,8 @@ def http_block(dconf, timestamp):
     # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
     # this keeps nginx from choosing some random site if it can't find one
     http.add(nginx.Map('"" $empty', nginx.Key("default", '""')))
-    http.add(empty_catchall_server())
+    http.add(*empty_catchall_server_http())
+    http.add(*empty_catchall_server_https())
 
     # /info and /stub_status
     http.add(info_and_stub_status_server(timestamp, dconf))
