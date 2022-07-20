@@ -586,7 +586,9 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
         nginx.Key('proxy_cache_valid', f"200 302 {str(cache_time_minutes)}m"),
-        nginx.Key('proxy_cache_valid', f"any 1m"),
+        # for 5XX error page, 10s micro cache to prevent flooding the origin
+        nginx.Key('proxy_cache_valid', "500 501 502 503 504 10s"),
+        nginx.Key('proxy_cache_valid', "any 30s"),
     ]
     if site["cache_lock"]:
         arr.append(nginx.Key('proxy_cache_lock', "on"))
