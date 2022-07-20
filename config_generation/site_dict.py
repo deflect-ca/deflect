@@ -161,6 +161,7 @@ def old_to_new_site_dict(old_dict):
     new_dict["cache_cookie_allowlist"] = old_dict.get("cache_cookie_allowlist", [])
     new_dict["cache_lock"] = old_dict.get("cache_lock", False)
     new_dict["cache_use_stale"] = old_dict.get("cache_use_stale", False)
+    new_dict["cache_override_vary_only_encoding"] = old_dict.get("cache_override_vary_only_encoding", False)
 
     return new_dict
 

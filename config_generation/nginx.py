@@ -149,7 +149,6 @@ def pass_prot_location(pattern, origin_https, site):
     location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
-    # XXX not working
     location.add(nginx.Key('proxy_intercept_errors', 'on'))
     location.add(nginx.Key('error_page', "500 /500.html"))
     location.add(nginx.Key('error_page', "502 /502-banjax.html"))
@@ -269,7 +268,7 @@ def access_granted_location_block(site, global_config, edge_https, origin_https)
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
-    # Confirm working
+
     # 502 in access granted section means origin is down, not banjax
     location.add(nginx.Key('error_page', "502 /502.html"))
     location.add(nginx.Key('error_page', "504 /504.html"))
@@ -283,7 +282,7 @@ def fail_open_location_block(site, global_config, edge_https, origin_https):
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
-    # XXX Not working for now
+
     # 502 in fail open section means origin is down, not banjax
     location.add(nginx.Key('error_page', "502 /502.html"))
     location.add(nginx.Key('error_page', "504 /504.html"))
@@ -594,6 +593,14 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         arr.append(nginx.Key('proxy_cache_lock', "on"))
     if site['cache_use_stale']:
         arr.append(nginx.Key('proxy_cache_use_stale', "updating error timeout invalid_header http_500 http_502 http_503 http_504"))
+    # option to force site to use 'Vary: Accept-Encoding' header
+    if site['cache_override_vary_only_encoding']:
+        arr += [
+            nginx.Key('proxy_ignore_headers', "Vary"),
+            nginx.Key('proxy_hide_header', "Vary"),
+            nginx.Key('add_header', "Vary 'Accept-Encoding'"),
+        ]
+
     return arr
 
 
