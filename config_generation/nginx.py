@@ -156,7 +156,6 @@ def pass_prot_location(pattern, origin_https, site):
     location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
-    # XXX not working
     location.add(nginx.Key('proxy_intercept_errors', 'on'))
     location.add(nginx.Key('error_page', "500 /500.html"))
     location.add(nginx.Key('error_page', "502 /502-banjax.html"))
@@ -241,6 +240,7 @@ def _access_granted_fail_open_location_contents(
     if global_config['nginx'].get('header_show_time', False):
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Status $upstream_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
@@ -248,14 +248,6 @@ def _access_granted_fail_open_location_contents(
     location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
     location_contents.append(nginx.Key('proxy_ssl_name', '$host'))
     location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
-
-    if len(site['cache_cookie_allowlist']) > 0:
-        # by default, do not cache content if 'Set cookie' header present
-        # but do cache if cookie name match config
-        site_name = site['public_domain'].replace('.', '_')
-        location_contents.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
-        location_contents.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
-        location_contents.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
 
     if origin_https:
         # if origin_https_port == 80, we assume it is http
@@ -276,7 +268,7 @@ def access_granted_location_block(site, global_config, edge_https, origin_https)
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
-    # Confirm working
+
     # 502 in access granted section means origin is down, not banjax
     location.add(nginx.Key('error_page', "502 /502.html"))
     location.add(nginx.Key('error_page', "504 /504.html"))
@@ -290,7 +282,7 @@ def fail_open_location_block(site, global_config, edge_https, origin_https):
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
-    # XXX Not working for now
+
     # 502 in fail open section means origin is down, not banjax
     location.add(nginx.Key('error_page', "502 /502.html"))
     location.add(nginx.Key('error_page', "504 /504.html"))
@@ -543,7 +535,7 @@ def http_block(dconf, timestamp):
     http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json if=$loggable"))
 
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"))
-    http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:10m max_size=50g"))
+    http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:50m inactive=30m max_size=50g"))
     http.add(nginx.Key('client_max_body_size', "2G"))  # XXX think about this
 
     http.add(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
@@ -606,10 +598,32 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
         nginx.Key('proxy_cache_valid', f"200 302 {str(cache_time_minutes)}m"),
-        nginx.Key('proxy_cache_valid', f"any 1m"),
+        # for 5XX error page, 10s micro cache to prevent flooding the origin
+        nginx.Key('proxy_cache_valid', "500 501 502 503 504 10s"),
+        nginx.Key('proxy_cache_valid', "any 30s"),
     ]
     if site["cache_lock"]:
         arr.append(nginx.Key('proxy_cache_lock', "on"))
+
+    if site['cache_use_stale']:
+        arr.append(nginx.Key('proxy_cache_use_stale', "updating error timeout invalid_header http_500 http_502 http_503 http_504"))
+
+    # option to force site to use 'Vary: Accept-Encoding' header
+    if site['cache_override_vary_only_encoding']:
+        arr += [
+            nginx.Key('proxy_ignore_headers', "Vary"),
+            nginx.Key('proxy_hide_header', "Vary"),
+            nginx.Key('add_header', "Vary 'Accept-Encoding'"),
+        ]
+
+    # by default, do not cache content if 'Set cookie' header present
+    # but do cache if cookie name match config
+    if len(site['cache_cookie_allowlist']) > 0:
+        site_name = site['public_domain'].replace('.', '_')
+        arr.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
+        arr.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
+        arr.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
+
     return arr
 
 
