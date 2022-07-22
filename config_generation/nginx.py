@@ -207,19 +207,11 @@ def static_files_location(site, global_config, edge_https, origin_https):
     # XXX how to avoid sending js challenger pages to (embedded) filetypes?
     location = nginx.Location(
         '~* \.(css|js|json|png|gif|ico|jpg|jpeg|svg|ttf|woff|woff2|avi|bin|bmp|dmg|doc|docx|dpkg|exe|flv|htm|html|ics|img|m2a|m2v|mov|mp3|mp4|mpeg|mpg|msi|pdf|pkg|png|ppt|pptx|ps|rar|rss|rtf|swf|tif|tiff|txt|webp|wmv|xhtml|xls|xml|zip)$')
-
-    if site['static_to_banjax']:
-        location.add(nginx.Key('set', "$loc_in \"static_file_banjax\""))
-        location.add(nginx.Key('proxy_intercept_errors', 'on'))
-        location.add(nginx.Key('error_page', "500 @fail_open"))
-        location.add(nginx.Key('error_page', "502 @fail_open"))
-        location.add(*proxy_pass_to_banjax_keys(origin_https, site))
-    else:
-        location.add(nginx.Key('set', "$loc_in \"static_file\""))
-        location.add(nginx.Key('set', "$loc_out \"static_file\""))
-        location_contents = _access_granted_fail_open_location_contents(
-            site, global_config, edge_https, origin_https)
-        location.add(*location_contents)
+    location.add(nginx.Key('set', "$loc_in \"static_file\""))
+    location.add(nginx.Key('set', "$loc_out \"static_file\""))
+    location_contents = _access_granted_fail_open_location_contents(
+        site, global_config, edge_https, origin_https)
+    location.add(*location_contents)
 
     # location.add(nginx.Key('proxy_cache_valid', '200 302 10m'))  # XXX config
     # location.add(nginx.Key('proxy_cache_valid', '404 30s'))  # XXX other error pages?
