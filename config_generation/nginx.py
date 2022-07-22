@@ -92,9 +92,10 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
             cache_exc_location(exc, origin_https, site)
         )
 
-    server.add(
-        static_files_location(site, dconf, edge_https, origin_https)
-    )
+    if not site['static_to_banjax']:
+        server.add(
+            static_files_location(site, dconf, edge_https, origin_https)
+        )
 
     server.add(
         slash_location(origin_https, site)
