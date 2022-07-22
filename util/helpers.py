@@ -218,7 +218,7 @@ FILENAMES_TO_TAIL = [
 PEMS = ['caroot.pem', 'certificate.pem', 'key.pem']
 LIST_NAME_TO_DECISION = {
    'ip_allowlist': 'allow',
-   'ip_blocklist': 'block',
+   'ip_blocklist': 'nginx_block',
    'ip_challengelist': 'challenge',
 }
 
@@ -304,3 +304,8 @@ def generate_selfsigned_cert(hostname, alt_name_arr=[], key=None):
     )
 
     return cert_pem, key_pem
+
+
+def expire_in_days(not_valid_after):
+    now = datetime.utcnow()
+    return (not_valid_after - now).days

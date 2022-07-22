@@ -57,6 +57,7 @@ certs:
   production_certbot_options: --email user@example.com --server https://acme-v02.api.letsencrypt.org/directory
   # do not set OU, CN here, no trailing / required
   self_sign_subj: /C=CA/ST=QC/L=Montreal/O=Company
+  renew_if_expire_in_days: 7
 doh_private_port: 8085
 kibana_private_port: 5601
 nginx:
@@ -78,6 +79,27 @@ nginx:
   header_srv_custom: True # Set False to show 'Server: nginx/1.17'
   header_srv_custom_str: Deflect (nginx)
   header_show_time: False
+  # print nginx default access.log
+  default_access_log: True
+  # reverse proxy to banjax
+  banjax_keepalive: 128
+  banjax_proxy_read_timeout: 30
+  banjax_proxy_connect_timeout: 30
+  # The hash bucket size parameter is aligned to the size
+  # that is a multiple of the processor’s cache line size.
+  # This speeds up key search in a hash on modern processors
+  # by reducing the number of memory accesses.
+  # If hash bucket size is equal to one processor’s cache
+  # line size then the number of memory accesses during the
+  # key search will be two in the worst case — first to compute
+  # the bucket address, and second during the key search inside
+  # the bucket.
+  # Therefore, if nginx emits the message requesting to increase
+  # either hash max size or hash bucket size then the first parameter
+  # should first be increased.
+  server_names_hash_max_size: 1024
+  server_names_hash_bucket_size: 64
+  worker_connections: 4096
 
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:

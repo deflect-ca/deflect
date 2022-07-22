@@ -4,9 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import logging
-import traceback
-
+import copy
 import yaml
 import os
 import tarfile
@@ -97,9 +95,17 @@ def generate_banjax_config(config, all_sites, formatted_time):
     for _, site in client_sites.items():
         rate_limited_regexes = site.get('rate_limited_regexes', [])
         if len(rate_limited_regexes) > 0:
-            all_per_site_rate_limited_regexes[site['public_domain']
-                                              ] = rate_limited_regexes
+            all_per_site_rate_limited_regexes[site['public_domain']] = rate_limited_regexes
+            # XXX append per site regex to global regex so it works
+            # as we don't have a per site regex implemented in banjax
+            banjax_next_config["regexes_with_rates"] += copy.deepcopy(rate_limited_regexes)
     banjax_next_config["per_site_rate_limited_regexes"] = all_per_site_rate_limited_regexes
+
+    # pass disable_logging = true sites to banjax
+    banjax_next_config["disable_logging"] = {}
+    for domain, site in client_sites.items():
+        if site['disable_logging']:
+            banjax_next_config["disable_logging"][domain] = True
 
     # todo: refactor into a writing/ output function - this pattern is repeated with a few variations
     output_dir = f"{path_to_output()}/{formatted_time}/etc-banjax"
