@@ -628,7 +628,10 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         # for 5XX error page, 10s micro cache to prevent flooding the origin
         nginx.Key('proxy_cache_valid', "500 501 502 503 504 10s"),
         nginx.Key('proxy_cache_valid', "any 30s"),
+        # do not cache if user logged into to pass_prot
+        nginx.Key('proxy_cache_bypass', "$cookie_deflect_password2"),
     ]
+
     if site["cache_lock"]:
         arr.append(nginx.Key('proxy_cache_lock', "on"))
 
