@@ -22,7 +22,7 @@ from util.helpers import (
 )
 
 logger = get_logger(__name__)
-
+CONFIG = None
 
 def redirect_to_https_server(site: dict):
     """
@@ -74,6 +74,13 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
 
     server.add(nginx.Key('include', 'snippets/error_pages.conf'))
 
+    # for sites who disable logging, we send their log to baskerville for ML only
+    # therefore put it in different file and send to different logstash topic
+    server.add(nginx.Key('set', f"$disable_logging {1 if site['disable_logging'] else 0}"))
+    if site['disable_logging']:
+        server.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))  # always send to banjax
+        server.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format-temp.log logstash_format_json"))
+
     for pattern in sorted(site['password_protected_paths']):
         server.add(
             pass_prot_location(pattern, origin_https, site)
@@ -85,9 +92,10 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
             cache_exc_location(exc, origin_https, site)
         )
 
-    server.add(
-        static_files_location(site, dconf, edge_https, origin_https)
-    )
+    if not site['static_to_banjax']:
+        server.add(
+            static_files_location(site, dconf, edge_https, origin_https)
+        )
 
     server.add(
         slash_location(origin_https, site)
@@ -113,6 +121,7 @@ def proxy_to_upstream_server(site, dconf, edge_https, origin_https):
 
 
 def proxy_pass_to_banjax_keys(origin_https, site):
+    global CONFIG
     return [
         # nginx.Key('access_log', "off"),  # XXX maybe log to a different file
 
@@ -125,9 +134,13 @@ def proxy_pass_to_banjax_keys(origin_https, site):
         nginx.Key('proxy_set_header', "X-Requested-Path $request_uri"),
         nginx.Key('proxy_set_header', "X-Client-User-Agent $http_user_agent"),
         nginx.Key('proxy_pass_request_body', "off"),
-        # XXX i just want to discard the path
-        # TODO: use config for port, ip
-        nginx.Key('proxy_pass', "http://127.0.0.1:8081/auth_request?")
+        # to make keepalive work
+        # XXX remove 0706 client are getting 504 in pass_prot
+        #nginx.Key('proxy_set_header', "Connection \"\""),
+        #nginx.Key('proxy_http_version', "1.1"),
+        nginx.Key('proxy_pass', "http://banjax/auth_request?"),
+        #nginx.Key('proxy_read_timeout', str(CONFIG['nginx'].get('banjax_proxy_read_timeout', 30))),
+        #nginx.Key('proxy_connect_timeout', str(CONFIG['nginx'].get('banjax_proxy_connect_timeout', 30))),
     ]
 
 
@@ -144,7 +157,6 @@ def pass_prot_location(pattern, origin_https, site):
     location.add(nginx.Key('proxy_cache', 'off'))
     location.add(nginx.Key('proxy_cache_valid', '0'))
 
-    # XXX not working
     location.add(nginx.Key('proxy_intercept_errors', 'on'))
     location.add(nginx.Key('error_page', "500 /500.html"))
     location.add(nginx.Key('error_page', "502 /502-banjax.html"))
@@ -195,7 +207,7 @@ def slash_location(origin_https, site):
 def static_files_location(site, global_config, edge_https, origin_https):
     # XXX how to avoid sending js challenger pages to (embedded) filetypes?
     location = nginx.Location(
-        '~* \.(css|js|json|png|gif|ico|jpg|jpeg|svg|ttf|woff|woff2)$')
+        '~* \.(css|js|json|png|gif|ico|jpg|jpeg|svg|ttf|woff|woff2|avi|bin|bmp|dmg|doc|docx|dpkg|exe|flv|htm|html|ics|img|m2a|m2v|mov|mp3|mp4|mpeg|mpg|msi|pdf|pkg|png|ppt|pptx|ps|rar|rss|rtf|swf|tif|tiff|txt|webp|wmv|xhtml|xls|xml|zip)$')
     location.add(nginx.Key('set', "$loc_in \"static_file\""))
     location.add(nginx.Key('set', "$loc_out \"static_file\""))
     location_contents = _access_granted_fail_open_location_contents(
@@ -229,6 +241,7 @@ def _access_granted_fail_open_location_contents(
     if global_config['nginx'].get('header_show_time', False):
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Response-Time $upstream_response_time"))
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Connect-Time $upstream_connect_time"))
+        location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Status $upstream_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
@@ -238,8 +251,10 @@ def _access_granted_fail_open_location_contents(
     location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
 
     if origin_https:
+        # if origin_https_port == 80, we assume it is http
+        proto = 'https' if site['origin_https_port'] != 80 else 'http'
         location_contents.append(nginx.Key(
-            'proxy_pass', f"https://{site['origin_ip']}:{site['origin_https_port']}"))
+            'proxy_pass', f"{proto}://{site['origin_ip']}:{site['origin_https_port']}"))
     else:
         location_contents.append(nginx.Key(
             'proxy_pass', f"http://{site['origin_ip']}:{site['origin_http_port']}"))
@@ -254,7 +269,7 @@ def access_granted_location_block(site, global_config, edge_https, origin_https)
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
-    # Confirm working
+
     # 502 in access granted section means origin is down, not banjax
     location.add(nginx.Key('error_page', "502 /502.html"))
     location.add(nginx.Key('error_page', "504 /504.html"))
@@ -268,7 +283,7 @@ def fail_open_location_block(site, global_config, edge_https, origin_https):
     location_contents = _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https)
     location.add(*location_contents)
-    # XXX Not working for now
+
     # 502 in fail open section means origin is down, not banjax
     location.add(nginx.Key('error_page', "502 /502.html"))
     location.add(nginx.Key('error_page', "504 /504.html"))
@@ -304,6 +319,24 @@ def port_443_server_block(dconf, site, https_req_does):
 def per_site_include_conf(site, dconf):
     nconf = nginx.Conf()
 
+    """
+    map $upstream_http_set_cookie $bypass_cache_{site_name} {
+        "~*pll" 0;
+        "~*="   1;
+        default 0;
+    }
+    """
+    if len(site['cache_cookie_allowlist']) > 0:
+        site_name = site['public_domain'].replace('.', '_')
+        cache_cookie_map = nginx.Map(f'$upstream_http_set_cookie $bypass_cache_{site_name}')
+        for cookie in site['cache_cookie_allowlist']:
+            # if regex match these cookie, allow cache
+            cache_cookie_map.add(nginx.Key(f"~*{cookie}", '0'))
+        # default prevent cache if there is set-cookie
+        cache_cookie_map.add(nginx.Key("~*=", '1'))
+        cache_cookie_map.add(nginx.Key("default", '0'))
+        nconf.add(cache_cookie_map)
+
     # 301 to https:// or proxy_pass to origin port 80
     http_req_does = site['http_request_does']
     if http_req_does != "nothing":
@@ -319,21 +352,46 @@ def per_site_include_conf(site, dconf):
 
 # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
 # this keeps nginx from choosing some random site if it can't find one...
-def empty_catchall_server():
-    return nginx.Server(
+def empty_catchall_server_http(config):
+    server = nginx.Server(
         nginx.Key('listen', "80 default_server"),
-        nginx.Key('listen', "443 ssl http2 default_server"),
         nginx.Key('listen', "[::]:80 default_server"),
+        nginx.Key('server_name', "_")
+    )
+    if config['nginx'].get('default_server_rlimit'):
+        server.add(nginx.Key('limit_conn', 'default_http_limit_per_ip 1'))
+        server.add(nginx.Key('limit_req', 'zone=default_http_req_limit burst=5 nodelay'))
+
+    server.add(nginx.Key('return', '444'))
+
+    return [
+        nginx.Key('limit_conn_zone', '$binary_remote_addr zone=default_http_limit_per_ip:10m'),
+        nginx.Key('limit_req_zone','$binary_remote_addr zone=default_http_req_limit:10m rate=1r/s'),
+        server,
+    ]
+
+
+def empty_catchall_server_https(config):
+    server = nginx.Server(
+        nginx.Key('listen', "443 ssl http2 default_server"),
         nginx.Key('listen', "[::]:443 ssl http2 default_server"),
-
         nginx.Key('server_name', "_"),
-
         nginx.Key('ssl_ciphers', "aNULL"),
         nginx.Key('ssl_certificate', "data:$empty"),
         nginx.Key('ssl_certificate_key', "data:$empty"),
-
-        nginx.Key('return', '444')
     )
+
+    if config['nginx'].get('default_server_rlimit'):
+        server.add(nginx.Key('limit_conn', 'default_https_limit_per_ip 1'))
+        server.add(nginx.Key('limit_req', 'zone=default_https_req_limit burst=5 nodelay'))
+
+    server.add(nginx.Key('return', '444'))
+
+    return [
+        nginx.Key('limit_conn_zone', '$binary_remote_addr zone=default_https_limit_per_ip:10m'),
+        nginx.Key('limit_req_zone','$binary_remote_addr zone=default_https_req_limit:10m rate=1r/s'),
+        server,
+    ]
 
 
 # the built-in stub_status route shows us the number of active connections.
@@ -421,35 +479,45 @@ def cache_purge_server(dconf):
     return server
 
 
+def init_nginx_var_with_map(var_name, default_val='-', base_var='host', add_keys=[]):
+    map = nginx.Map(f"${base_var} ${var_name}")
+    for key in add_keys:
+        map.add(key)
+    if isinstance(default_val, str):
+        map.add(nginx.Key('default', f"\"{default_val}\""))
+    else:
+        map.add(nginx.Key('default', f"{default_val}"))
+    return map
+
+
 def http_block(dconf, timestamp):
     http = nginx.Http()
-    http.add(nginx.Key('server_names_hash_bucket_size', '128'))
-    http.add(nginx.Key('log_format', "main '$time_local | $status | $request_time (s)| $remote_addr | $request'"))
+    # optimization
+    # XXX could not build optimal server_names_hash, you should increase either server_names_hash_max_size: 512 or server_names_hash_bucket_size: 128; ignoring server_names_hash_bucket_size
+    http.add(nginx.Key('server_names_hash_bucket_size', str(dconf['nginx'].get('server_names_hash_bucket_size', 64))))
+    http.add(nginx.Key('server_names_hash_max_size', str(dconf['nginx'].get('server_names_hash_max_size', 1024))))
+
+    # copies data between one FD and other from within the kernel
+    # faster than read() + write()
+    http.add(nginx.Key('sendfile', 'on'))
+
+    # send headers in one piece, it is better than sending them one by one
+    http.add(nginx.Key('tcp_nopush', 'on'))
+
     http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"))
-    http.add(nginx.Key('log_format',
-        "logstash_format '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
-        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
-        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\"'"))
-    http.add(nginx.Key('log_format',
-        "logstash_format_new '$remote_addr $remote_user [$time_local] \"$request\" $scheme $host "
-        "$status $bytes_sent \"$http_user_agent\" $upstream_cache_status \"$sent_http_content_type\" "
-        "$proxy_host $request_time $scheme://$proxy_host:$proxy_port$uri \"$http_referer\" \"$http_x_forwarded_for\" "
-        "\"$upstream_status\" \"$upstream_response_time\" \"$upstream_header_time\" \"$upstream_connect_time\" "
-        "\"$upstream_bytes_sent\" \"$upstream_bytes_received\"'"))
+    http.add(nginx.Key('log_format', 'nginx_default \'$remote_addr $server_name $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" $server_port $upstream_bytes_received "$sent_http_content_type" $host "$https" "$http_cookie"\''))
 
     # Init $banjax_decision to avoid var not defined errors
     # We use $host here but it does not matter since we make it default to "-"
-    map_decision = nginx.Map("$host $banjax_decision")
-    map_decision.add(nginx.Key('default', '"-"'))
-    http.add(map_decision)
+    http.add(init_nginx_var_with_map('banjax_decision'))
     # Error if banjax panic
-    map_error = nginx.Map("$host $banjax_error")
-    map_error.add(nginx.Key('default', '"-"'))
-    http.add(map_error)
+    http.add(init_nginx_var_with_map('banjax_error'))
+    http.add(init_nginx_var_with_map('disable_logging', 0))
 
     http.add(nginx.Key('log_format', """logstash_format_json escape=json
         '{'
             '"time_local": "$time_local",'
+            '"request_id": "$request_id",'
             '"client_user": "$remote_user",'
             '"client_ip": "$remote_addr",'
             '"http_request_scheme": "$scheme",'
@@ -478,38 +546,22 @@ def http_block(dconf, timestamp):
             '"upstream_bytes_sent": "$upstream_bytes_sent",'
             '"upstream_bytes_received": "$upstream_bytes_received",'
             '"banjax_decision": "$banjax_decision",'
-            '"banjax_error": "$banjax_error"'
+            '"banjax_error": "$banjax_error",'
+            '"disable_logging": $disable_logging'
         '}' """
     ))
 
-    # renaming so they don't collide in ES/kibana
-    http.add(nginx.Key('log_format', """json_combined escape=json
-        '{'
-            '"time_local": "$time_local",'
-            '"remote_addr": "$remote_addr",'
-            '"request_host": "$host",'
-            '"request_uri": "$request_uri",'
-            '"ngx_status": "$status",'
-            '"ngx_body_bytes_sent": "$body_bytes_sent",'
-            '"ngx_upstream_addr": "$upstream_addr",'
-            '"ngx_upstream_cache_status": "$upstream_cache_status",'
-            '"ngx_upstream_response_time": "$upstream_response_time",'
-            '"ngx_request_time": "$request_time",'
-            '"http_referrer": "$http_referer",'
-            '"http_user_agent": "$http_user_agent",'
-            '"ngx_loc_in": "$loc_in",'
-            '"ngx_loc_out": "$loc_out",'
-            '"ngx_loc_in_out": "${loc_in}-${loc_out}"'
-        '}' """
-    ))
+    http.add(init_nginx_var_with_map(
+        'loggable', default_val=1, base_var='disable_logging', add_keys=[nginx.Key('1', '0')]))
 
     http.add(nginx.Key('error_log', "/dev/stdout warn"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/access.log logstash_format_new"))
+    if dconf['nginx'].get('default_access_log', True):
+        http.add(nginx.Key('access_log', "/var/log/nginx/access.log nginx_default"))
     http.add(nginx.Key('access_log', "/var/log/nginx/banjax-format.log banjax_format"))
-    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json"))
+    http.add(nginx.Key('access_log', "/var/log/nginx/nginx-logstash-format.log logstash_format_json if=$loggable"))
 
     http.add(nginx.Key('proxy_cache_path', "/data/nginx/auth_requests_cache keys_zone=auth_requests_cache:10m"))
-    http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:10m max_size=50g"))
+    http.add(nginx.Key('proxy_cache_path', "/data/nginx/site_content_cache keys_zone=site_content_cache:50m inactive=30m max_size=50g"))
     http.add(nginx.Key('client_max_body_size', "2G"))  # XXX think about this
 
     http.add(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
@@ -517,7 +569,8 @@ def http_block(dconf, timestamp):
     # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
     # this keeps nginx from choosing some random site if it can't find one
     http.add(nginx.Map('"" $empty', nginx.Key("default", '""')))
-    http.add(empty_catchall_server())
+    http.add(*empty_catchall_server_http(dconf))
+    http.add(*empty_catchall_server_https(dconf))
 
     # /info and /stub_status
     http.add(info_and_stub_status_server(timestamp, dconf))
@@ -527,6 +580,13 @@ def http_block(dconf, timestamp):
 
     # purge the auth_requests or site_content caches
     http.add(cache_purge_server(dconf))
+
+    # only add upstream once
+    banjax_upstream = nginx.Upstream('banjax')
+    banjax_upstream.add(nginx.Key('server', '127.0.0.1:8081'))
+    # XXX remove 0706 client are getting 504 in pass_prot
+    # banjax_upstream.add(nginx.Key('keepalive', str(dconf['nginx'].get('banjax_keepalive', '128'))))
+    http.add(banjax_upstream)
 
     # include all the per-site files
     http.add(nginx.Key('include', "/etc/nginx/sites.d/*.conf"))
@@ -539,7 +599,21 @@ def top_level_conf(dconf, timestamp):
 
     nconf.add(nginx.Key('load_module', '/usr/lib/nginx/modules/ngx_http_cache_purge_module_torden.so'))
 
-    nconf.add(nginx.Events(nginx.Key('worker_connections', '1024')))
+    # you must set worker processes based on your CPU cores, nginx does not benefit from setting more than that
+    nconf.add(nginx.Key('worker_processes', 'auto'))
+
+    # number of file descriptors used for nginx
+    # the limit for the maximum FDs on the server is usually set by the OS.
+    # if you don't set FD's then OS settings will be used which is by default 2000
+    nconf.add(nginx.Key('worker_rlimit_nofile', '100000'))
+
+    # determines how much clients will be served per worker
+    # max clients = worker_connections * worker_processes
+    # max clients is also limited by the number of socket connections available on the system (~64k)
+    nconf.add(nginx.Events(
+        nginx.Key('worker_connections', str(dconf['nginx'].get('worker_connections', '4096'))),
+        nginx.Key('use', 'epoll'),
+    ))
 
     nconf.add(http_block(dconf, timestamp))
 
@@ -547,12 +621,40 @@ def top_level_conf(dconf, timestamp):
 
 
 def default_site_content_cache_include_conf(cache_time_minutes, site):
-    return [
+    arr = [
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
         nginx.Key('proxy_cache_valid', f"200 302 {str(cache_time_minutes)}m"),
-        nginx.Key('proxy_cache_valid', f"any 1m")
+        # for 5XX error page, 10s micro cache to prevent flooding the origin
+        nginx.Key('proxy_cache_valid', "500 501 502 503 504 10s"),
+        nginx.Key('proxy_cache_valid', "any 30s"),
+        # do not cache if user logged into to pass_prot
+        nginx.Key('proxy_cache_bypass', "$cookie_deflect_password2"),
     ]
+
+    if site["cache_lock"]:
+        arr.append(nginx.Key('proxy_cache_lock', "on"))
+
+    if site['cache_use_stale']:
+        arr.append(nginx.Key('proxy_cache_use_stale', "updating error timeout invalid_header http_500 http_502 http_503 http_504"))
+
+    # option to force site to use 'Vary: Accept-Encoding' header
+    if site['cache_override_vary_only_encoding']:
+        arr += [
+            nginx.Key('proxy_ignore_headers', "Vary"),
+            nginx.Key('proxy_hide_header', "Vary"),
+            nginx.Key('add_header', "Vary 'Accept-Encoding'"),
+        ]
+
+    # by default, do not cache content if 'Set cookie' header present
+    # but do cache if cookie name match config
+    if len(site['cache_cookie_allowlist']) > 0:
+        site_name = site['public_domain'].replace('.', '_')
+        arr.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
+        arr.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
+        arr.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
+
+    return arr
 
 
 def access_denied_location(site):
@@ -580,6 +682,8 @@ def get_output_dir(formatted_time, dnet):
 
 # XXX ugh this needs redoing
 def generate_nginx_config(all_sites, config, formatted_time):
+    global CONFIG
+    CONFIG = config
     # clear out directories
     for dnet in sorted(config['dnets']):
         output_dir = get_output_dir(formatted_time, dnet)
