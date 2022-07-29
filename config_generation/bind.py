@@ -415,7 +415,7 @@ def generate_bind_config(config, all_sites, timestamp):
 
     # template for edgemanage
     from distutils.dir_util import copy_tree
-    zone_template_dir = os.path.join(output_dir, "deflect_zones")
+    zone_template_dir = os.path.join(output_dir, "deflect_zones_swap")
     # We do copy here because we still want a working zone file
     # in /etc/bind/deflect initially for the bind server to work
     # later edgemanage will take over and overwrite it
