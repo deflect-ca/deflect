@@ -133,7 +133,7 @@ def install_controller_components(config, all_sites, timestamp, logger):
     client = docker_client_for_host(config['controller'], config=config)
 
     Bind(          client, config, find_existing=True, logger=logger).update(timestamp)
-    EdgeManage(    client, config, find_existing=True, logger=logger).update(timestamp)
+    EdgeManage(    client, config, find_existing=True, logger=logger, timestamp=timestamp).update(timestamp)
 
     if config['server_env'] == 'staging':
         DohProxy(      client, config, find_existing=True, logger=logger).update(timestamp)

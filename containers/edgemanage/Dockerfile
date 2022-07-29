@@ -23,14 +23,13 @@ RUN mkdir -p /var/tmp/edgemanage
 COPY init.sh init.sh
 COPY check.sh check.sh
 COPY check-to-reload.sh check-to-reload.sh
+COPY edgemanage_loop.sh edgemanage_loop.sh
 
 # TODO: Install from pypi
 RUN pip3 install git+https://github.com/deflect-ca/edgemanage
 
 RUN touch /etc/cron.d/cronjob
 RUN touch /var/log/edgemanage.log
-# Add dnets to crontab
-RUN ./init.sh
 RUN chmod 0644 /etc/cron.d/cronjob
 RUN crontab /etc/cron.d/cronjob
 
