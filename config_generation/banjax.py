@@ -86,6 +86,13 @@ def generate_banjax_config(config, all_sites, formatted_time):
             password_bytes = base64.b64decode(password_b64)
             password_hex = password_bytes.hex()
             all_site_password_hashes[site['public_domain']] = password_hex
+            # patch www and additional_domain_prefix
+            for subdomain in ['www'] + site['additional_domain_prefix']:
+                full_domain = subdomain + '.' + site['public_domain']
+                all_site_password_protected_paths[full_domain] = copy.deepcopy(paths)
+                all_site_password_protected_path_exceptions[full_domain] = copy.deepcopy(exception_paths)
+                all_site_password_hashes[full_domain] = password_hex
+
     banjax_next_config["password_protected_paths"] = all_site_password_protected_paths
     banjax_next_config["password_protected_path_exceptions"] = all_site_password_protected_path_exceptions
     banjax_next_config["password_hashes"] = all_site_password_hashes
