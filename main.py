@@ -34,7 +34,7 @@ from util.decrypt_and_verify_cert_bundles import \
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
                           path_to_output, reset_log_level, generate_selfsigned_cert,
-                          expire_in_days)
+                          expire_in_days, symlink_force)
 
 logger = get_logger(__name__)
 
@@ -186,6 +186,11 @@ def _gen_config(ctx, no_certs):
     if not no_certs:
         logger.info('>>> Decrypting and verifying cert bundles...')
         ctx.invoke(_decrypt_and_verify_cert_bundles)
+
+    # add shortcuts to generated config
+    symlink_force(
+        f"{path_to_output()}/{timestamp}",
+        f"{path_to_output()}/latest")
 
 
 def abort_if_false(ctx, param, value):
