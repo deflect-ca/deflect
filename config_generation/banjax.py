@@ -57,6 +57,9 @@ def generate_banjax_config(config, all_sites, formatted_time):
         decision_lists = site_decision_lists(site)
         if decision_lists != {}:
             all_site_decision_lists[site['public_domain']] = decision_lists
+            for subdomain in ['www'] + site['additional_domain_prefix']:
+                full_domain = subdomain + '.' + site['public_domain']
+                all_site_decision_lists[full_domain] = copy.deepcopy(decision_lists)
     banjax_next_config["per_site_decision_lists"] = all_site_decision_lists
 
     # example.com: challenge and block
