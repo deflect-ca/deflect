@@ -67,6 +67,9 @@ def generate_banjax_config(config, all_sites, formatted_time):
         fail_action = sitewide_sha_inv(site)
         if fail_action:
             sitewide_sha_inv_dict[site['public_domain']] = fail_action
+            for subdomain in ['www'] + site['additional_domain_prefix']:
+                full_domain = subdomain + '.' + site['public_domain']
+                sitewide_sha_inv_dict[full_domain] = fail_action
     banjax_next_config["sitewide_sha_inv_list"] = sitewide_sha_inv_dict
 
     all_site_password_protected_paths = {}
