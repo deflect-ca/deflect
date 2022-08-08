@@ -1,0 +1,25 @@
+# /var/log/nginx sample
+
+# 54G  nginx-logstash-format.log
+# 30G  access.log
+# 14G  banjax-format.log
+# 17M  system_sites.log
+# 524K error.log
+
+/var/log/nginx/*.log {
+    daily
+    dateext
+    dateformat -%Y-%m-%d
+    missingok
+    size 1G
+    rotate 30
+    # Truncate the original log file in place after creating a copy,
+    # instead of moving the old log file and optionally creating a new one.
+    # It can be used when some program cannot be told to close its logfile
+    # and thus might continue writing (appending) to the previous log file forever
+    copytruncate
+    compress
+    delaycompress
+    notifempty
+    sharedscripts
+}
