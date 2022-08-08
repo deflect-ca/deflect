@@ -634,6 +634,8 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         nginx.Key('proxy_cache_valid', "any 30s"),
         # do not cache if user logged into to pass_prot
         nginx.Key('proxy_cache_bypass', "$cookie_deflect_password2"),
+        # do not cache if hit number is low, especailly when there is /?s={rand}
+        nginx.Key('proxy_cache_min_uses', '3'),
     ]
 
     if site["cache_lock"]:
