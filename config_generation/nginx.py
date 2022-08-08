@@ -622,7 +622,7 @@ def top_level_conf(dconf, timestamp):
 
 def default_site_content_cache_include_conf(cache_time_minutes, site):
     # disable cache for this site
-    if not site["cachecontrol"]:
+    if site["cache_disable"]:
         return []
 
     arr = [
