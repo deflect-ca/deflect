@@ -158,6 +158,7 @@ def old_to_new_site_dict(old_dict):
     new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
     # append origin IP to banjax per site whitelist
     new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", []) + [old_dict["origin"]]
+    new_dict["ip_blocklist"] = old_dict.get("add_banjax_blocklist", [])
     new_dict["cache_cookie_allowlist"] = old_dict.get("cache_cookie_allowlist", [])
     new_dict["cache_lock"] = old_dict.get("cache_lock", False)
     new_dict["cache_use_stale"] = old_dict.get("cache_use_stale", False)
