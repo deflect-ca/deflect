@@ -124,6 +124,11 @@ def old_to_new_site_dict(old_dict):
         "banjax_password", None)
     new_dict["rate_limited_regexes"] = old_to_new_rate_limited_regexes(
         old_dict.get("banjax_regex_banner", []), old_dict["url"])
+    new_dict["additional_domain_prefix"] = old_dict.get("additional_domain_prefix", [])
+    for subdomain in ['www'] + new_dict['additional_domain_prefix']:
+        full_domain = subdomain + '.' + old_dict["url"]
+        new_dict["rate_limited_regexes"] += old_to_new_rate_limited_regexes(
+            old_dict.get("banjax_regex_banner", []), full_domain)
     new_dict["password_protected_path_exceptions"] = old_dict.get('banjax_path_exceptions', [])
     new_dict["default_cache_time_minutes"] = old_dict["cache_time"]
     new_dict["cache_exceptions"] = old_to_new_cache_exceptions(
@@ -153,7 +158,6 @@ def old_to_new_site_dict(old_dict):
         server_names.append("www." + root_name)
     for prefix in old_dict.get("additional_domain_prefix", []):
         server_names.append(prefix + "." + root_name)
-    new_dict["additional_domain_prefix"] = old_dict.get("additional_domain_prefix", [])
     new_dict["server_names"] = server_names
     new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
     # append origin IP to banjax per site whitelist
