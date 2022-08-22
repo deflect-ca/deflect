@@ -31,6 +31,39 @@ filebeat.inputs:
     dnet: "${DEFLECT_DNET}"
     type: banjax_temp
 
+# Resending section
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/nginx/resend/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/nginx/resend-temp/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access_temp
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/resend/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/resend-temp/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax_temp
+
 output.logstash:
   hosts: ["${LOGSTASH_HOST}"]
   ssl.certificate_authorities: ["/etc/filebeat/rootca.pem"]
