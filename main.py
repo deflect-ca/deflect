@@ -15,7 +15,7 @@ from OpenSSL.crypto import \
 from config_generation import (generate_banjax_config, generate_bind_config,
                                generate_edgemanage_config,
                                generate_legacy_filebeat_config,
-                               generate_nginx_config)
+                               generate_nginx_config, generate_kafka_filebeat_config)
 from config_generation.generate_elastic_keys import generate_new_elastic_certs
 from config_generation.site_dict import get_all_sites
 from orchestration.everything import (gather_info, install_base,
@@ -183,6 +183,10 @@ def _gen_config(ctx, no_certs):
     if config['logging']['mode'] == 'logstash_external':
         logger.info('>>> Generating legacy-filebeat config...')
         generate_legacy_filebeat_config(config, all_sites, timestamp)
+
+        if config['logging'].get('extra_output_kafka'):
+            logger.info('>>> Generating kafka filebeat config...')
+            generate_kafka_filebeat_config(config, all_sites, timestamp)
 
     if not no_certs:
         logger.info('>>> Decrypting and verifying cert bundles...')

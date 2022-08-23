@@ -1,0 +1,82 @@
+filebeat.inputs:
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/nginx/nginx-logstash-format.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/nginx/nginx-logstash-format-temp.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access_temp
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/banjax-logstash-format.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/banjax-logstash-format-temp.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax_temp
+
+# Resending section
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/nginx/resend/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/nginx/resend-temp/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: deflect_access_temp
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/resend/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax
+
+- type: log
+  tail_files: true
+  paths:
+    - /var/log/banjax/resend-temp/*.log
+  fields:
+    dnet: "${DEFLECT_DNET}"
+    type: banjax_temp
+
+output.kafka:
+  hosts: ["${KAFKA_HOST1}", "${KAFKA_HOST2}", "${KAFKA_HOST3}"]
+  ssl.certificate_authorities:
+    - /etc/filebeat/caroot.pem
+  ssl.certificate: /etc/filebeat/certificate.pem
+  ssl.key: /etc/filebeat/key.pem
+  ssl.enabled: true
+  ssl.verification_mode: "none"
+  topic: "${KAFKA_TOPIC}"
+  partition.round_robin:
+    reachable_only: false
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+
+logging.level: "${FILEBEAT_LOG_LEVEL}"

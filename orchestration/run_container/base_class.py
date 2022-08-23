@@ -101,6 +101,7 @@ class Container:
             "EdgeManage": "edgemanage",
             "LegacyFilebeat": "legacy-filebeat",
             "Logrotate": "logrotate",
+            "KafkaFilebeat": "kafka-filebeat",
         }[concrete_class]
         if find_existing:
             self.container = find_existing_container(self.client, self.lowercase_name, None, config, logger)
