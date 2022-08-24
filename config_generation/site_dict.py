@@ -228,12 +228,6 @@ def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
 
     new_sites = {}
     for name, old_site in old_sites.items():
-        # print(f"doing {name}")
-        # XXX think about this. ATS ignores missing certs, but Nginx does not.
-        # if not old_site["ns_on_deflect"]:
-        #     continue
-        if name in ["acmx.ch", "donuz.okajak.com", "abortion-pills.org", "zemzen.defakto.support", "irancybercrime.org"]: #, "gubernia.com", "old.gubernia.com", "radiozamaneh.com", "volksentscheid-berlin-autofrei.de", "zemzen.defakto.support", "dev.pandemicbigbrother.online", "pandemicbigbrother.online"]:
-            continue
         new_site = old_to_new_site_dict(old_site)
         new_sites[name] = new_site
 
