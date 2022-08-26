@@ -20,6 +20,7 @@ edges:
 logging:
   mode: 'elk_internal'
   filebeat_log_level: 'warning'
+  extra_output_kafka: false
   elk_internal: ~
     # stand up built in ELK, no settings required
   elk_external:
@@ -30,6 +31,10 @@ logging:
   logstash_external:
     # connect to an external ELK via legacy-filebeat
     logstash_host: logstash.example.com
+    kafka_host1: ~
+    kafka_host2: ~
+    kafka_host3: ~
+    kafka_topic: filebeat.logs
 fetch_site_yml:
   ssh:
     host: host
