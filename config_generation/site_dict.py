@@ -169,6 +169,7 @@ def old_to_new_site_dict(old_dict):
     new_dict["cache_override_vary_only_encoding"] = old_dict.get("cache_override_vary_only_encoding", False)
     new_dict["static_to_banjax"] = old_dict.get("static_to_banjax", False)
     new_dict["cache_disable"] = old_dict.get("cache_disable", False)
+    new_dict["enable_sni"] = old_dict.get("enable_sni", False)
 
     return new_dict
 

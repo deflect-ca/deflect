@@ -250,6 +250,9 @@ def _access_granted_fail_open_location_contents(
     location_contents.append(nginx.Key('proxy_ssl_name', '$host'))
     location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
 
+    if site['enable_sni']:
+        location_contents.append(nginx.Key('proxy_ssl_server_name', "on"))
+
     if origin_https:
         # if origin_https_port == 80, we assume it is http
         proto = 'https' if site['origin_https_port'] != 80 else 'http'
