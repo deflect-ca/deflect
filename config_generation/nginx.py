@@ -655,6 +655,13 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
             nginx.Key('add_header', "Vary 'Accept-Encoding'"),
         ]
 
+    # ignore cache-control header from origin
+    if site['cache_ignore_cache_control']:
+        arr += [
+            nginx.Key('proxy_ignore_headers', "Cache-Control"),
+            nginx.Key('proxy_hide_header', "Cache-Control"),
+        ]
+
     # by default, do not cache content if 'Set cookie' header present
     # but do cache if cookie name match config
     if len(site['cache_cookie_allowlist']) > 0:
