@@ -171,6 +171,7 @@ def old_to_new_site_dict(old_dict):
     new_dict["cache_disable"] = old_dict.get("cache_disable", False)
     new_dict["cache_ignore_cache_control"] = old_dict.get("cache_ignore_cache_control", False)
     new_dict["enable_sni"] = old_dict.get("enable_sni", False)
+    new_dict["cache_ignore_expires"] = old_dict.get("cache_ignore_expires", False)
 
     return new_dict
 
