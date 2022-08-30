@@ -504,6 +504,11 @@ def http_block(dconf, timestamp):
     # send headers in one piece, it is better than sending them one by one
     http.add(nginx.Key('tcp_nopush', 'on'))
 
+    # proxy buffer settings for large header
+    http.add(nginx.Key('proxy_busy_buffers_size', '256k'))
+    http.add(nginx.Key('proxy_buffers', '8 256k'))
+    http.add(nginx.Key('proxy_buffer_size', '128k'))
+
     http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"))
     http.add(nginx.Key('log_format', 'nginx_default \'$remote_addr $server_name $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" $server_port $upstream_bytes_received "$sent_http_content_type" $host "$https" "$http_cookie"\''))
 
