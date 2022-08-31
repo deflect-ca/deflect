@@ -206,8 +206,11 @@ def abort_if_false(ctx, param, value):
 @click.command('config', short_help='Install config to target')
 @click.option('--sync', is_flag=True, default=False,
               help='Install edge one by one, instead of all at once')
+@click.option('--update-banjax', is_flag=True, default=False,
+              help='Force restart banjax, and other related containers including: '
+                   'legacy-filebeat, kafka-filebeat, logrotate')
 @click.pass_context
-def _install_config(ctx, sync):
+def _install_config(ctx, sync, update_banjax):
     """Install config to target
 
     This will install config in output dir to target.
@@ -225,12 +228,14 @@ def _install_config(ctx, sync):
     """
     all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['host'] == 'edges':
-        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp, sync=sync)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'],
+                      all_sites, timestamp, sync=sync, update_banjax=update_banjax)
     elif ctx.obj['host'] == 'controller':
         install_controller(ctx.obj['config'], all_sites, timestamp)
     elif ctx.obj['host'] == 'all':
         install_controller(ctx.obj['config'], all_sites, timestamp)
-        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp, sync=sync)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'],
+                      all_sites, timestamp, sync=sync, update_banjax=update_banjax)
     else:
         ctx.forward(_install_selected)
 
@@ -241,8 +246,11 @@ def _install_config(ctx, sync):
 @click.option('--yes', is_flag=True, callback=abort_if_false,
               expose_value=False,
               prompt='Please confirm the target _host is correct')
+@click.option('--update-banjax', is_flag=True, default=False,
+              help='Force restart banjax, and other related containers including: '
+                   'legacy-filebeat, kafka-filebeat, logrotate')
 @click.pass_context
-def _install_selected(ctx, sync):
+def _install_selected(ctx, sync, update_banjax):
     all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['_has_controller']:
         install_controller(ctx.obj['config'], all_sites, timestamp)
@@ -252,7 +260,8 @@ def _install_selected(ctx, sync):
             if host['hostname'] == ctx.obj['config']['controller']['hostname']:
                 ctx.obj['_hosts'].remove(host)
 
-    install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp, sync=sync)
+    install_edges(ctx.obj['config'], ctx.obj['_hosts'],
+                  all_sites, timestamp, sync=sync, update_banjax=update_banjax)
 
 
 @click.command('es', help='Install Elasticsearch')

@@ -107,7 +107,7 @@ def install_base(config, hosts, logger):
             logger.info(f"\t {line}")
 
 
-def install_edge_components(edge, config, all_sites, timestamp, logger):
+def install_edge_components(edge, config, all_sites, timestamp, logger, update_banjax=False):
     logger.info(f"$$$ starting install_all_edge_components for {edge['hostname']}")
     # XXX very annoyingly you can't specify a specific ssh key here... has to be in a (the?) default
     # location OR the socket / ssh-agent thing.
@@ -116,18 +116,31 @@ def install_edge_components(edge, config, all_sites, timestamp, logger):
     logger.info(f"docker things this host is called {hostname}")
 
     Nginx(client, config, find_existing=True, logger=logger).update(timestamp)
-    Banjax(client, config, find_existing=True, logger=logger, timestamp=timestamp).update(timestamp)
+    if update_banjax:
+        logger.info('Update banjax mode, force restarting banjax, legacy-filebeat, kafka-filebeat and logrotate')
+        Banjax(client, config, kill_existing=True, logger=logger, timestamp=timestamp).update(timestamp)
+    else:
+        Banjax(client, config, find_existing=True, logger=logger, timestamp=timestamp).update(timestamp)
 
     logger.info(f"Logging mode is: {config['logging']['mode']}")
     if config['logging']['mode'] == 'logstash_external':
-        LegacyFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
+        if update_banjax:
+            LegacyFilebeat(client, config, kill_existing=True, logger=logger).update(timestamp)
+        else:
+            LegacyFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
         if config['logging'].get('extra_output_kafka'):
-            KafkaFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
+            if update_banjax:
+                KafkaFilebeat(client, config, kill_existing=True, logger=logger).update(timestamp)
+            else:
+                KafkaFilebeat(client, config, find_existing=True, logger=logger).update(timestamp)
     else:
         Filebeat(      client, config, find_existing=True, logger=logger).update(timestamp)
         Metricbeat(    client, config, find_existing=True, logger=logger).update(timestamp)
 
-    Logrotate(client, config, find_existing=True, logger=logger).update(timestamp)
+    if update_banjax:
+        Logrotate(client, config, kill_existing=True, logger=logger).update(timestamp)
+    else:
+        Logrotate(client, config, find_existing=True, logger=logger).update(timestamp)
 
     logger.info(f"$$$ finished install_all_edge_components for {edge}")
     return True
@@ -176,19 +189,19 @@ def install_controller(config, all_sites, timestamp):
     logger.info(f"install_controller host: {config['controller']}, result: {res}")
 
 
-def install_edges(config, edges, all_sites, timestamp, sync=False):
+def install_edges(config, edges, all_sites, timestamp, sync=False, update_banjax=False):
     """Install to edges, either in sync or parallel"""
     if sync:
         for edge in edges:
             logger.info(f"running install_edge_components() in sync on {edge['hostname']}")
-            res = install_edge_components(edge, config, all_sites, timestamp, logger)
+            res = install_edge_components(edge, config, all_sites, timestamp, logger, update_banjax=update_banjax)
             logger.info(f"install_edge host: {edge['hostname']}, result: {res}")
         return
 
     # now we can install all the edges in parallel
     logger.info(f"running install_edge_components() in parallel for {len(config['edges'])} edges")
     results = run_on_threadpool({
-        edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp)
+        edge['hostname']: partial(install_edge_components, edge, config, all_sites, timestamp, update_banjax=update_banjax)
         for edge in edges
     })
 
