@@ -26,6 +26,7 @@ from orchestration.run_container.banjax import Banjax
 from orchestration.run_container.certbot import Certbot
 from orchestration.run_container.legacy_filebeat import LegacyFilebeat
 from orchestration.run_container.logrotate import Logrotate
+from orchestration.run_container.kafka_filebeat import KafkaFilebeat
 from orchestration.run_container.base_class import (find_existing_container,
                                                     get_persisted_config)
 from orchestration.run_container.elasticsearch import (Elasticsearch,
@@ -313,6 +314,19 @@ def _install_logrotate(ctx):
         logrotate.update(timestamp)
 
 
+@click.command('kafka-filebeat', help='Install and update kafka-filebeat (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild kafka-filebeat, are you sure?')
+@click.pass_context
+def _install_kafka_filebeat(ctx):
+    _, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        kafka_filebeat = KafkaFilebeat(client, ctx.obj['config'], kill_existing=True, logger=logger)
+        kafka_filebeat.update(timestamp)
+
+
 @click.command('certbot', help='Install and update certbot')
 @click.pass_context
 def _install_certbot(ctx):
@@ -577,6 +591,7 @@ install.add_command(_install_certbot)
 install.add_command(_install_selected)
 install.add_command(_install_legacy_filebeat)
 install.add_command(_install_logrotate)
+install.add_command(_install_kafka_filebeat)
 
 # Get section
 get.add_command(_get_nginx_errors)
