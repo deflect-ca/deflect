@@ -159,7 +159,7 @@ def old_to_new_site_dict(old_dict):
     for prefix in old_dict.get("additional_domain_prefix", []):
         server_names.append(prefix + "." + root_name)
     new_dict["server_names"] = server_names
-    new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
+    new_dict["ns_on_deflect"] = old_dict.get('ns_on_deflect')
     # append origin IP to banjax per site whitelist
     new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", []) + [old_dict["origin"]]
     new_dict["ip_blocklist"] = old_dict.get("add_banjax_blocklist", [])
