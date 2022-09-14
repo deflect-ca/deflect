@@ -23,6 +23,7 @@ from util.helpers import (
 
 logger = get_logger(__name__)
 CONFIG = None
+ALL_SITES = None
 
 def redirect_to_https_server(site: dict):
     """
@@ -226,6 +227,7 @@ def static_files_location(site, global_config, edge_https, origin_https):
 def _access_granted_fail_open_location_contents(
         site, global_config, edge_https, origin_https
 ):
+    global ALL_SITES
     location_contents = []
     location_contents += default_site_content_cache_include_conf(
         site['default_cache_time_minutes'], site
@@ -244,15 +246,45 @@ def _access_granted_fail_open_location_contents(
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Status $upstream_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
+
+    if site['enable_sni']:
+        location_contents.append(nginx.Key('proxy_ssl_server_name', "on"))
+
+    parent_site = None
+    if site.get('alias_of_domain'):
+        for name, p_site in ALL_SITES['client'].items():
+            if name == site.get('alias_of_domain') and p_site.get('dnet') == site.get('dnet'):
+                parent_site = p_site
+                break
+
+        if parent_site:
+            logger.info("setting %s as an alias of domain: %s",
+                site['public_domain'], parent_site.get('public_domain'))
+            location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
+            location_contents.append(nginx.Key('proxy_set_header', f"Host {parent_site.get('public_domain')}"))
+            location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
+            location_contents.append(nginx.Key('proxy_ssl_name', parent_site.get('public_domain')))
+            location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
+            location_contents.append(nginx.Key('proxy_redirect', f"'http://{parent_site.get('public_domain')}' 'http://{site.get('public_domain')}'"))
+            location_contents.append(nginx.Key('proxy_redirect', f"'https://{parent_site.get('public_domain')}' 'https://{site.get('public_domain')}'"))
+            location_contents.append(nginx.Key('sub_filter_once', "off"))
+            location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' '{site.get('public_domain')}'"))
+            return _proxy_pass_to_origin(location_contents, parent_site, origin_https)
+        else:
+            logger.warn("%s has alias_of_domain: %s set but not found",
+                site['public_domain'], parent_site.get('public_domain'))
+
+    # normal site settings
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
     location_contents.append(nginx.Key('proxy_set_header', "Host $host"))
     location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
     location_contents.append(nginx.Key('proxy_ssl_name', '$host'))
     location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
 
-    if site['enable_sni']:
-        location_contents.append(nginx.Key('proxy_ssl_server_name', "on"))
+    return _proxy_pass_to_origin(location_contents, site, origin_https)
 
+
+def _proxy_pass_to_origin(location_contents, site, origin_https):
     if origin_https:
         # if origin_https_port == 80, we assume it is http
         proto = 'https' if site['origin_https_port'] != 80 else 'http'
@@ -711,6 +743,8 @@ def get_output_dir(formatted_time, dnet):
 # XXX ugh this needs redoing
 def generate_nginx_config(all_sites, config, formatted_time):
     global CONFIG
+    global ALL_SITES
+    ALL_SITES = all_sites
     CONFIG = config
     # clear out directories
     for dnet in sorted(config['dnets']):
