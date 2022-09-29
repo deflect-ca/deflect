@@ -260,6 +260,8 @@ def _access_granted_fail_open_location_contents(
             site['public_domain'], parent_site.get('public_domain'))
         location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
         location_contents.append(nginx.Key('proxy_set_header', f"Host {parent_site.get('public_domain')}"))
+        # disable gzip from origin
+        location_contents.append(nginx.Key('proxy_set_header', "Accept-Encoding \"\""))
         location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
         location_contents.append(nginx.Key('proxy_hide_header', "Link"))
         location_contents.append(nginx.Key('proxy_ssl_name', parent_site.get('public_domain')))
