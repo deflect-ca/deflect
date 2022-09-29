@@ -249,6 +249,7 @@ def _access_granted_fail_open_location_contents(
         location_contents.append(nginx.Key('proxy_ssl_server_name', "on"))
 
     if site.get('alias_of_domain'):
+        www_domain = True if site.get('alias_of_domain').startswith('www.') else False
         parent_site = {
             'public_domain': site.get('alias_of_domain'),
             'origin_https_port': 443,
@@ -266,9 +267,13 @@ def _access_granted_fail_open_location_contents(
         for proto in ['http', 'https']:
             for triple_w in ['', 'www.']:
                 location_contents.append(nginx.Key('proxy_redirect',
-                    f"'{proto}://{triple_w}{parent_site.get('public_domain')}' '{proto}://{triple_w}{site.get('public_domain')}'"))
+                    f"'{proto}://{parent_site.get('public_domain')}' '{proto}://{triple_w}{site.get('public_domain')}'"))
+        if www_domain:
+            # remove www.
+            domain_to_replace = parent_site.get('public_domain').replace('www.', '')
         location_contents.append(nginx.Key('sub_filter_once', "off"))
-        location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' '{site.get('public_domain')}'"))
+        location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' 'www.{site.get('public_domain')}'"))
+        location_contents.append(nginx.Key('sub_filter', f"'{domain_to_replace}' '{site.get('public_domain')}'"))
         return _proxy_pass_to_origin(location_contents, parent_site, origin_https)
 
     # normal site settings
