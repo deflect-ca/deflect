@@ -277,6 +277,7 @@ def _access_granted_fail_open_location_contents(
         location_contents.append(nginx.Key('sub_filter_once', "off"))
         location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' 'www.{site.get('public_domain')}'"))
         location_contents.append(nginx.Key('sub_filter', f"'{domain_to_replace}' '{site.get('public_domain')}'"))
+        location_contents.append(nginx.Key('sub_filter_types', "text/html text/css text/xml text/plain text/javascript application/javascript application/json"))
         return _proxy_pass_to_origin(location_contents, parent_site, origin_https)
 
     # normal site settings
