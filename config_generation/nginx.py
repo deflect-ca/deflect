@@ -718,6 +718,9 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         arr.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
         arr.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
         arr.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
+    else:
+        # prevent wordpress admin been cached, especailly when we ignore cache_ignore_cache_control
+        arr.append(nginx.Key('proxy_no_cache', "$cookie_deflect_password2"))
 
     return arr
 
