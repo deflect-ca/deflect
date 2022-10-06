@@ -613,6 +613,34 @@ def http_block(dconf, timestamp):
 
     http.add(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
 
+    if dconf['nginx'].get('enable_gzip', True):
+        http.add(nginx.Key('gzip', 'on'))
+        http.add(nginx.Key('gzip_min_length', '1024'))
+        http.add(nginx.Key('gzip_vary', 'on'))
+        http.add(nginx.Key('gzip_disable', '\"msie6\"'))
+        http.add(nginx.Key('gzip_proxied', 'any'))
+        http.add(nginx.Key('gzip_types', """
+            text/richtext
+            text/xsd
+            text/xsl
+            text/css
+            text/javascript
+            text/xml
+            text/plain
+            text/x-component
+            application/javascript
+            application/x-javascript
+            application/json
+            application/xml
+            application/rss+xml
+            application/atom+xml
+            application/font-woff
+            application/vnd.ms-fontobject
+            font/truetype
+            font/opentype
+            image/svg+xml
+            image/x-icon"""))
+
     # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
     # this keeps nginx from choosing some random site if it can't find one
     http.add(nginx.Map('"" $empty', nginx.Key("default", '""')))
