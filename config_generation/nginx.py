@@ -616,7 +616,7 @@ def http_block(dconf, timestamp):
         http.add(nginx.Key('gzip', 'on'))
         http.add(nginx.Key('gzip_min_length', '1024'))
         http.add(nginx.Key('gzip_vary', 'on'))
-        http.add(nginx.Key('gzip_disable', 'MSIE [1-6]\.(?!.*SV1)'))
+        http.add(nginx.Key('gzip_disable', '\"msie6\"'))
         http.add(nginx.Key('gzip_proxied', 'any'))
         http.add(nginx.Key('gzip_types', """
             text/richtext
