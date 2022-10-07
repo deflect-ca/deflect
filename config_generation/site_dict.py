@@ -155,8 +155,11 @@ def old_to_new_site_dict(old_dict):
         new_dict["www_only"] = True
     else:
         server_names.append(root_name)
-    # only 3
-    if not old_dict.get("no_www", False):
+
+    if old_dict.get("no_www", False):
+        # redirects www to apex domain
+        new_dict["no_www"] = True
+    else:
         server_names.append("www." + root_name)
     for prefix in old_dict.get("additional_domain_prefix", []):
         server_names.append(prefix + "." + root_name)
