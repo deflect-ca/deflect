@@ -377,6 +377,8 @@ def redirect_apex_to_www_server_block(dconf, site, http=False, https=False):
                 nginx.Key('set', "$loc_out \"redir_apex_to_www\""),
                 nginx.Key('server_name', site['public_domain']),
                 nginx.Key('listen', '443 ssl http2'),
+                *ssl_certificate_and_key(dconf, site),
+                nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]),
                 nginx.Key(
                     # note that we always redirect to the non-www hostname
                     'return', "301 https://www.$server_name$request_uri")
