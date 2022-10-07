@@ -150,8 +150,10 @@ def old_to_new_site_dict(old_dict):
     new_dict["uploaded_cert_bundle_name"] = old_dict.get("tls_bundle", None)
     server_names = []
     root_name = new_dict["public_domain"]
-    # not seen
-    if not old_dict.get("www_only", False):
+    if old_dict.get("www_only", False):
+        # redirects apex to www domain
+        new_dict["www_only"] = True
+    else:
         server_names.append(root_name)
     # only 3
     if not old_dict.get("no_www", False):

@@ -357,6 +357,33 @@ def port_443_server_block(dconf, site, https_req_does):
         raise Exception(f"unrecognized https_request_does: {https_req_does}")
 
 
+def redirect_apex_to_www_server_block(dconf, site, http=False, https=False):
+    if http:
+        conf = nginx.Conf(
+            nginx.Server(
+                nginx.Key('set', "$loc_in \"redir_apex_to_www\""),
+                nginx.Key('set', "$loc_out \"redir_apex_to_www\""),
+                nginx.Key('server_name', site['public_domain']),
+                nginx.Key('listen', '80'),
+                nginx.Key(
+                    # note that we always redirect to the non-www hostname
+                    'return', "301 http://www.$server_name$request_uri")
+            )
+        )
+    elif https:
+        conf = nginx.Conf(
+            nginx.Server(
+                nginx.Key('set', "$loc_in \"redir_apex_to_www\""),
+                nginx.Key('set', "$loc_out \"redir_apex_to_www\""),
+                nginx.Key('server_name', site['public_domain']),
+                nginx.Key('listen', '443 ssl http2'),
+                nginx.Key(
+                    # note that we always redirect to the non-www hostname
+                    'return', "301 https://www.$server_name$request_uri")
+            )
+        )
+    return conf
+
 def per_site_include_conf(site, dconf):
     nconf = nginx.Conf()
 
@@ -382,11 +409,17 @@ def per_site_include_conf(site, dconf):
     http_req_does = site['http_request_does']
     if http_req_does != "nothing":
         nconf.add(port_80_server_block(dconf, site, http_req_does))
+        # redirect apex to www
+        if site.get('www_only'):
+            nconf.add(redirect_apex_to_www_server_block(dconf, site, http=True))
 
     # proxy_pass to origin port 80 or 443
     https_req_does = site['https_request_does']
     if https_req_does != "nothing":
         nconf.add(port_443_server_block(dconf, site, https_req_does))
+        # redirect apex to www
+        if site.get('www_only'):
+            nconf.add(redirect_apex_to_www_server_block(dconf, site, https=True))
 
     return nconf
 
