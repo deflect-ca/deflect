@@ -34,6 +34,7 @@ def redirect_to_https_server(site: dict):
             nginx.Key('set', "$loc_out \"redir_to_ssl\""),
             nginx.Key('server_name', " ".join(site["server_names"])),
             nginx.Key('listen', '80'),
+            nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
             nginx.Key(
                 # note that we always redirect to the non-www hostname
                 'return', "301 https://$server_name$request_uri")
@@ -357,6 +358,36 @@ def port_443_server_block(dconf, site, https_req_does):
         raise Exception(f"unrecognized https_request_does: {https_req_does}")
 
 
+def redirect_apex_www_server_block(dconf, site, http=False, https=False, to_www=False):
+    server_name = site.get('public_domain') if to_www else f"www.{site.get('public_domain')}"
+    if http:
+        conf = nginx.Conf(
+            nginx.Server(
+                nginx.Key('set', "$loc_in \"redir_apex_www\""),
+                nginx.Key('set', "$loc_out \"redir_apex_www\""),
+                nginx.Key('server_name', server_name),
+                nginx.Key('listen', '80'),
+                nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
+                nginx.Key(
+                    'return', f"301 http://{('www.' if to_www else '')}$server_name$request_uri")
+            )
+        )
+    elif https:
+        conf = nginx.Conf(
+            nginx.Server(
+                nginx.Key('set', "$loc_in \"redir_apex_www\""),
+                nginx.Key('set', "$loc_out \"redir_apex_www\""),
+                nginx.Key('server_name', server_name),
+                nginx.Key('listen', '443 ssl http2'),
+                *ssl_certificate_and_key(dconf, site),
+                nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]),
+                nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
+                nginx.Key(
+                    'return', f"301 https://{('www.' if to_www else '')}$server_name$request_uri")
+            )
+        )
+    return conf
+
 def per_site_include_conf(site, dconf):
     nconf = nginx.Conf()
 
@@ -382,11 +413,21 @@ def per_site_include_conf(site, dconf):
     http_req_does = site['http_request_does']
     if http_req_does != "nothing":
         nconf.add(port_80_server_block(dconf, site, http_req_does))
+        # redirect apex to www
+        if site.get('www_only'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, http=True, to_www=True))
+        elif site.get('no_www'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, http=True))
 
     # proxy_pass to origin port 80 or 443
     https_req_does = site['https_request_does']
     if https_req_does != "nothing":
         nconf.add(port_443_server_block(dconf, site, https_req_does))
+        # redirect apex to www
+        if site.get('www_only'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, https=True, to_www=True))
+        elif site.get('no_www'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, https=True))
 
     return nconf
 
