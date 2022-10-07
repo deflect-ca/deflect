@@ -34,6 +34,7 @@ def redirect_to_https_server(site: dict):
             nginx.Key('set', "$loc_out \"redir_to_ssl\""),
             nginx.Key('server_name', " ".join(site["server_names"])),
             nginx.Key('listen', '80'),
+            nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
             nginx.Key(
                 # note that we always redirect to the non-www hostname
                 'return', "301 https://$server_name$request_uri")
@@ -366,6 +367,7 @@ def redirect_apex_www_server_block(dconf, site, http=False, https=False, to_www=
                 nginx.Key('set', "$loc_out \"redir_apex_www\""),
                 nginx.Key('server_name', server_name),
                 nginx.Key('listen', '80'),
+                nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
                 nginx.Key(
                     'return', f"301 http://{('www.' if to_www else '')}$server_name$request_uri")
             )
@@ -379,6 +381,7 @@ def redirect_apex_www_server_block(dconf, site, http=False, https=False, to_www=
                 nginx.Key('listen', '443 ssl http2'),
                 *ssl_certificate_and_key(dconf, site),
                 nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]),
+                nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
                 nginx.Key(
                     'return', f"301 https://{('www.' if to_www else '')}$server_name$request_uri")
             )
