@@ -292,6 +292,7 @@ def _access_granted_fail_open_location_contents(
 
 
 def _proxy_pass_to_origin(location_contents, site, origin_https):
+    location_contents.append(nginx.Key('proxy_ssl_protocols', "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3"))
     if origin_https:
         # if origin_https_port == 80, we assume it is http
         proto = 'https' if site['origin_https_port'] != 80 else 'http'
