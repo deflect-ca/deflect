@@ -247,6 +247,7 @@ def comma_separated_names_to_hosts(config, names):
 
 
 def hosts_arg_to_hosts(config, hosts_arg):
+    # return [], has_controller
     if hosts_arg == "all":
         return [config['controller']] + config['edges'], True
     elif hosts_arg == "controller":
@@ -254,7 +255,17 @@ def hosts_arg_to_hosts(config, hosts_arg):
     elif hosts_arg == "edges":
         return config['edges'], False
     else:
-        return comma_separated_names_to_hosts(config, hosts_arg)
+        # see if its a dnet
+        edge_in_dnet = []
+        for edge in config['edges']:
+            if hosts_arg == edge['dnet']:
+                edge_in_dnet.append(edge)
+
+        if len(edge_in_dnet) > 0:
+            return edge_in_dnet, False
+        else:
+            # maybe not a dnet, try as a comma separated list of names
+            return comma_separated_names_to_hosts(config, hosts_arg)
 
 
 def generate_selfsigned_cert(hostname, alt_name_arr=[], key=None):
