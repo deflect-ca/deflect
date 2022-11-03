@@ -593,7 +593,9 @@ def http_block(dconf, timestamp):
         http.add(nginx.Key('proxy_buffers', '8 256k'))
         http.add(nginx.Key('proxy_buffer_size', '128k'))
 
-    http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"))
+    # Replace raw $request (GET / HTTP/1.1) with $request_method $uri $server_protocol
+    # to prevent ending up with GET https://example.com/ HTTP/1.1
+    http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request_method $uri $server_protocol $http_user_agent'"))
     http.add(nginx.Key('log_format', 'nginx_default \'$remote_addr $server_name $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" $server_port $upstream_bytes_received "$sent_http_content_type" $host "$https" "$http_cookie"\''))
 
     # Init $banjax_decision to avoid var not defined errors
