@@ -44,11 +44,11 @@ def generate_test_origin_config(config, all_sites, timestamp):
         else:
             dnets[edge['dnet']] = [edge['ip']]
 
-    with open(f"{output_dir}/edges_{file_token}.json", 'w') as f:
+    with open(f"{output_dir}/edges-{file_token}.json", 'w') as f:
         logger.info(f"Writing edge list to {output_dir}/edges-{file_token}.json")
         json.dump(edge_list, f)
 
-    with open(f"{output_dir}/dnets_{file_token}.json", 'w') as f:
+    with open(f"{output_dir}/dnets-{file_token}.json", 'w') as f:
         logger.info(f"Writing dnet list to {output_dir}/dnets-{file_token}.json")
         json.dump(dnets, f)
 
