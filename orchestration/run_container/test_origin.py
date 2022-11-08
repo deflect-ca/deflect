@@ -3,7 +3,10 @@ from orchestration.run_container.base_class import Container
 
 class TestOrigin(Container):
     def update(self, config_timestamp):
-        pass
+        self.logger.info('Clearing /opt/test-origin/static/*.json and install new ones')
+        self.container.exec_run("rm -f /opt/test-origin/static/*.json")
+        with open(f"output/{config_timestamp}/test-origin.tar", "rb") as f:
+            self.container.put_archive("/opt/test-origin/static", f.read())
 
     def start_new_container(self, config, image_id):
         return self.client.containers.run(

@@ -15,7 +15,8 @@ from OpenSSL.crypto import \
 from config_generation import (generate_banjax_config, generate_bind_config,
                                generate_edgemanage_config,
                                generate_legacy_filebeat_config,
-                               generate_nginx_config, generate_kafka_filebeat_config)
+                               generate_nginx_config, generate_kafka_filebeat_config,
+                               generate_test_origin_config)
 from config_generation.generate_elastic_keys import generate_new_elastic_certs
 from config_generation.site_dict import get_all_sites
 from orchestration.everything import (gather_info, install_base,
@@ -192,6 +193,9 @@ def _gen_config(ctx, no_certs):
     if not no_certs:
         logger.info('>>> Decrypting and verifying cert bundles...')
         ctx.invoke(_decrypt_and_verify_cert_bundles)
+
+    logger.info('>>> Generating test-origin config...')
+    generate_test_origin_config(config, all_sites, timestamp)
 
     # add shortcuts to generated config
     symlink_force(

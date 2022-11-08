@@ -109,7 +109,8 @@ nginx:
   # setting to false will make it default
   increase_proxy_buffer_size: true
   enable_gzip: True
-
+# set this to protect access to the edge/dnet list
+test_origin_file_token: None
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:
   # The path where the data is accesible on the host, it can be a docker volume
