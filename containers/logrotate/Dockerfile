@@ -5,8 +5,10 @@ RUN set -x \
   && mv /etc/periodic/daily/logrotate /etc/.logrotate.cronjob
 
 COPY ./entrypoint.sh /entrypoint.sh
-COPY --chmod 644 ./logrotate.d/banjax /etc/logrotate.d/
-COPY --chmod 644 ./logrotate.d/nginx /etc/logrotate.d/
+COPY ./logrotate.d/banjax /etc/logrotate.d/
+COPY ./logrotate.d/nginx /etc/logrotate.d/
+
+RUN chmod 644 /etc/logrotate.d/banjax /etc/logrotate.d/nginx
 
 ENTRYPOINT ["tini", "-g", "--"]
 CMD ["/entrypoint.sh"]
