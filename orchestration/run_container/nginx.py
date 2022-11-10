@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from orchestration.run_container.base_class import Container
-from util.helpers import FILENAMES_TO_TAIL, path_to_output
+from util.helpers import path_to_output
 
 
 class Nginx(Container):
@@ -60,30 +60,7 @@ class Nginx(Container):
         """
         build_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         logs_volume = self.client.volumes.create(name=f"nginx-{build_timestamp}")
-        # XXX think about this approach. also need to delete these containers...
-        # TODO: delete? when?
-        for filename_to_tail in FILENAMES_TO_TAIL:
-            base_name = filename_to_tail.split("/")[-1].replace(".", "-")  # XXX
-            self.logger.info(f'Run container for: {base_name}')
-            self.client.containers.run(
-                "debian:buster-slim",
-                command=f"tail --retry --follow=name {filename_to_tail}",
-                detach=True,
-                labels={
-                        'name': "nginx-log-tailer",
-                        'version': build_timestamp,
-                        'ngx_log_file': base_name
-                },
-                volumes={
-                    logs_volume.name:
-                    {
-                        'bind': '/var/log/nginx/',
-                        'mode': 'ro'
-                    },
-                },
-                name=f"nginx-{base_name}-tailer-{build_timestamp}",
-                restart_policy=Container.DEFAULT_RESTART_POLICY,
-            )
+
         return self.client.containers.run(
             image_id,
             detach=True,
