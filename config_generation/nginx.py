@@ -269,14 +269,16 @@ def _access_granted_fail_open_location_contents(
         location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
         # handle "Location:" header replace
         for proto in ['http', 'https']:
-            for triple_w in ['', 'www.']:
+            for triple_w in (['', 'www.'] if www_domain else ['']):
                 location_contents.append(nginx.Key('proxy_redirect',
                     f"'{proto}://{parent_site.get('public_domain')}' '{proto}://{triple_w}{site.get('public_domain')}'"))
+        domain_to_replace = parent_site.get('public_domain')
         if www_domain:
             # remove www.
             domain_to_replace = parent_site.get('public_domain').replace('www.', '')
         location_contents.append(nginx.Key('sub_filter_once', "off"))
-        location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' 'www.{site.get('public_domain')}'"))
+        if www_domain:
+            location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' 'www.{site.get('public_domain')}'"))
         location_contents.append(nginx.Key('sub_filter', f"'{domain_to_replace}' '{site.get('public_domain')}'"))
         location_contents.append(nginx.Key('sub_filter_types', "text/html text/css text/xml text/plain text/javascript application/javascript application/json"))
         return _proxy_pass_to_origin(location_contents, parent_site, origin_https)
