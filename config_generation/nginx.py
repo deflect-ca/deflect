@@ -277,9 +277,10 @@ def _access_granted_fail_open_location_contents(
             # remove www.
             domain_to_replace = parent_site.get('public_domain').replace('www.', '')
         location_contents.append(nginx.Key('sub_filter_once', "off"))
+        # only replace domain with leading //
         if www_domain:
-            location_contents.append(nginx.Key('sub_filter', f"'{parent_site.get('public_domain')}' 'www.{site.get('public_domain')}'"))
-        location_contents.append(nginx.Key('sub_filter', f"'{domain_to_replace}' '{site.get('public_domain')}'"))
+            location_contents.append(nginx.Key('sub_filter', f"'//{parent_site.get('public_domain')}' '//www.{site.get('public_domain')}'"))
+        location_contents.append(nginx.Key('sub_filter', f"'//{domain_to_replace}' '//{site.get('public_domain')}'"))
         location_contents.append(nginx.Key('sub_filter_types', "text/html text/css text/xml text/plain text/javascript application/javascript application/json"))
         return _proxy_pass_to_origin(location_contents, parent_site, origin_https)
 
