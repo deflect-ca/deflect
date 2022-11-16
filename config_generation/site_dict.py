@@ -178,6 +178,8 @@ def old_to_new_site_dict(old_dict):
     new_dict["enable_sni"] = old_dict.get("enable_sni", False)
     new_dict["cache_ignore_expires"] = old_dict.get("cache_ignore_expires", False)
     new_dict["alias_of_domain"] = old_dict.get("alias_of_domain", None)
+    if new_dict["alias_of_domain"]:
+        new_dict["alias_sub_double_slash"] = old_dict.get("alias_sub_double_slash", True)
 
     return new_dict
 
