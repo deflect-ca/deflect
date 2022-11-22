@@ -255,6 +255,8 @@ Commands:
 Commands:
   check-cert-expiry    Loop through all our certs and print the...
   decrypt-verify-cert  Decrypt and verify cert bundles
+  gen-self-sign-certs  Generate a self sign cert
+  verify-cert          Verify input certs
 ```
 
 ### gen
@@ -289,11 +291,15 @@ python3 main.py --action fetch-site-yml
 
 ```
 Commands:
-  banjax    Install and update banjax
-  base      Install required package on target
-  config    Install config to target
-  es        Install Elasticsearch
-  selected  Install config to selected target
+  banjax           Install and update banjax (force rebuild)
+  base             Install required package on target
+  certbot          Install and update certbot
+  config           Install config to target
+  es               Install Elasticsearch
+  kafka-filebeat   Install and update kafka-filebeat (force rebuild)
+  legacy-filebeat  Install and update legacy-filebeat (force rebuild)
+  logrotate        Install and update logrotate (force rebuild)
+  selected         Install config to selected target
 ```
 
 `install base` installs docker and the required package on the remote target.
@@ -318,6 +324,9 @@ python main.py --host edge1,edge2,controller install config
 
 # Install to selected edges and controller (using full domain)
 python main.py --host edge1.dev.deflect.network install config
+
+# Install to selected dnet
+python main.py --host dnext1 install config
 ```
 
 Note that `install selected` works the same as `install config`, the only difference is that it gives a prompt for you to confirm the target host before doing install. You can override this by using `python main.py --host edge1,edge2,controller install config --yes`.
@@ -328,13 +337,17 @@ Both `install config` and `install selected` support `--sync` options, adding th
 
 ```
 Commands:
+  cmd                        Run remote commands
+  curl-gen                   Generate curl command for testing all site
   info                       Fetch docker version via SSH for testing
   kill-all-containers        Run docker kill $(docker ps -q) on target
   show-useful-curl-commands  Print curl commands for ES and edge testing
   test-es-auth               Attempt to authenticate with saved ES auth
 ```
 
-`util info` is useful for testing connection to the remote host. 
+`util info` is useful for testing connection to the remote host.
+
+`curl-gen` is useful for generating curl commands for testing all sites. It can be used like `python main.py -q util curl-gen | bash`
 
 ## CLI (Banjax)
 
