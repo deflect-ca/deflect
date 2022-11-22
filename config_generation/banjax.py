@@ -142,13 +142,3 @@ def generate_banjax_config(config, all_sites, formatted_time):
     logger.info(f"Writing {output_dir}.tar")
     with tarfile.open(f"{output_dir}.tar", "x") as tar:
         tar.add(output_dir, arcname=".")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-
-    all_sites, formatted_time = get_all_sites()
-
-    generate_banjax_config(config, all_sites, formatted_time)
