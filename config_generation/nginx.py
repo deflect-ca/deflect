@@ -11,8 +11,6 @@ import tarfile
 import json
 from jinja2 import Template
 from pyaml_env import parse_config
-
-import logging
 from util.helpers import (
         get_logger,
         get_config_yml_path,

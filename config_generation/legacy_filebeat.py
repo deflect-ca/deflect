@@ -6,10 +6,7 @@
 
 import os
 import shutil
-import logging
 import tarfile
-import yaml
-
 from pyaml_env import parse_config
 from util.config_parser import parse_container_config_with_defaults
 from util.helpers import (
