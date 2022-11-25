@@ -11,8 +11,6 @@ import tarfile
 import json
 from jinja2 import Template
 from pyaml_env import parse_config
-
-import logging
 from util.helpers import (
         get_logger,
         get_config_yml_path,
@@ -259,7 +257,7 @@ def _access_granted_fail_open_location_contents(
         }
         logger.info("setting %s as an alias of domain: %s",
             site['public_domain'], parent_site.get('public_domain'))
-    
+
         location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
         location_contents.append(nginx.Key('proxy_set_header', f"Host {parent_site.get('public_domain')}"))
         # disable gzip from origin
@@ -895,13 +893,3 @@ def generate_nginx_config(all_sites, config, formatted_time):
         logger.info(f"Writing {output_dir}.tar")
         with tarfile.open(f"{output_dir}.tar", "x") as tar:
             tar.add(output_dir, arcname=".")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-
-    all_sites, formatted_time = get_all_sites()
-
-    generate_nginx_config(all_sites, config, formatted_time)

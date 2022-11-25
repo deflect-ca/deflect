@@ -1,3 +1,5 @@
+*Deprecated document*
+
 We should probably rename and organize these files better. And the code should
 definitely be prettied up now it's mostly working.
 

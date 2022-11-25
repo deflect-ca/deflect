@@ -3,6 +3,7 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
+
 import random
 import shutil
 import tarfile
@@ -479,13 +480,3 @@ def remove_soa_ns_a_record(old_path, new_path, hostname, dnet):
     zone.delete_rdataset('@', dns.rdatatype.SOA)
     zone.to_file(new_path, relativize=True, sorted=True)
     logger.debug(f"Removed SOA/NS/A record for {dnet}/{hostname}.zone")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-
-    all_sites, formatted_time = get_all_sites()
-
-    generate_bind_config(config, all_sites, formatted_time)

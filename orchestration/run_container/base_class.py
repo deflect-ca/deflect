@@ -31,18 +31,18 @@ def kill_containers_with_label(client, label, logger):
         filters={'name': label}
     )
     for container in containers1 + containers2:
-        logger.info(f"killing {container} with label or name {label}")
+        logger.info(f"killing {container} with label or name {label}...")
         # XXX ugh all of this
         try:
             container.kill()
         except Exception as ex:
-            logger.warn('Could not kill container')
+            logger.info('Could not kill container, trying to remove it...')
             logger.debug(str(ex))
             pass
         try:
             container.remove()  # XXX just so i can use a name later... re-think
         except Exception as ex:
-            logger.warn('Could not remove container')
+            logger.info('Could not remove container, trying again...')
             logger.debug(str(ex))
             pass
 

@@ -255,17 +255,3 @@ def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
         f.write(yaml.dump(new_sites, default_flow_style=False))
 
     return new_sites
-
-
-if __name__ == "__main__":
-    old_client_sites = {}
-    old_client_sites_timestamp = None
-    with open(get_sites_yml_path(), "r") as f:
-        old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
-        old_client_sites_timestamp = old_client_sites_dict["timestamp"]
-        old_client_sites = old_client_sites_dict["remap"]
-
-    time = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)
-    formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S")
-
-    new_client_sites = convert_old_sites_to_new_sites(old_client_sites, old_client_sites_timestamp)

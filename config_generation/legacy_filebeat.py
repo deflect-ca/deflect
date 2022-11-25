@@ -6,10 +6,7 @@
 
 import os
 import shutil
-import logging
 import tarfile
-import yaml
-
 from pyaml_env import parse_config
 from util.config_parser import parse_container_config_with_defaults
 from util.helpers import (
@@ -56,11 +53,3 @@ def generate_legacy_filebeat_config(config, all_sites, timestamp):
     logger.info(f"Writing {output_dir_tar}")
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-    all_sites, formatted_time = get_all_sites()
-    generate_legacy_filebeat_config(config, all_sites, formatted_time)
