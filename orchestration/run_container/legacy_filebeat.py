@@ -6,11 +6,6 @@ class LegacyFilebeat(Container):
         with open(f"output/{config_timestamp}/etc-legacy-filebeat.tar", "rb") as f:
             self.container.put_archive("/etc/filebeat", f.read())
 
-        # print file stat
-        (_, output) = self.container.exec_run("ls -lh /var/log/nginx /var/log/banjax")
-        self.logger.info(output.decode('utf-8'))
-
-
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
             image_id,
