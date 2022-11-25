@@ -6,7 +6,10 @@
 
 import os
 import shutil
+import logging
 import tarfile
+import yaml
+
 from pyaml_env import parse_config
 from util.config_parser import parse_container_config_with_defaults
 from util.helpers import (
@@ -19,9 +22,9 @@ from util.helpers import (
 logger = get_logger(__name__)
 
 
-def generate_legacy_filebeat_config(config, all_sites, timestamp):
+def generate_kafka_filebeat_config(config, all_sites, timestamp):
     # Setup dirs
-    output_dir = f"{path_to_output()}/{timestamp}/etc-legacy-filebeat"
+    output_dir = f"{path_to_output()}/{timestamp}/etc-kafka-filebeat"
     output_dir_tar = f"{output_dir}.tar"
 
     if len(output_dir) == 0:
@@ -33,17 +36,21 @@ def generate_legacy_filebeat_config(config, all_sites, timestamp):
 
     os.mkdir(output_dir)
 
-    # copy certs and key to output dir
-    filebeat_configs = [
-        'edgecert.key',
-        'edgecert.pem',
-        'rootca.pem',
+    filebeat_kafka_configs = [
+        'key.pem',
+        'certificate.pem',
+        'caroot.pem',
     ]
-    for config in filebeat_configs:
-        logger.debug(f"Copy {config} to output dir")
+    src_path = f"{path_to_input()}/kafka-filebeat"
+    if not os.path.isdir(src_path):
+        src_path = f"{path_to_input()}/banjax"
+        logger.info(f"input/kafka-filebeat not found, fallback to {src_path} to get kafka certs")
+
+    for kconfig in filebeat_kafka_configs:
+        logger.debug(f"Copy {kconfig} to output dir")
         shutil.copyfile(
-            f"{path_to_input()}/legacy-filebeat/{config}",
-            f"{output_dir}/{config}")
+            f"{src_path}/{kconfig}",
+            f"{output_dir}/{kconfig}")
 
     # Output files, compress and clean
     if os.path.isfile(output_dir_tar):

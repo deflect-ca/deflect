@@ -224,10 +224,14 @@ class Certbot(Container):
                              f"expire in: {expire_in_days(cert.not_valid_after)} days")
             # cert.issuer contains SnakeOilCert
             if "SnakeOilCert" in cert.issuer.rfc4514_string():
-                repack = True
-                self.problematic_certs['snake_oil_certs'].append(domain)
-                shutil.rmtree(os.path.join(path, 'archive', domain))
-                self.logger.info(f"removed snake oil cert for {domain}")
+                self.logger.info(f"Detected self-sign certs for {domain}")
+                if site.get("ns_on_deflect", True):
+                    repack = True
+                    self.problematic_certs['snake_oil_certs'].append(domain)
+                    shutil.rmtree(os.path.join(path, 'archive', domain))
+                    self.logger.info(f"removed snake oil cert for {domain}")
+                else:
+                    self.logger.info(f"{domain} has ns_on_deflect=False, skip removing snake oil cert")
             # cert expired
             if expire_in_days(cert.not_valid_after) <= self.renew_if_expire_in_days:
                 repack = True

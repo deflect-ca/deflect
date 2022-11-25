@@ -57,6 +57,9 @@ def generate_banjax_config(config, all_sites, formatted_time):
         decision_lists = site_decision_lists(site)
         if decision_lists != {}:
             all_site_decision_lists[site['public_domain']] = decision_lists
+            for subdomain in ['www'] + site['additional_domain_prefix']:
+                full_domain = subdomain + '.' + site['public_domain']
+                all_site_decision_lists[full_domain] = copy.deepcopy(decision_lists)
     banjax_next_config["per_site_decision_lists"] = all_site_decision_lists
 
     # example.com: challenge and block
@@ -67,6 +70,9 @@ def generate_banjax_config(config, all_sites, formatted_time):
         fail_action = sitewide_sha_inv(site)
         if fail_action:
             sitewide_sha_inv_dict[site['public_domain']] = fail_action
+            for subdomain in ['www'] + site['additional_domain_prefix']:
+                full_domain = subdomain + '.' + site['public_domain']
+                sitewide_sha_inv_dict[full_domain] = fail_action
     banjax_next_config["sitewide_sha_inv_list"] = sitewide_sha_inv_dict
 
     all_site_password_protected_paths = {}
@@ -86,6 +92,13 @@ def generate_banjax_config(config, all_sites, formatted_time):
             password_bytes = base64.b64decode(password_b64)
             password_hex = password_bytes.hex()
             all_site_password_hashes[site['public_domain']] = password_hex
+            # patch www and additional_domain_prefix
+            for subdomain in ['www'] + site['additional_domain_prefix']:
+                full_domain = subdomain + '.' + site['public_domain']
+                all_site_password_protected_paths[full_domain] = copy.deepcopy(paths)
+                all_site_password_protected_path_exceptions[full_domain] = copy.deepcopy(exception_paths)
+                all_site_password_hashes[full_domain] = password_hex
+
     banjax_next_config["password_protected_paths"] = all_site_password_protected_paths
     banjax_next_config["password_protected_path_exceptions"] = all_site_password_protected_path_exceptions
     banjax_next_config["password_hashes"] = all_site_password_hashes
@@ -129,13 +142,3 @@ def generate_banjax_config(config, all_sites, formatted_time):
     logger.info(f"Writing {output_dir}.tar")
     with tarfile.open(f"{output_dir}.tar", "x") as tar:
         tar.add(output_dir, arcname=".")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-
-    all_sites, formatted_time = get_all_sites()
-
-    generate_banjax_config(config, all_sites, formatted_time)

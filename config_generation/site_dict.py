@@ -124,6 +124,11 @@ def old_to_new_site_dict(old_dict):
         "banjax_password", None)
     new_dict["rate_limited_regexes"] = old_to_new_rate_limited_regexes(
         old_dict.get("banjax_regex_banner", []), old_dict["url"])
+    new_dict["additional_domain_prefix"] = old_dict.get("additional_domain_prefix", [])
+    for subdomain in ['www'] + new_dict['additional_domain_prefix']:
+        full_domain = subdomain + '.' + old_dict["url"]
+        new_dict["rate_limited_regexes"] += old_to_new_rate_limited_regexes(
+            old_dict.get("banjax_regex_banner", []), full_domain)
     new_dict["password_protected_path_exceptions"] = old_dict.get('banjax_path_exceptions', [])
     new_dict["default_cache_time_minutes"] = old_dict["cache_time"]
     new_dict["cache_exceptions"] = old_to_new_cache_exceptions(
@@ -145,24 +150,36 @@ def old_to_new_site_dict(old_dict):
     new_dict["uploaded_cert_bundle_name"] = old_dict.get("tls_bundle", None)
     server_names = []
     root_name = new_dict["public_domain"]
-    # not seen
-    if not old_dict.get("www_only", False):
+    if old_dict.get("www_only", False):
+        # redirects apex to www domain
+        new_dict["www_only"] = True
+    else:
         server_names.append(root_name)
-    # only 3
-    if not old_dict.get("no_www", False):
+
+    if old_dict.get("no_www", False):
+        # redirects www to apex domain
+        new_dict["no_www"] = True
+    else:
         server_names.append("www." + root_name)
     for prefix in old_dict.get("additional_domain_prefix", []):
         server_names.append(prefix + "." + root_name)
-    new_dict["additional_domain_prefix"] = old_dict.get("additional_domain_prefix", [])
     new_dict["server_names"] = server_names
-    new_dict["ns_on_deflect"] = old_dict["ns_on_deflect"]
+    new_dict["ns_on_deflect"] = old_dict.get('ns_on_deflect')
     # append origin IP to banjax per site whitelist
     new_dict["ip_allowlist"] = old_dict.get("add_banjax_whitelist", []) + [old_dict["origin"]]
+    new_dict["ip_blocklist"] = old_dict.get("add_banjax_blocklist", [])
     new_dict["cache_cookie_allowlist"] = old_dict.get("cache_cookie_allowlist", [])
     new_dict["cache_lock"] = old_dict.get("cache_lock", False)
     new_dict["cache_use_stale"] = old_dict.get("cache_use_stale", False)
     new_dict["cache_override_vary_only_encoding"] = old_dict.get("cache_override_vary_only_encoding", False)
     new_dict["static_to_banjax"] = old_dict.get("static_to_banjax", False)
+    new_dict["cache_disable"] = old_dict.get("cache_disable", False)
+    new_dict["cache_ignore_cache_control"] = old_dict.get("cache_ignore_cache_control", False)
+    new_dict["enable_sni"] = old_dict.get("enable_sni", False)
+    new_dict["cache_ignore_expires"] = old_dict.get("cache_ignore_expires", False)
+    new_dict["alias_of_domain"] = old_dict.get("alias_of_domain", None)
+    if new_dict["alias_of_domain"]:
+        new_dict["alias_sub_double_slash"] = old_dict.get("alias_sub_double_slash", True)
 
     return new_dict
 
@@ -218,16 +235,10 @@ def get_all_sites(config):
 
 
 def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
-    logger.info(f">>> Converting old sites to new sites, count {len(old_sites)}")
+    logger.debug(f">>> Converting old sites to new sites, count {len(old_sites)}")
 
     new_sites = {}
     for name, old_site in old_sites.items():
-        # print(f"doing {name}")
-        # XXX think about this. ATS ignores missing certs, but Nginx does not.
-        # if not old_site["ns_on_deflect"]:
-        #     continue
-        if name in ["acmx.ch", "donuz.okajak.com", "abortion-pills.org", "zemzen.defakto.support", "irancybercrime.org"]: #, "gubernia.com", "old.gubernia.com", "radiozamaneh.com", "volksentscheid-berlin-autofrei.de", "zemzen.defakto.support", "dev.pandemicbigbrother.online", "pandemicbigbrother.online"]:
-            continue
         new_site = old_to_new_site_dict(old_site)
         new_sites[name] = new_site
 
@@ -244,17 +255,3 @@ def convert_old_sites_to_new_sites(old_sites, old_sites_timestamp):
         f.write(yaml.dump(new_sites, default_flow_style=False))
 
     return new_sites
-
-
-if __name__ == "__main__":
-    old_client_sites = {}
-    old_client_sites_timestamp = None
-    with open(get_sites_yml_path(), "r") as f:
-        old_client_sites_dict = yaml.load(f.read(), Loader=yaml.SafeLoader)
-        old_client_sites_timestamp = old_client_sites_dict["timestamp"]
-        old_client_sites = old_client_sites_dict["remap"]
-
-    time = datetime.fromtimestamp(float(old_client_sites_timestamp)/1000.0)
-    formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S")
-
-    new_client_sites = convert_old_sites_to_new_sites(old_client_sites, old_client_sites_timestamp)

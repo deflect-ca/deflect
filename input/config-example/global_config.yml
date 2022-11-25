@@ -20,6 +20,7 @@ edges:
 logging:
   mode: 'elk_internal'
   filebeat_log_level: 'warning'
+  extra_output_kafka: false
   elk_internal: ~
     # stand up built in ELK, no settings required
   elk_external:
@@ -30,6 +31,10 @@ logging:
   logstash_external:
     # connect to an external ELK via legacy-filebeat
     logstash_host: logstash.example.com
+    kafka_host1: ~
+    kafka_host2: ~
+    kafka_host3: ~
+    kafka_topic: filebeat.logs
 fetch_site_yml:
   ssh:
     host: host
@@ -100,7 +105,12 @@ nginx:
   server_names_hash_max_size: 1024
   server_names_hash_bucket_size: 64
   worker_connections: 4096
-
+  # increase proxy_buffers to 8 256k, proxy_buffer_size to 128k and proxy_busy_buffers_size to 256k
+  # setting to false will make it default
+  increase_proxy_buffer_size: true
+  enable_gzip: True
+# set this to protect access to the edge/dnet list
+test_origin_file_token: None
 # Data volumes and paths where the prometheus metrics are stored.
 prometheus_data:
   # The path where the data is accesible on the host, it can be a docker volume

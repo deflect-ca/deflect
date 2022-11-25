@@ -11,8 +11,6 @@ import tarfile
 import json
 from jinja2 import Template
 from pyaml_env import parse_config
-
-import logging
 from util.helpers import (
         get_logger,
         get_config_yml_path,
@@ -34,6 +32,7 @@ def redirect_to_https_server(site: dict):
             nginx.Key('set', "$loc_out \"redir_to_ssl\""),
             nginx.Key('server_name', " ".join(site["server_names"])),
             nginx.Key('listen', '80'),
+            nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
             nginx.Key(
                 # note that we always redirect to the non-www hostname
                 'return', "301 https://$server_name$request_uri")
@@ -244,12 +243,62 @@ def _access_granted_fail_open_location_contents(
         location_contents.append(nginx.Key('add_header', "X-Deflect-Upstream-Status $upstream_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Cache $upstream_cache_status"))
     location_contents.append(nginx.Key('add_header', "X-Deflect-Edge $hostname"))
+
+    if site['enable_sni']:
+        location_contents.append(nginx.Key('proxy_ssl_server_name', "on"))
+
+    if site.get('alias_of_domain'):
+        www_domain = True if site.get('alias_of_domain').startswith('www.') else False
+        parent_site = {
+            'public_domain': site.get('alias_of_domain'),
+            'origin_https_port': 443,
+            'origin_http_port': 80,
+            'origin_ip': site.get('origin_ip'),
+        }
+        logger.info("setting %s as an alias of domain: %s",
+            site['public_domain'], parent_site.get('public_domain'))
+
+        location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
+        location_contents.append(nginx.Key('proxy_set_header', f"Host {parent_site.get('public_domain')}"))
+        # disable gzip from origin
+        location_contents.append(nginx.Key('proxy_set_header', "Accept-Encoding \"\""))
+        location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
+        location_contents.append(nginx.Key('proxy_hide_header', "Link"))
+        location_contents.append(nginx.Key('proxy_ssl_name', parent_site.get('public_domain')))
+        location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
+
+        # handle "Location:" header replace
+        for proto in ['http', 'https']:
+            for triple_w in (['', 'www.'] if www_domain else ['']):
+                location_contents.append(nginx.Key('proxy_redirect',
+                    f"'{proto}://{parent_site.get('public_domain')}' '{proto}://{triple_w}{site.get('public_domain')}'"))
+
+        domain_to_replace = parent_site.get('public_domain')
+        if www_domain:
+            # remove www.
+            domain_to_replace = parent_site.get('public_domain').replace('www.', '')
+
+        leading_dslash = '//' if site.get('alias_sub_double_slash') else ''
+        if www_domain:
+            location_contents.append(nginx.Key('sub_filter', f"'{leading_dslash}{parent_site.get('public_domain')}' '{leading_dslash}www.{site.get('public_domain')}'"))
+        location_contents.append(nginx.Key('sub_filter', f"'{leading_dslash}{domain_to_replace}' '{leading_dslash}{site.get('public_domain')}'"))
+
+        location_contents.append(nginx.Key('sub_filter_once', "off"))  # filter all occurences
+        location_contents.append(nginx.Key('sub_filter_types', "text/html text/css text/xml text/plain text/javascript application/javascript application/json"))
+        return _proxy_pass_to_origin(location_contents, parent_site, origin_https)
+
+    # normal site settings
     location_contents.append(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
     location_contents.append(nginx.Key('proxy_set_header', "Host $host"))
     location_contents.append(nginx.Key('proxy_hide_header', "Upgrade"))
     location_contents.append(nginx.Key('proxy_ssl_name', '$host'))
     location_contents.append(nginx.Key('proxy_pass_request_body', "on"))
 
+    return _proxy_pass_to_origin(location_contents, site, origin_https)
+
+
+def _proxy_pass_to_origin(location_contents, site, origin_https):
+    location_contents.append(nginx.Key('proxy_ssl_protocols', "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3"))
     if origin_https:
         # if origin_https_port == 80, we assume it is http
         proto = 'https' if site['origin_https_port'] != 80 else 'http'
@@ -316,6 +365,36 @@ def port_443_server_block(dconf, site, https_req_does):
         raise Exception(f"unrecognized https_request_does: {https_req_does}")
 
 
+def redirect_apex_www_server_block(dconf, site, http=False, https=False, to_www=False):
+    server_name = site.get('public_domain') if to_www else f"www.{site.get('public_domain')}"
+    if http:
+        conf = nginx.Conf(
+            nginx.Server(
+                nginx.Key('set', "$loc_in \"redir_apex_www\""),
+                nginx.Key('set', "$loc_out \"redir_apex_www\""),
+                nginx.Key('server_name', server_name),
+                nginx.Key('listen', '80'),
+                nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
+                nginx.Key(
+                    'return', f"301 http://{('www.' if to_www else '')}$server_name$request_uri")
+            )
+        )
+    elif https:
+        conf = nginx.Conf(
+            nginx.Server(
+                nginx.Key('set', "$loc_in \"redir_apex_www\""),
+                nginx.Key('set', "$loc_out \"redir_apex_www\""),
+                nginx.Key('server_name', server_name),
+                nginx.Key('listen', '443 ssl http2'),
+                *ssl_certificate_and_key(dconf, site),
+                nginx.Key('ssl_ciphers', dconf["nginx"]["ssl_ciphers"]),
+                nginx.Key('add_header', "X-Redirect-By 'Deflect'"),
+                nginx.Key(
+                    'return', f"301 https://{('www.' if to_www else '')}$server_name$request_uri")
+            )
+        )
+    return conf
+
 def per_site_include_conf(site, dconf):
     nconf = nginx.Conf()
 
@@ -341,11 +420,21 @@ def per_site_include_conf(site, dconf):
     http_req_does = site['http_request_does']
     if http_req_does != "nothing":
         nconf.add(port_80_server_block(dconf, site, http_req_does))
+        # redirect apex to www
+        if site.get('www_only'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, http=True, to_www=True))
+        elif site.get('no_www'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, http=True))
 
     # proxy_pass to origin port 80 or 443
     https_req_does = site['https_request_does']
     if https_req_does != "nothing":
         nconf.add(port_443_server_block(dconf, site, https_req_does))
+        # redirect apex to www
+        if site.get('www_only'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, https=True, to_www=True))
+        elif site.get('no_www'):
+            nconf.add(redirect_apex_www_server_block(dconf, site, https=True))
 
     return nconf
 
@@ -504,7 +593,15 @@ def http_block(dconf, timestamp):
     # send headers in one piece, it is better than sending them one by one
     http.add(nginx.Key('tcp_nopush', 'on'))
 
-    http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request $http_user_agent'"))
+    # proxy buffer settings for large header
+    if dconf['nginx'].get('increase_proxy_buffer_size') != False:
+        http.add(nginx.Key('proxy_busy_buffers_size', '256k'))
+        http.add(nginx.Key('proxy_buffers', '8 256k'))
+        http.add(nginx.Key('proxy_buffer_size', '128k'))
+
+    # Replace raw $request (GET / HTTP/1.1) with $request_method $uri $server_protocol
+    # to prevent ending up with GET https://example.com/ HTTP/1.1
+    http.add(nginx.Key('log_format', "banjax_format '$msec $remote_addr $request_method $host $request_method $uri $server_protocol $http_user_agent | $status'"))
     http.add(nginx.Key('log_format', 'nginx_default \'$remote_addr $server_name $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for" $server_port $upstream_bytes_received "$sent_http_content_type" $host "$https" "$http_cookie"\''))
 
     # Init $banjax_decision to avoid var not defined errors
@@ -566,6 +663,34 @@ def http_block(dconf, timestamp):
 
     http.add(nginx.Key('proxy_set_header', "X-Forwarded-For $proxy_add_x_forwarded_for"))
 
+    if dconf['nginx'].get('enable_gzip', True):
+        http.add(nginx.Key('gzip', 'on'))
+        http.add(nginx.Key('gzip_min_length', '1024'))
+        http.add(nginx.Key('gzip_vary', 'on'))
+        http.add(nginx.Key('gzip_disable', '\"msie6\"'))
+        http.add(nginx.Key('gzip_proxied', 'any'))
+        http.add(nginx.Key('gzip_types', """
+            text/richtext
+            text/xsd
+            text/xsl
+            text/css
+            text/javascript
+            text/xml
+            text/plain
+            text/x-component
+            application/javascript
+            application/x-javascript
+            application/json
+            application/xml
+            application/rss+xml
+            application/atom+xml
+            application/font-woff
+            application/vnd.ms-fontobject
+            font/truetype
+            font/opentype
+            image/svg+xml
+            image/x-icon"""))
+
     # https://serverfault.com/questions/578648/properly-setting-up-a-default-nginx-server-for-https/1044022#1044022
     # this keeps nginx from choosing some random site if it can't find one
     http.add(nginx.Map('"" $empty', nginx.Key("default", '""')))
@@ -621,6 +746,10 @@ def top_level_conf(dconf, timestamp):
 
 
 def default_site_content_cache_include_conf(cache_time_minutes, site):
+    # disable cache for this site
+    if site["cache_disable"]:
+        return []
+
     arr = [
         nginx.Key('proxy_cache', "site_content_cache"),
         nginx.Key('proxy_cache_key', '"$host $scheme $uri $is_args $args"'),
@@ -628,7 +757,12 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         # for 5XX error page, 10s micro cache to prevent flooding the origin
         nginx.Key('proxy_cache_valid', "500 501 502 503 504 10s"),
         nginx.Key('proxy_cache_valid', "any 30s"),
+        # do not cache if user logged into to pass_prot
+        nginx.Key('proxy_cache_bypass', "$cookie_deflect_password2"),
+        # do not cache if hit number is low, especailly when there is /?s={rand}
+        nginx.Key('proxy_cache_min_uses', '3'),
     ]
+
     if site["cache_lock"]:
         arr.append(nginx.Key('proxy_cache_lock', "on"))
 
@@ -643,6 +777,19 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
             nginx.Key('add_header', "Vary 'Accept-Encoding'"),
         ]
 
+    # ignore cache-control header from origin
+    if site['cache_ignore_cache_control']:
+        arr += [
+            nginx.Key('proxy_ignore_headers', "Cache-Control"),
+            nginx.Key('proxy_hide_header', "Cache-Control"),
+        ]
+
+    if site['cache_ignore_expires']:
+        arr += [
+            nginx.Key('proxy_ignore_headers', "Expires"),
+            nginx.Key('proxy_hide_header', "Expires"),
+        ]
+
     # by default, do not cache content if 'Set cookie' header present
     # but do cache if cookie name match config
     if len(site['cache_cookie_allowlist']) > 0:
@@ -650,6 +797,9 @@ def default_site_content_cache_include_conf(cache_time_minutes, site):
         arr.append(nginx.Key('proxy_ignore_headers', 'Set-cookie'))
         arr.append(nginx.Key('proxy_no_cache', f'$bypass_cache_{site_name}'))
         arr.append(nginx.Key('add_header', f'X-Deflect-Cache-Bypass $bypass_cache_{site_name}'))
+    else:
+        # prevent wordpress admin been cached, especailly when we ignore cache_ignore_cache_control
+        arr.append(nginx.Key('proxy_no_cache', "$cookie_deflect_password2"))
 
     return arr
 
@@ -743,13 +893,3 @@ def generate_nginx_config(all_sites, config, formatted_time):
         logger.info(f"Writing {output_dir}.tar")
         with tarfile.open(f"{output_dir}.tar", "x") as tar:
             tar.add(output_dir, arcname=".")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-
-    all_sites, formatted_time = get_all_sites()
-
-    generate_nginx_config(all_sites, config, formatted_time)

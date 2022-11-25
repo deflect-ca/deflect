@@ -1,10 +1,9 @@
 from orchestration.run_container.base_class import Container
 
 
-class LegacyFilebeat(Container):
-    def update(self, config_timestamp):
-        with open(f"output/{config_timestamp}/etc-legacy-filebeat.tar", "rb") as f:
-            self.container.put_archive("/etc/filebeat", f.read())
+class Logrotate(Container):
+    def update(self, timestamp):
+        pass
 
     def start_new_container(self, config, image_id):
         return self.client.containers.run(
@@ -12,27 +11,24 @@ class LegacyFilebeat(Container):
             detach=True,
             user="root",
             labels={
-                'name': "legacy-filebeat",
+                'name': "logrotate",
             },
             hostname=self.hostname,
             environment={
-                "LOGSTASH_HOST": config['logging']['logstash_external']['logstash_host'],
-                "DEFLECT_EDGE_NAME": self.hostname,
-                "DEFLECT_DNET": self.dnet,
-                "FILEBEAT_LOG_LEVEL": config['logging'].get('filebeat_log_level', 'warning'),
+                "LOGROTATE_CRON": "0 0 * * *",  # run daily
             },
             volumes={
                 self.get_volume_name('nginx', '/var/log/nginx'):
                 {
                     'bind': '/var/log/nginx/',
-                    'mode': 'ro'
+                    'mode': 'rw'
                 },
                 self.get_volume_name('banjax', '/var/log/banjax'):
                 {
                     'bind': '/var/log/banjax/',
-                    'mode': 'ro'
+                    'mode': 'rw'
                 }
             },
-            name="legacy-filebeat",
+            name="logrotate",
             restart_policy=Container.DEFAULT_RESTART_POLICY,
         )

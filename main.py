@@ -15,7 +15,8 @@ from OpenSSL.crypto import \
 from config_generation import (generate_banjax_config, generate_bind_config,
                                generate_edgemanage_config,
                                generate_legacy_filebeat_config,
-                               generate_nginx_config)
+                               generate_nginx_config, generate_kafka_filebeat_config,
+                               generate_test_origin_config)
 from config_generation.generate_elastic_keys import generate_new_elastic_certs
 from config_generation.site_dict import get_all_sites
 from orchestration.everything import (gather_info, install_base,
@@ -25,6 +26,8 @@ from orchestration.hosts import (docker_client_for_host, host_to_role,
 from orchestration.run_container.banjax import Banjax
 from orchestration.run_container.certbot import Certbot
 from orchestration.run_container.legacy_filebeat import LegacyFilebeat
+from orchestration.run_container.logrotate import Logrotate
+from orchestration.run_container.kafka_filebeat import KafkaFilebeat
 from orchestration.run_container.base_class import (find_existing_container,
                                                     get_persisted_config)
 from orchestration.run_container.elasticsearch import (Elasticsearch,
@@ -34,7 +37,7 @@ from util.decrypt_and_verify_cert_bundles import \
 from util.fetch_site_yml import fetch_site_yml
 from util.helpers import (get_config_yml_path, get_logger, hosts_arg_to_hosts,
                           path_to_output, reset_log_level, generate_selfsigned_cert,
-                          expire_in_days)
+                          expire_in_days, symlink_force)
 
 logger = get_logger(__name__)
 
@@ -183,9 +186,21 @@ def _gen_config(ctx, no_certs):
         logger.info('>>> Generating legacy-filebeat config...')
         generate_legacy_filebeat_config(config, all_sites, timestamp)
 
+        if config['logging'].get('extra_output_kafka'):
+            logger.info('>>> Generating kafka filebeat config...')
+            generate_kafka_filebeat_config(config, all_sites, timestamp)
+
     if not no_certs:
         logger.info('>>> Decrypting and verifying cert bundles...')
         ctx.invoke(_decrypt_and_verify_cert_bundles)
+
+    logger.info('>>> Generating test-origin config...')
+    generate_test_origin_config(config, all_sites, timestamp)
+
+    # add shortcuts to generated config
+    symlink_force(
+        f"{path_to_output()}/{timestamp}",
+        f"{path_to_output()}/latest")
 
 
 def abort_if_false(ctx, param, value):
@@ -196,8 +211,11 @@ def abort_if_false(ctx, param, value):
 @click.command('config', short_help='Install config to target')
 @click.option('--sync', is_flag=True, default=False,
               help='Install edge one by one, instead of all at once')
+@click.option('--update-banjax', is_flag=True, default=False,
+              help='Force restart banjax, and other related containers including: '
+                   'legacy-filebeat, kafka-filebeat, logrotate')
 @click.pass_context
-def _install_config(ctx, sync):
+def _install_config(ctx, sync, update_banjax):
     """Install config to target
 
     This will install config in output dir to target.
@@ -215,12 +233,14 @@ def _install_config(ctx, sync):
     """
     all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['host'] == 'edges':
-        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp, sync=sync)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'],
+                      all_sites, timestamp, sync=sync, update_banjax=update_banjax)
     elif ctx.obj['host'] == 'controller':
         install_controller(ctx.obj['config'], all_sites, timestamp)
     elif ctx.obj['host'] == 'all':
         install_controller(ctx.obj['config'], all_sites, timestamp)
-        install_edges(ctx.obj['config'], ctx.obj['config']['edges'], all_sites, timestamp, sync=sync)
+        install_edges(ctx.obj['config'], ctx.obj['config']['edges'],
+                      all_sites, timestamp, sync=sync, update_banjax=update_banjax)
     else:
         ctx.forward(_install_selected)
 
@@ -231,8 +251,11 @@ def _install_config(ctx, sync):
 @click.option('--yes', is_flag=True, callback=abort_if_false,
               expose_value=False,
               prompt='Please confirm the target _host is correct')
+@click.option('--update-banjax', is_flag=True, default=False,
+              help='Force restart banjax, and other related containers including: '
+                   'legacy-filebeat, kafka-filebeat, logrotate')
 @click.pass_context
-def _install_selected(ctx, sync):
+def _install_selected(ctx, sync, update_banjax):
     all_sites, timestamp = ctx.obj['get_all_sites']
     if ctx.obj['_has_controller']:
         install_controller(ctx.obj['config'], all_sites, timestamp)
@@ -242,7 +265,8 @@ def _install_selected(ctx, sync):
             if host['hostname'] == ctx.obj['config']['controller']['hostname']:
                 ctx.obj['_hosts'].remove(host)
 
-    install_edges(ctx.obj['config'], ctx.obj['_hosts'], all_sites, timestamp, sync=sync)
+    install_edges(ctx.obj['config'], ctx.obj['_hosts'],
+                  all_sites, timestamp, sync=sync, update_banjax=update_banjax)
 
 
 @click.command('es', help='Install Elasticsearch')
@@ -265,7 +289,7 @@ def _install_banjax(ctx):
         client = docker_client_for_host(host, config=ctx.obj['config'])
         banjax = Banjax(client, ctx.obj['config'], kill_existing=True, logger=logger, timestamp=timestamp)
         banjax.update(timestamp)
-    click.echo("Please rebuild legacy-filebeat too after rebuilding banjax")
+    click.echo("Please rebuild legacy-filebeat & logrotate too after rebuilding banjax")
 
 
 @click.command('legacy-filebeat', help='Install and update legacy-filebeat (force rebuild)')
@@ -279,6 +303,32 @@ def _install_legacy_filebeat(ctx):
         client = docker_client_for_host(host, config=ctx.obj['config'])
         filebeat = LegacyFilebeat(client, ctx.obj['config'], kill_existing=True, logger=logger)
         filebeat.update(timestamp)
+
+
+@click.command('logrotate', help='Install and update logrotate (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild logrotate, are you sure?')
+@click.pass_context
+def _install_logrotate(ctx):
+    _, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        logrotate = Logrotate(client, ctx.obj['config'], kill_existing=True, logger=logger)
+        logrotate.update(timestamp)
+
+
+@click.command('kafka-filebeat', help='Install and update kafka-filebeat (force rebuild)')
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='This will kill and rebuild kafka-filebeat, are you sure?')
+@click.pass_context
+def _install_kafka_filebeat(ctx):
+    _, timestamp = ctx.obj['get_all_sites']
+    for host in ctx.obj['_hosts']:
+        client = docker_client_for_host(host, config=ctx.obj['config'])
+        kafka_filebeat = KafkaFilebeat(client, ctx.obj['config'], kill_existing=True, logger=logger)
+        kafka_filebeat.update(timestamp)
 
 
 @click.command('certbot', help='Install and update certbot')
@@ -544,6 +594,8 @@ install.add_command(_install_banjax)
 install.add_command(_install_certbot)
 install.add_command(_install_selected)
 install.add_command(_install_legacy_filebeat)
+install.add_command(_install_logrotate)
+install.add_command(_install_kafka_filebeat)
 
 # Get section
 get.add_command(_get_nginx_errors)

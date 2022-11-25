@@ -1,3 +1,9 @@
+# Copyright (c) 2021, eQualit.ie inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 # https://gist.github.com/major/8ac9f98ae8b07f46b208
 # https://cryptography.io/en/latest/x509/reference/
 from cryptography import x509

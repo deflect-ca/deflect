@@ -38,32 +38,6 @@ class Banjax(Container):
             self.logger.error(nginx_d["Mounts"])
             raise Exception("couldn't find log volume in nginx container")
 
-        # XXX bad duplication with the nginx log tailers above
-        filenames_to_tail = [
-            "/var/log/banjax/gin.log",
-            "/var/log/banjax/metrics.log",
-        ]
-        for filename in filenames_to_tail:
-            base_name = filename.split("/")[-1].replace(".", "-")  # XXX
-            self.client.containers.run(
-                "debian:buster-slim",
-                command=f"tail --retry --follow=name {filename}",
-                detach=True,
-                labels={
-                        'name': "banjax-log-tailer",
-                        'banjax_log_file': base_name
-                },
-                volumes={  # XXX check out volumes_from?
-                    banjax_logs_volume.name:  # XXX
-                    {
-                        'bind': '/var/log/banjax/',
-                        'mode': 'ro'
-                    }
-                },
-                name=f"banjax-log-{base_name}",
-                restart_policy={"Name": "on-failure", "MaximumRetryCount": 5}
-            )
-
         # We create a container here that does nothing
         # but bind to a volume of /etc/banjax so we can upload stuff to it
         # before the banjax container starts

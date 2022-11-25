@@ -31,18 +31,18 @@ def kill_containers_with_label(client, label, logger):
         filters={'name': label}
     )
     for container in containers1 + containers2:
-        logger.info(f"killing {container} with label or name {label}")
+        logger.info(f"killing {container} with label or name {label}...")
         # XXX ugh all of this
         try:
             container.kill()
         except Exception as ex:
-            logger.warn('Could not kill container')
+            logger.info('Could not kill container, trying to remove it...')
             logger.debug(str(ex))
             pass
         try:
             container.remove()  # XXX just so i can use a name later... re-think
         except Exception as ex:
-            logger.warn('Could not remove container')
+            logger.info('Could not remove container, trying again...')
             logger.debug(str(ex))
             pass
 
@@ -100,6 +100,8 @@ class Container:
             "TestOrigin": "test-origin",
             "EdgeManage": "edgemanage",
             "LegacyFilebeat": "legacy-filebeat",
+            "Logrotate": "logrotate",
+            "KafkaFilebeat": "kafka-filebeat",
         }[concrete_class]
         if find_existing:
             self.container = find_existing_container(self.client, self.lowercase_name, None, config, logger)
@@ -171,3 +173,20 @@ class Container:
                 break
         else:
             raise Exception("didn't find this host in config!")
+
+    def get_volume_name(self, label, destination_path):
+        containers = self.client.containers.list(
+            filters={"label": f"name={label}"}
+        )
+        inspect_container = self.client.api.inspect_container(containers[0].id)
+        volume_name = None
+        for mount in inspect_container["Mounts"]:
+            if mount["Type"] == "volume":
+                if mount["Destination"] == destination_path:
+                    volume_name = mount["Name"]
+                    self.logger.info(f"Found volume {volume_name} for {label}")
+                    break
+        else:
+            self.logger.error(inspect_container["Mounts"])
+            raise Exception(f"couldn't find volume in {label} container")
+        return volume_name

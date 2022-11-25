@@ -7,6 +7,11 @@ class Bind(Container, metaclass=SingletonMetaclass):
         with open(f"output/{config_timestamp}/etc-bind.tar", "rb") as f:
             self.container.put_archive("/etc/bind", f.read())
 
+        # swapping the deflect_zones_swap to deflect_zones
+        self.container.exec_run("mv /etc/bind/deflect_zones /etc/bind/deflect_zones_old")
+        self.container.exec_run("mv /etc/bind/deflect_zones_swap /etc/bind/deflect_zones")
+        self.container.exec_run("rm -rf /etc/bind/deflect_zones_old")
+
         # call named checks
         self.container.exec_run("chmod +x /etc/bind/named-checks.sh")
         (exit_code, output) = self.container.exec_run('/etc/bind/named-checks.sh')

@@ -82,11 +82,3 @@ def generate_edgemanage_config(config, all_sites, timestamp):
     logger.info(f"Writing {output_dir_tar}")
     with tarfile.open(output_dir_tar, "x") as tar:
         tar.add(output_dir, arcname=".")
-
-
-if __name__ == "__main__":
-    from orchestration.shared import get_all_sites
-
-    config = parse_config(get_config_yml_path())
-    all_sites, formatted_time = get_all_sites()
-    generate_edgemanage_config(config, all_sites, formatted_time)
